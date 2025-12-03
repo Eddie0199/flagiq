@@ -1,0 +1,255 @@
+import React, { useEffect, useState } from "react";
+import { MAX_HEARTS, REGEN_MS } from "../App";
+import { getCoinsByUser } from "./ProgressByUser"; // persistent coins
+
+function formatRemaining(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(s / 60)
+    .toString()
+    .padStart(2, "0");
+  const ss = (s % 60).toString().padStart(2, "0");
+  return `${m}:${ss}`;
+}
+
+function HeartsPill({ count, lastTick, t, lang }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const nextMs = Math.max(0, REGEN_MS - (now - lastTick));
+  const showTimer = count < MAX_HEARTS;
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 8,
+        background: "#ffffff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 999,
+        padding: "4px 8px",
+        height: 36,
+        boxShadow: "0 1px 2px rgba(0,0,0,.04)",
+      }}
+    >
+      <div
+        style={{
+          position: "relative",
+          width: 28,
+          height: 28,
+          borderRadius: 8,
+          background: "#fff",
+          border: "1px solid #e2e8f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        title={t && lang ? t(lang, "lives") : "Lives"}
+      >
+        <span style={{ fontSize: 18 }} role="img" aria-label="heart">
+          ❤️
+        </span>
+        <span
+          style={{
+            position: "absolute",
+            bottom: 1,
+            right: 3,
+            fontSize: 11,
+            fontWeight: 800,
+            color: "#0f172a",
+            textShadow: "0 1px 0 rgba(255,255,255,.7)",
+          }}
+        >
+          {count}
+        </span>
+      </div>
+      {showTimer && (
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            color: "#0f172a",
+            fontVariantNumeric: "tabular-nums",
+          }}
+          title={t && lang ? t(lang, "nextLife") : "Next life"}
+        >
+          {formatRemaining(nextMs)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CoinsPill({ username, coinsProp, t, lang, onClick }) {
+  const [coins, setCoins] = useState(() => getCoinsByUser(username));
+
+  // keep in sync with storage so it updates when GameScreen/home change it
+  useEffect(() => {
+    const id = setInterval(() => {
+      const latest = getCoinsByUser(username);
+      setCoins(latest);
+    }, 1500);
+    return () => clearInterval(id);
+  }, [username]);
+
+  // prefer live prop from App if provided
+  const displayCoins =
+    typeof coinsProp === "number" ? coinsProp : Number(coins || 0);
+
+  const label = t && lang ? t(lang, "coinsPillLabel") : "Shop"; // small hint it opens a shop
+
+  const clickable = typeof onClick === "function";
+  const Wrapper = clickable ? "button" : "div";
+
+  return (
+    <Wrapper
+      onClick={clickable ? onClick : undefined}
+      style={{
+        padding: "6px 10px",
+        background: "#f1f5f9",
+        border: "1px solid #e2e8f0",
+        borderRadius: 999,
+        fontSize: 12,
+        fontWeight: 800,
+        color: "#0f172a",
+        display: "inline-flex",
+        gap: 6,
+        alignItems: "center",
+        cursor: clickable ? "pointer" : "default",
+        boxShadow: clickable ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
+        transition: "transform 0.08s ease, box-shadow 0.08s ease",
+      }}
+      title={
+        clickable
+          ? t && lang
+            ? t(lang, "openShopTooltip")
+            : "Open booster shop"
+          : t && lang
+          ? t(lang, "coins")
+          : "Coins"
+      }
+      onMouseDown={(e) => {
+        if (!clickable) return;
+        e.currentTarget.style.transform = "scale(0.97)";
+      }}
+      onMouseUp={(e) => {
+        if (!clickable) return;
+        e.currentTarget.style.transform = "scale(1)";
+      }}
+      onMouseLeave={(e) => {
+        if (!clickable) return;
+        e.currentTarget.style.transform = "scale(1)";
+      }}
+    >
+      <span aria-hidden="true">💰</span>
+      <span>{displayCoins}</span>
+      {clickable && (
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            padding: "2px 6px",
+            borderRadius: 999,
+            background: "#e2e8f0",
+            color: "#0f172a",
+          }}
+        >
+          {label}
+        </span>
+      )}
+    </Wrapper>
+  );
+}
+
+export default function Header({
+  showBack,
+  onBack,
+  hearts,
+  onSettings,
+  showHearts,
+  t,
+  lang,
+  coins = 0, // live coins prop from parent
+  username,
+  onCoinsClick, // optional: when provided, coins pill becomes clickable
+}) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr auto auto auto",
+        alignItems: "center",
+        padding: "8px 12px",
+        gap: 10,
+      }}
+    >
+      {/* Back button */}
+      <div style={{ justifySelf: "start" }}>
+        {showBack ? (
+          <button
+            onClick={onBack}
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              cursor: "pointer",
+              fontWeight: 500,
+            }}
+          >
+            ← {t && lang ? t(lang, "back") : "Back"}
+          </button>
+        ) : null}
+      </div>
+
+      {/* Hearts pill */}
+      <div style={{ justifySelf: "center" }}>
+        {showHearts && hearts ? (
+          <HeartsPill
+            count={hearts.count}
+            lastTick={hearts.lastTick}
+            t={t}
+            lang={lang}
+          />
+        ) : null}
+      </div>
+
+      {/* Coins pill */}
+      <div style={{ justifySelf: "end" }}>
+        <CoinsPill
+          username={username}
+          coinsProp={coins}
+          t={t}
+          lang={lang}
+          onClick={onCoinsClick}
+        />
+      </div>
+
+      {/* Settings */}
+      <div style={{ justifySelf: "end" }}>
+        <button
+          onClick={onSettings}
+          aria-label={t && lang ? t(lang, "settings") : "Settings"}
+          title={t && lang ? t(lang, "settings") : "Settings"}
+          style={{
+            background: "#f1f5f9",
+            color: "#0f172a",
+            border: "1px solid #e2e8f0",
+            borderRadius: 999,
+            width: 36,
+            height: 36,
+            lineHeight: "36px",
+            textAlign: "center",
+            fontSize: 18,
+            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+            cursor: "pointer",
+          }}
+        >
+          ⚙️
+        </button>
+      </div>
+    </div>
+  );
+}
