@@ -12,7 +12,7 @@ import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 
-const VERSION = "v1.0";
+const VERSION = "v1.1";
 
 // ----- constants -----
 export const TOTAL_LEVELS = 30;
