@@ -307,7 +307,7 @@ export default function GameScreen({
     }, TT_TICK_MS);
 
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [mode, done, fail, ttPaused]);
 
   const current = questions[qIndex];
@@ -568,7 +568,7 @@ export default function GameScreen({
         loseLifeOnce();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
   // skulls render
@@ -1298,3 +1298,4 @@ export default function GameScreen({
     </div>
   );
 }
+
