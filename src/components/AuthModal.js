@@ -263,6 +263,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 10,
+                  fontSize: 16, // prevent mobile zoom
                 }}
               />
 
@@ -286,6 +287,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 4,
+                  fontSize: 16, // prevent mobile zoom
                 }}
               />
 
@@ -334,6 +336,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 4,
+                  fontSize: 16, // prevent mobile zoom
                 }}
               />
               {suErrUser ? (
@@ -366,6 +369,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 4,
+                  fontSize: 16, // prevent mobile zoom
                 }}
               />
               {suErrEmail ? (
@@ -396,6 +400,7 @@ export default function AuthModal({
                     padding: "8px 10px",
                     borderRadius: 10,
                     border: "1px solid #e2e8f0",
+                    fontSize: 16, // prevent mobile zoom
                   }}
                 />
                 <button
@@ -455,3 +460,4 @@ export default function AuthModal({
     </div>
   );
 }
+
