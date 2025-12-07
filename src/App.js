@@ -12,6 +12,9 @@ import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 
+// 🔹 NEW: Supabase client import
+import { supabase } from "./supabaseClient";
+
 const VERSION = "v1.1";
 
 // ----- constants -----
@@ -338,6 +341,21 @@ function usePerUserHints(username) {
 
 // ================= Main App =================
 export default function App() {
+  // 🔹 NEW: simple Supabase connectivity test (runs once on load)
+  useEffect(() => {
+    async function testSupabase() {
+      try {
+        const { data, error } = await supabase
+          .from("nonexistent_table")
+          .select("*");
+        console.log("Supabase test:", { data, error });
+      } catch (err) {
+        console.error("Supabase test error:", err);
+      }
+    }
+    testSupabase();
+  }, []);
+
   // preferences
   const [lang, setLang] = useLocalStorage("flagiq:lang", "en");
   const [soundOn, setSoundOn] = useLocalStorage("flagiq:soundOn", true);
@@ -765,3 +783,4 @@ export default function App() {
     </div>
   );
 }
+
