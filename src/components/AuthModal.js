@@ -319,10 +319,42 @@ const { data, error } = await supabase.auth.signUp({
                 </div>
               ) : null}
 
-              <div style={{ fontSize: 12, marginBottom: 12, color: "#64748b" }}>
-                {tr("auth.forgot", "Forgot password?")}
-              </div>
+<button
+  type="button"
+  onClick={async () => {
+    const em = loginEmail.trim();
+    if (!em) {
+      alert("Enter your email above first.");
+      return;
+    }
+    if (!emailRx.test(em)) {
+      alert("Please enter a valid email.");
+      return;
+    }
 
+    const { error } = await supabase.auth.resetPasswordForEmail(em);
+    if (error) {
+      console.error("Reset password error:", error);
+      alert(error.message || "Could not send reset email.");
+      return;
+    }
+
+    alert("If that email exists, a reset link has been sent.");
+  }}
+  style={{
+    fontSize: 12,
+    marginBottom: 12,
+    color: "#2563eb",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    padding: 0,
+    textDecoration: "underline",
+  }}
+>
+  {tr("auth.forgot", "Forgot password?")}
+</button>
+  
               <button
                 type="submit"
                 style={{
@@ -483,6 +515,7 @@ const { data, error } = await supabase.auth.signUp({
     </div>
   );
 }
+
 
 
 
