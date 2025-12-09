@@ -9,8 +9,8 @@ export default function AuthModal({
   onClose,
   tab,
   setTab,
-  users,     // kept for compatibility (no longer used)
-  setUsers,  // kept for compatibility (no longer used)
+  users, // kept for compatibility (no longer used)
+  setUsers, // kept for compatibility (no longer used)
   onLoggedIn,
 }) {
   // login fields
@@ -28,6 +28,13 @@ export default function AuthModal({
   const [suErrUser, setSuErrUser] = useState("");
   const [suErrEmail, setSuErrEmail] = useState("");
   const [suErrPwd, setSuErrPwd] = useState("");
+
+  // forgot-password / reset mode
+  const [isResetMode, setIsResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetErr, setResetErr] = useState("");
+  const [resetMsg, setResetMsg] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   // small helper to get text safely
   const tr = (key, fallback) => (t && lang ? t(lang, key) : fallback);
@@ -97,8 +104,7 @@ export default function AuthModal({
     }
 
     const user = data.user;
-    const username =
-      user?.user_metadata?.username || user?.email || em;
+    const username = user?.user_metadata?.username || user?.email || em;
 
     onLoggedIn && onLoggedIn(username);
     onClose && onClose();
@@ -140,21 +146,16 @@ export default function AuthModal({
       return;
     }
 
-const { data, error } = await supabase.auth.signUp({
-  email: em,
-  password: pw,
-  options: {
-    data: {
-      username: u,
-      display_name: u,
-      full_name: u,
-      name: u,
-      user_name: u,
-    },
-  },
-});
-
-
+    const { data, error } = await supabase.auth.signUp({
+      email: em,
+      password: pw,
+      options: {
+        data: {
+          username: u,
+          display_name: u,
+        },
+      },
+    });
 
     if (error) {
       console.error("Signup error:", error);
@@ -170,6 +171,73 @@ const { data, error } = await supabase.auth.signUp({
 
     onLoggedIn && onLoggedIn(username);
     onClose && onClose();
+  }
+
+  // ---------- RESET PASSWORD (Supabase) ----------
+  async function handleReset(e) {
+    e.preventDefault();
+    setResetErr("");
+    setResetMsg("");
+
+    const em = resetEmail.trim();
+
+    if (!em) {
+      setResetErr(
+        tr("auth.emailRequired", "Email address is required.")
+      );
+      return;
+    }
+    if (!emailRx.test(em)) {
+      setResetErr(tr("auth.emailInvalid", "Please enter a valid email."));
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(em);
+      setResetLoading(false);
+
+      if (error) {
+        console.error("Reset error:", error);
+        setResetErr(
+          tr(
+            "auth.resetError",
+            "Could not send reset link. Please try again."
+          )
+        );
+        return;
+      }
+
+      setResetMsg(
+        tr(
+          "auth.resetEmailSent",
+          "If an account exists for that email, you'll receive a reset link shortly."
+        )
+      );
+    } catch (err) {
+      console.error("Reset error:", err);
+      setResetLoading(false);
+      setResetErr(
+        tr(
+          "auth.resetError",
+          "Could not send reset link. Please try again."
+        )
+      );
+    }
+  }
+
+  function openResetMode() {
+    setIsResetMode(true);
+    setResetEmail(loginEmail || "");
+    setResetErr("");
+    setResetMsg("");
+  }
+
+  function closeResetMode() {
+    setIsResetMode(false);
+    setResetErr("");
+    setResetMsg("");
+    // keep login fields as they are so user can go back easily
   }
 
   return (
@@ -216,54 +284,155 @@ const { data, error } = await supabase.auth.signUp({
         {/* title */}
         <div style={{ padding: "16px 20px 6px" }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>
-            {tr("auth.welcome", "Welcome to FlagIQ")}
+            {isResetMode
+              ? tr("auth.forgot", "Forgot password?")
+              : tr("auth.welcome", "Welcome to FlagIQ")}
           </h2>
         </div>
 
-        {/* tabs */}
-        <div
-          style={{
-            display: "flex",
-            gap: 0,
-            padding: "0 20px 12px",
-            marginTop: 4,
-          }}
-        >
-          <button
-            onClick={() => setTab("login")}
+        {/* tabs (hide in reset mode) */}
+        {!isResetMode && (
+          <div
             style={{
-              flex: 1,
-              background: tab === "login" ? "#0f172a" : "#e2e8f0",
-              color: tab === "login" ? "#fff" : "#0f172a",
-              border: "none",
-              padding: "8px 10px",
-              borderRadius: 999,
-              fontWeight: 600,
-              cursor: "pointer",
+              display: "flex",
+              gap: 0,
+              padding: "0 20px 12px",
+              marginTop: 4,
             }}
           >
-            {tr("login", "Login")}
-          </button>
-          <button
-            onClick={() => setTab("signup")}
-            style={{
-              flex: 1,
-              background: tab === "signup" ? "#0f172a" : "#e2e8f0",
-              color: tab === "signup" ? "#fff" : "#0f172a",
-              border: "none",
-              padding: "8px 10px",
-              borderRadius: 999,
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            {tr("createAccount", "Create Account")}
-          </button>
-        </div>
+            <button
+              onClick={() => setTab("login")}
+              style={{
+                flex: 1,
+                background: tab === "login" ? "#0f172a" : "#e2e8f0",
+                color: tab === "login" ? "#fff" : "#0f172a",
+                border: "none",
+                padding: "8px 10px",
+                borderRadius: 999,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {tr("login", "Login")}
+            </button>
+            <button
+              onClick={() => setTab("signup")}
+              style={{
+                flex: 1,
+                background: tab === "signup" ? "#0f172a" : "#e2e8f0",
+                color: tab === "signup" ? "#fff" : "#0f172a",
+                border: "none",
+                padding: "8px 10px",
+                borderRadius: 999,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {tr("createAccount", "Create Account")}
+            </button>
+          </div>
+        )}
 
         {/* body */}
         <div style={{ padding: "0 20px 20px 20px" }}>
-          {tab === "login" ? (
+          {isResetMode ? (
+            // ---------- RESET PASSWORD SCREEN ----------
+            <form onSubmit={handleReset}>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "#64748b",
+                  marginBottom: 10,
+                  marginTop: 4,
+                }}
+              >
+                {tr(
+                  "auth.resetInfo",
+                  "Enter your email and we’ll send you a link to reset your password."
+                )}
+              </p>
+
+              <label
+                style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
+              >
+                {tr("auth.email", "Email")}
+              </label>
+              <input
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder={tr(
+                  "auth.emailPlaceholder",
+                  "Enter your email"
+                )}
+                style={{
+                  width: "100%",
+                  padding: "8px 10px",
+                  borderRadius: 10,
+                  border: "1px solid #e2e8f0",
+                  marginBottom: 6,
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                }}
+              />
+
+              {resetErr ? (
+                <div
+                  style={{ color: "#b91c1c", fontSize: 13, marginBottom: 6 }}
+                >
+                  {resetErr}
+                </div>
+              ) : null}
+
+              {resetMsg ? (
+                <div
+                  style={{ color: "#16a34a", fontSize: 13, marginBottom: 6 }}
+                >
+                  {resetMsg}
+                </div>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                style={{
+                  width: "100%",
+                  background: "#0f172a",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 14,
+                  padding: "10px 12px",
+                  fontWeight: 700,
+                  cursor: resetLoading ? "default" : "pointer",
+                  opacity: resetLoading ? 0.8 : 1,
+                  marginTop: 4,
+                  marginBottom: 10,
+                }}
+              >
+                {resetLoading
+                  ? tr("loading", "Loading…")
+                  : tr("auth.sendResetLink", "Send reset link")}
+              </button>
+
+              <button
+                type="button"
+                onClick={closeResetMode}
+                style={{
+                  width: "100%",
+                  background: "#e2e8f0",
+                  color: "#0f172a",
+                  border: "none",
+                  borderRadius: 14,
+                  padding: "8px 12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: 14,
+                }}
+              >
+                {tr("auth.backToLogin", "Back to login")}
+              </button>
+            </form>
+          ) : tab === "login" ? (
+            // ---------- LOGIN SCREEN ----------
             <form onSubmit={handleLogin}>
               {/* email */}
               <label
@@ -319,42 +488,32 @@ const { data, error } = await supabase.auth.signUp({
                 </div>
               ) : null}
 
-<button
-  type="button"
-  onClick={async () => {
-    const em = loginEmail.trim();
-    if (!em) {
-      alert("Enter your email above first.");
-      return;
-    }
-    if (!emailRx.test(em)) {
-      alert("Please enter a valid email.");
-      return;
-    }
+              <div
+                style={{
+                  fontSize: 12,
+                  marginBottom: 12,
+                  color: "#64748b",
+                  textAlign: "right",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={openResetMode}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    margin: 0,
+                    cursor: "pointer",
+                    color: "#0f172a",
+                    textDecoration: "underline",
+                    fontSize: "inherit",
+                  }}
+                >
+                  {tr("auth.forgot", "Forgot password?")}
+                </button>
+              </div>
 
-    const { error } = await supabase.auth.resetPasswordForEmail(em);
-    if (error) {
-      console.error("Reset password error:", error);
-      alert(error.message || "Could not send reset email.");
-      return;
-    }
-
-    alert("If that email exists, a reset link has been sent.");
-  }}
-  style={{
-    fontSize: 12,
-    marginBottom: 12,
-    color: "#2563eb",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    padding: 0,
-    textDecoration: "underline",
-  }}
->
-  {tr("auth.forgot", "Forgot password?")}
-</button>
-  
               <button
                 type="submit"
                 style={{
@@ -371,6 +530,7 @@ const { data, error } = await supabase.auth.signUp({
               </button>
             </form>
           ) : (
+            // ---------- SIGNUP SCREEN ----------
             <form onSubmit={handleSignup}>
               {/* username */}
               <label
@@ -515,6 +675,8 @@ const { data, error } = await supabase.auth.signUp({
     </div>
   );
 }
+
+
 
 
 
