@@ -140,15 +140,17 @@ export default function AuthModal({
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: em,
-      password: pw,
-      options: {
-        data: {
-          username: u,
-        },
-      },
-    });
+const { data, error } = await supabase.auth.signUp({
+  email: em,
+  password: pw,
+  options: {
+    data: {
+      username: u,
+      display_name: u,  
+    },
+  },
+});
+
 
     if (error) {
       console.error("Signup error:", error);
@@ -477,5 +479,6 @@ export default function AuthModal({
     </div>
   );
 }
+
 
 
