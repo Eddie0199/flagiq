@@ -146,6 +146,16 @@ const STRINGS = {
     "auth.passwordNeedSpecial":
       "Password must contain at least one special character.",
 
+        "auth.resetInfo":
+      "Enter your email and we’ll send you a link to reset your password.",
+    "auth.resetEmailSent":
+      "If an account exists for that email, you'll receive a reset link shortly.",
+    "auth.resetError":
+      "Could not send reset link. Please try again.",
+    "auth.sendResetLink": "Send reset link",
+    "auth.backToLogin": "Back to login",
+
+
     "flag.Afghanistan": "Afghanistan",
     "flag.Albania": "Albania",
     "flag.Algeria": "Algeria",
@@ -538,6 +548,16 @@ const STRINGS = {
     "auth.passwordNeedSpecial":
       "La contraseña debe contener al menos un carácter especial.",
 
+        "auth.resetInfo":
+      "Introduce tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.",
+    "auth.resetEmailSent":
+      "Si existe una cuenta con ese correo, recibirás en breve un enlace para restablecer la contraseña.",
+    "auth.resetError":
+      "No se pudo enviar el enlace de restablecimiento. Inténtalo de nuevo.",
+    "auth.sendResetLink": "Enviar enlace de restablecimiento",
+    "auth.backToLogin": "Volver a iniciar sesión",
+
+
     "flag.Afghanistan": "Afganistán",
     "flag.Albania": "Albania",
     "flag.Algeria": "Argelia",
@@ -928,6 +948,16 @@ const STRINGS = {
       "A palavra-passe deve conter pelo menos uma letra minúscula.",
     "auth.passwordNeedSpecial":
       "A palavra-passe deve conter pelo menos um carácter especial.",
+
+        "auth.resetInfo":
+      "Introduza o seu e-mail e enviaremos um link para redefinir a palavra-passe.",
+    "auth.resetEmailSent":
+      "Se existir uma conta com esse e-mail, receberá em breve um link para redefinir a palavra-passe.",
+    "auth.resetError":
+      "Não foi possível enviar o link de redefinição. Tente novamente.",
+    "auth.sendResetLink": "Enviar link de redefinição",
+    "auth.backToLogin": "Voltar ao início de sessão",
+
 
     "flag.Afghanistan": "Afeganistão",
     "flag.Albania": "Albânia",
@@ -1321,6 +1351,16 @@ const STRINGS = {
       "Das Passwort muss mindestens einen Kleinbuchstaben enthalten.",
     "auth.passwordNeedSpecial":
       "Das Passwort muss mindestens ein Sonderzeichen enthalten.",
+
+        "auth.resetInfo":
+      "Gib deine E-Mail ein und wir schicken dir einen Link zum Zurücksetzen deines Passworts.",
+    "auth.resetEmailSent":
+      "Wenn ein Konto mit dieser E-Mail existiert, erhältst du in Kürze einen Link zum Zurücksetzen.",
+    "auth.resetError":
+      "Der Zurücksetzungslink konnte nicht gesendet werden. Bitte versuche es erneut.",
+    "auth.sendResetLink": "Zurücksetzlink senden",
+    "auth.backToLogin": "Zurück zur Anmeldung",
+
 
     "flag.Afghanistan": "Afghanistan",
     "flag.Albania": "Albanien",
@@ -1718,6 +1758,16 @@ const STRINGS = {
     "auth.passwordNeedSpecial":
       "Le mot de passe doit contenir au moins un caractère spécial.",
 
+        "auth.resetInfo":
+      "Saisis ton e-mail et nous t’enverrons un lien pour réinitialiser ton mot de passe.",
+    "auth.resetEmailSent":
+      "Si un compte existe avec cet e-mail, tu recevras bientôt un lien de réinitialisation.",
+    "auth.resetError":
+      "Impossible d’envoyer le lien de réinitialisation. Merci de réessayer.",
+    "auth.sendResetLink": "Envoyer le lien de réinitialisation",
+    "auth.backToLogin": "Retour à la connexion",
+
+
     "flag.Afghanistan": "Afghanistan",
     "flag.Albania": "Albanie",
     "flag.Algeria": "Algérie",
@@ -2107,6 +2157,16 @@ const STRINGS = {
     "auth.passwordNeedSpecial":
       "Wachtwoord moet minstens één speciaal teken bevatten.",
 
+        "auth.resetInfo":
+      "Vul je e-mail in en we sturen je een link om je wachtwoord te resetten.",
+    "auth.resetEmailSent":
+      "Als er een account bestaat met dat e-mailadres, ontvang je binnenkort een resetlink.",
+    "auth.resetError":
+      "De resetlink kon niet worden verzonden. Probeer het opnieuw.",
+    "auth.sendResetLink": "Resetlink verzenden",
+    "auth.backToLogin": "Terug naar inloggen",
+
+
     "flag.Afghanistan": "Afghanistan",
     "flag.Albania": "Albanië",
     "flag.Algeria": "Algerije",
@@ -2365,3 +2425,4 @@ export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
   return pack[key] || STRINGS.en[key] || key;
 }
+
