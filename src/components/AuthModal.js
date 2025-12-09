@@ -1,6 +1,7 @@
 // src/components/AuthModal.js
 import React, { useState } from "react";
-import { emailRx, hashPwd } from "../App";
+import { emailRx } from "../App";
+import { supabase } from "../supabaseClient";
 
 export default function AuthModal({
   lang,
@@ -8,12 +9,12 @@ export default function AuthModal({
   onClose,
   tab,
   setTab,
-  users,
-  setUsers,
+  users,     // kept for compatibility (no longer used)
+  setUsers,  // kept for compatibility (no longer used)
   onLoggedIn,
 }) {
   // login fields
-  const [loginUser, setLoginUser] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
   const [loginPwd, setLoginPwd] = useState("");
   const [loginErr, setLoginErr] = useState("");
 
@@ -51,7 +52,8 @@ export default function AuthModal({
         "Password must contain at least 1 lowercase letter."
       );
     }
-    if (!/[!@#$%^&*(),.?":{}|<>_\-+=]/.test(pwd)) {
+    // at least one non-alphanumeric (special) character
+    if (!/[^A-Za-z0-9]/.test(pwd)) {
       return tr(
         "auth.passwordNeedSpecial",
         "Password must contain at least 1 special character."
@@ -60,40 +62,50 @@ export default function AuthModal({
     return "";
   }
 
-  function handleLogin(e) {
+  // ---------- LOGIN (Supabase) ----------
+  async function handleLogin(e) {
     e.preventDefault();
     setLoginErr("");
 
-    const entered = loginUser.trim();
+    const em = loginEmail.trim();
     const pwd = loginPwd;
 
-    if (!entered || !pwd) {
+    if (!em || !pwd) {
       setLoginErr(
-        tr("auth.missingCredentials", "Please enter your credentials.")
+        tr("auth.missingCredentials", "Please enter your email and password.")
       );
       return;
     }
 
-    // users object shape: { username: { email, pwdHash } }
-    const existing =
-      users[entered] || Object.values(users).find((u) => u.email === entered);
-
-    if (!existing) {
-      setLoginErr(tr("auth.userNotFound", "User not found."));
+    if (!emailRx.test(em)) {
+      setLoginErr(tr("auth.emailInvalid", "Please enter a valid email."));
       return;
     }
 
-    const ok = existing.pwdHash === hashPwd(pwd);
-    if (!ok) {
-      setLoginErr(tr("auth.invalidPassword", "Incorrect password."));
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: em,
+      password: pwd,
+    });
+
+    if (error) {
+      console.error("Login error:", error);
+      setLoginErr(
+        error.message ||
+          tr("auth.invalidPassword", "Incorrect email or password.")
+      );
       return;
     }
 
-    onLoggedIn && onLoggedIn(existing.username);
+    const user = data.user;
+    const username =
+      user?.user_metadata?.username || user?.email || em;
+
+    onLoggedIn && onLoggedIn(username);
     onClose && onClose();
   }
 
-  function handleSignup(e) {
+  // ---------- SIGNUP (Supabase) ----------
+  async function handleSignup(e) {
     e.preventDefault();
     setSuErrUser("");
     setSuErrEmail("");
@@ -111,13 +123,7 @@ export default function AuthModal({
       return;
     }
 
-    // unique username?
-    if (users[u]) {
-      setSuErrUser(tr("auth.usernameTaken", "That username is already taken."));
-      return;
-    }
-
-    // ✅ email is now REQUIRED
+    // email required
     if (!em) {
       setSuErrEmail(tr("auth.emailRequired", "Email address is required."));
       return;
@@ -134,20 +140,29 @@ export default function AuthModal({
       return;
     }
 
-    // all good → create
-    const newUser = {
-      username: u,
+    const { data, error } = await supabase.auth.signUp({
       email: em,
-      pwdHash: hashPwd(pw),
-    };
-
-    setUsers({
-      ...users,
-      [u]: newUser,
+      password: pw,
+      options: {
+        data: {
+          username: u,
+        },
+      },
     });
 
-    // auto-login new user
-    onLoggedIn && onLoggedIn(u);
+    if (error) {
+      console.error("Signup error:", error);
+      setSuErrEmail(
+        error.message ||
+          tr("auth.genericSignupError", "Could not create account.")
+      );
+      return;
+    }
+
+    const user = data.user;
+    const username = user?.user_metadata?.username || u;
+
+    onLoggedIn && onLoggedIn(username);
     onClose && onClose();
   }
 
@@ -244,27 +259,24 @@ export default function AuthModal({
         <div style={{ padding: "0 20px 20px 20px" }}>
           {tab === "login" ? (
             <form onSubmit={handleLogin}>
-              {/* email / username */}
+              {/* email */}
               <label
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
-                {tr("auth.emailOrUsername", "Email or Username")}
+                {tr("auth.email", "Email")}
               </label>
               <input
-                value={loginUser}
-                onChange={(e) => setLoginUser(e.target.value)}
-                placeholder={tr(
-                  "auth.emailOrUsernamePlaceholder",
-                  "Enter your email or username"
-                )}
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                placeholder={tr("auth.emailPlaceholder", "Enter your email")}
                 style={{
                   width: "100%",
                   padding: "8px 10px",
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 10,
-                  fontSize: 16, // prevent mobile zoom
-                  boxSizing: "border-box", // keep inside container
+                  fontSize: 16,
+                  boxSizing: "border-box",
                 }}
               />
 
@@ -288,7 +300,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 4,
-                  fontSize: 16, // prevent mobile zoom
+                  fontSize: 16,
                   boxSizing: "border-box",
                 }}
               />
@@ -338,7 +350,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 4,
-                  fontSize: 16, // prevent mobile zoom
+                  fontSize: 16,
                   boxSizing: "border-box",
                 }}
               />
@@ -356,11 +368,11 @@ export default function AuthModal({
                 </div>
               )}
 
-              {/* email (optional) */}
+              {/* email */}
               <label
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
-                {tr("auth.email", "Email (optional)")}
+                {tr("auth.email", "Email")}
               </label>
               <input
                 value={suEmail}
@@ -372,7 +384,7 @@ export default function AuthModal({
                   borderRadius: 10,
                   border: "1px solid #e2e8f0",
                   marginBottom: 4,
-                  fontSize: 16, // prevent mobile zoom
+                  fontSize: 16,
                   boxSizing: "border-box",
                 }}
               />
@@ -404,7 +416,7 @@ export default function AuthModal({
                     padding: "8px 10px",
                     borderRadius: 10,
                     border: "1px solid #e2e8f0",
-                    fontSize: 16, // prevent mobile zoom
+                    fontSize: 16,
                     boxSizing: "border-box",
                   }}
                 />
@@ -465,3 +477,5 @@ export default function AuthModal({
     </div>
   );
 }
+
+
