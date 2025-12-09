@@ -146,10 +146,14 @@ const { data, error } = await supabase.auth.signUp({
   options: {
     data: {
       username: u,
-      display_name: u,  
+      display_name: u,
+      full_name: u,
+      name: u,
+      user_name: u,
     },
   },
 });
+
 
 
     if (error) {
@@ -479,6 +483,7 @@ const { data, error } = await supabase.auth.signUp({
     </div>
   );
 }
+
 
 
 
