@@ -131,6 +131,15 @@ const STRINGS = {
     "auth.passwordHint":
       "At least 6 characters, 1 uppercase, 1 lowercase, 1 special.",
 
+    "auth.passwordConfirm": "Confirm password",
+"auth.resetTitle": "Reset your password",
+"auth.resetIntro": "Choose a new password for your FlagIQ account.",
+"auth.resetSubmit": "Save new password",
+"auth.resetSuccess": "Your password has been updated. You can now return to the app and log in.",
+"auth.resetMismatch": "Passwords do not match.",
+"auth.resetError": "Could not update your password. The link may have expired.",
+
+
     // errors
     "auth.missingCredentials": "Please enter your credentials.",
     "auth.userNotFound": "User not found.",
@@ -532,6 +541,15 @@ const STRINGS = {
     "auth.passwordHint":
       "Al menos 6 caracteres, 1 mayúscula, 1 minúscula y 1 carácter especial.",
 
+    "auth.passwordConfirm": "Confirmar contraseña",
+"auth.resetTitle": "Restablecer tu contraseña",
+"auth.resetIntro": "Elige una nueva contraseña para tu cuenta de FlagIQ.",
+"auth.resetSubmit": "Guardar nueva contraseña",
+"auth.resetSuccess": "Tu contraseña se ha actualizado. Ahora puedes volver a la app e iniciar sesión.",
+"auth.resetMismatch": "Las contraseñas no coinciden.",
+"auth.resetError": "No se pudo actualizar tu contraseña. Es posible que el enlace haya caducado.",
+
+
     // errores
     "auth.missingCredentials": "Por favor, introduce tus credenciales.",
     "auth.userNotFound": "Usuario no encontrado.",
@@ -931,6 +949,15 @@ const STRINGS = {
     "auth.forgot": "Esqueceu-se da palavra-passe?",
     "auth.passwordHint":
       "Pelo menos 6 caracteres, 1 maiúscula, 1 minúscula e 1 carácter especial.",
+
+    "auth.passwordConfirm": "Confirmar palavra-passe",
+"auth.resetTitle": "Redefinir a sua palavra-passe",
+"auth.resetIntro": "Escolha uma nova palavra-passe para a sua conta FlagIQ.",
+"auth.resetSubmit": "Guardar nova palavra-passe",
+"auth.resetSuccess": "A sua palavra-passe foi atualizada. Já pode voltar à aplicação e iniciar sessão.",
+"auth.resetMismatch": "As palavras-passe não coincidem.",
+"auth.resetError": "Não foi possível atualizar a palavra-passe. O link pode ter expirado.",
+
 
     // erros
     "auth.missingCredentials": "Por favor, insira as suas credenciais.",
@@ -1334,6 +1361,15 @@ const STRINGS = {
     "auth.forgot": "Passwort vergessen?",
     "auth.passwordHint":
       "Mindestens 6 Zeichen, 1 Großbuchstabe, 1 Kleinbuchstabe, 1 Sonderzeichen.",
+
+    "auth.passwordConfirm": "Passwort bestätigen",
+"auth.resetTitle": "Neues Passwort festlegen",
+"auth.resetIntro": "Wähle ein neues Passwort für dein FlagIQ-Konto.",
+"auth.resetSubmit": "Neues Passwort speichern",
+"auth.resetSuccess": "Dein Passwort wurde aktualisiert. Du kannst jetzt zur App zurückkehren und dich einloggen.",
+"auth.resetMismatch": "Die Passwörter stimmen nicht überein.",
+"auth.resetError": "Dein Passwort konnte nicht aktualisiert werden. Der Link ist möglicherweise abgelaufen.",
+
 
     // Fehler
     "auth.missingCredentials": "Bitte gib deine Anmeldedaten ein.",
@@ -1741,6 +1777,15 @@ const STRINGS = {
     "auth.passwordHint":
       "Au moins 6 caractères, 1 majuscule, 1 minuscule, 1 caractère spécial.",
 
+    "auth.passwordConfirm": "Confirmer le mot de passe",
+"auth.resetTitle": "Réinitialiser votre mot de passe",
+"auth.resetIntro": "Choisissez un nouveau mot de passe pour votre compte FlagIQ.",
+"auth.resetSubmit": "Enregistrer le nouveau mot de passe",
+"auth.resetSuccess": "Votre mot de passe a été mis à jour. Vous pouvez maintenant revenir à l’application et vous connecter.",
+"auth.resetMismatch": "Les mots de passe ne correspondent pas.",
+"auth.resetError": "Impossible de mettre à jour votre mot de passe. Le lien a peut-être expiré.",
+
+
     // erreurs
     "auth.missingCredentials": "Veuillez entrer vos identifiants.",
     "auth.userNotFound": "Utilisateur introuvable.",
@@ -2142,6 +2187,15 @@ const STRINGS = {
     "auth.passwordHint":
       "Minimaal 6 tekens, 1 hoofdletter, 1 kleine letter, 1 speciaal teken.",
 
+    "auth.passwordConfirm": "Wachtwoord bevestigen",
+"auth.resetTitle": "Stel een nieuw wachtwoord in",
+"auth.resetIntro": "Kies een nieuw wachtwoord voor je FlagIQ-account.",
+"auth.resetSubmit": "Nieuw wachtwoord opslaan",
+"auth.resetSuccess": "Je wachtwoord is bijgewerkt. Je kunt nu terug naar de app en inloggen.",
+"auth.resetMismatch": "De wachtwoorden komen niet overeen.",
+"auth.resetError": "Je wachtwoord kon niet worden bijgewerkt. De link is mogelijk verlopen.",
+
+
     // fouten
     "auth.missingCredentials": "Voer je gegevens in.",
     "auth.userNotFound": "Gebruiker niet gevonden.",
@@ -2425,4 +2479,5 @@ export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
   return pack[key] || STRINGS.en[key] || key;
 }
+
 
