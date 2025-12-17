@@ -1,5 +1,5 @@
 // src/ResetPasswordPage.js
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { t as translate } from "./i18n";
 
@@ -39,11 +39,46 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  // 🔑 IMPORTANT: hydrate recovery session from URL
+  useEffect(() => {
+    async function initSession() {
+      const { data, error } = await supabase.auth.getSessionFromUrl({
+        storeSession: true,
+      });
+
+      if (error || !data?.session) {
+        console.error("Invalid or expired recovery link:", error);
+        setError(
+          tr(
+            "auth.resetInvalid",
+            "This reset link is invalid or has expired. Please request a new one."
+          )
+        );
+        return;
+      }
+
+      setSessionReady(true);
+    }
+
+    initSession();
+  }, [tr]);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSuccess("");
+
+    if (!sessionReady) {
+      setError(
+        tr(
+          "auth.resetInvalid",
+          "This reset link is invalid or has expired. Please request a new one."
+        )
+      );
+      return;
+    }
 
     if (!pwd1 || !pwd2 || pwd1 !== pwd2) {
       setError(tr("auth.resetMismatch", "Passwords do not match."));
@@ -113,6 +148,7 @@ export default function ResetPasswordPage() {
         >
           {tr("auth.resetTitle", "Reset your password")}
         </h1>
+
         <p
           style={{
             fontSize: 14,
@@ -127,11 +163,10 @@ export default function ResetPasswordPage() {
         </p>
 
         <form onSubmit={handleSubmit}>
-          <label
-            style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
-          >
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
             {tr("auth.password", "Password")}
           </label>
+
           <div style={{ position: "relative", marginBottom: 8 }}>
             <input
               type={showPwd ? "text" : "password"}
@@ -164,17 +199,14 @@ export default function ResetPasswordPage() {
                 color: "#0f172a",
               }}
             >
-              {showPwd
-                ? tr("auth.hide", "Hide")
-                : tr("auth.show", "Show")}
+              {showPwd ? tr("auth.hide", "Hide") : tr("auth.show", "Show")}
             </button>
           </div>
 
-          <label
-            style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
-          >
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
             {tr("auth.passwordConfirm", "Confirm password")}
           </label>
+
           <input
             type={showPwd ? "text" : "password"}
             value={pwd2}
@@ -207,29 +239,17 @@ export default function ResetPasswordPage() {
             )}
           </div>
 
-          {error ? (
-            <div
-              style={{
-                color: "#b91c1c",
-                fontSize: 13,
-                marginBottom: 8,
-              }}
-            >
+          {error && (
+            <div style={{ color: "#b91c1c", fontSize: 13, marginBottom: 8 }}>
               {error}
             </div>
-          ) : null}
+          )}
 
-          {success ? (
-            <div
-              style={{
-                color: "#15803d",
-                fontSize: 13,
-                marginBottom: 8,
-              }}
-            >
+          {success && (
+            <div style={{ color: "#15803d", fontSize: 13, marginBottom: 8 }}>
               {success}
             </div>
-          ) : null}
+          )}
 
           <button
             type="submit"
