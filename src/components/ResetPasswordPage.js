@@ -1,7 +1,7 @@
 // src/ResetPasswordPage.js
 import React, { useEffect, useState } from "react";
-import { supabase } from "../supabaseClient";
-import { t as translate } from "../i18n";
+import { supabase } from "./supabaseClient";
+import { t as translate } from "./i18n";
 
 function validatePassword(pwd, tr) {
   if (!pwd || pwd.length < 6) {
@@ -29,7 +29,6 @@ function validatePassword(pwd, tr) {
 }
 
 export default function ResetPasswordPage() {
-  // read last chosen language, or default to English
   const savedLang = window.localStorage.getItem("flagLang") || "en";
   const tr = (key, fallback) => translate(savedLang, key) || fallback;
 
@@ -39,43 +38,59 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionReady, setSessionReady] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  // 🔑 IMPORTANT: hydrate recovery session from URL
+  // 🔑 Establish recovery session
   useEffect(() => {
-    async function initSession() {
-      const { data, error } = await supabase.auth.getSessionFromUrl({
-        storeSession: true,
-      });
+    let unsub = null;
 
-      if (error || !data?.session) {
-        console.error("Invalid or expired recovery link:", error);
-        setError(
-          tr(
-            "auth.resetInvalid",
-            "This reset link is invalid or has expired. Please request a new one."
-          )
-        );
+    async function init() {
+      setError("");
+      setReady(false);
+
+      // PKCE-style reset links (?code=...)
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get("code");
+      if (code) {
+        const { error: exErr } =
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exErr) {
+          setError(
+            tr(
+              "auth.resetInvalid",
+              "This reset link is invalid or has expired."
+            )
+          );
+          return;
+        }
+        setReady(true);
         return;
       }
 
-      setSessionReady(true);
+      // Hash-token / PASSWORD_RECOVERY flow
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+          setReady(true);
+        }
+      });
+      unsub = data?.subscription;
+
+      const { data: sess } = await supabase.auth.getSession();
+      if (sess?.session) setReady(true);
     }
 
-    initSession();
-  }, [tr]);
+    init();
+    return () => unsub?.unsubscribe();
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (!sessionReady) {
+    if (!ready) {
       setError(
-        tr(
-          "auth.resetInvalid",
-          "This reset link is invalid or has expired. Please request a new one."
-        )
+        tr("auth.resetInvalid", "This reset link is invalid or has expired.")
       );
       return;
     }
@@ -98,7 +113,6 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (updateError) {
-      console.error("Reset password error:", updateError);
       setError(
         tr(
           "auth.resetError",
@@ -127,7 +141,6 @@ export default function ResetPasswordPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: 16,
-        boxSizing: "border-box",
       }}
     >
       <div
@@ -139,23 +152,11 @@ export default function ResetPasswordPage() {
           padding: "20px 22px 22px",
         }}
       >
-        <h1
-          style={{
-            fontSize: 22,
-            fontWeight: 700,
-            marginBottom: 6,
-          }}
-        >
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
           {tr("auth.resetTitle", "Reset your password")}
         </h1>
 
-        <p
-          style={{
-            fontSize: 14,
-            color: "#64748b",
-            marginBottom: 16,
-          }}
-        >
+        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
           {tr(
             "auth.resetIntro",
             "Choose a new password for your FlagIQ account."
@@ -163,7 +164,7 @@ export default function ResetPasswordPage() {
         </p>
 
         <form onSubmit={handleSubmit}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
+          <label style={{ fontWeight: 600 }}>
             {tr("auth.password", "Password")}
           </label>
 
@@ -181,8 +182,6 @@ export default function ResetPasswordPage() {
                 padding: "8px 10px",
                 borderRadius: 10,
                 border: "1px solid #e2e8f0",
-                fontSize: 16,
-                boxSizing: "border-box",
               }}
             />
             <button
@@ -192,18 +191,17 @@ export default function ResetPasswordPage() {
                 position: "absolute",
                 right: 8,
                 top: 6,
+                background: "none",
                 border: "none",
-                background: "transparent",
                 cursor: "pointer",
                 fontSize: 12,
-                color: "#0f172a",
               }}
             >
               {showPwd ? tr("auth.hide", "Hide") : tr("auth.show", "Show")}
             </button>
           </div>
 
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
+          <label style={{ fontWeight: 600 }}>
             {tr("auth.passwordConfirm", "Confirm password")}
           </label>
 
@@ -220,19 +218,11 @@ export default function ResetPasswordPage() {
               padding: "8px 10px",
               borderRadius: 10,
               border: "1px solid #e2e8f0",
-              fontSize: 16,
-              boxSizing: "border-box",
               marginBottom: 6,
             }}
           />
 
-          <div
-            style={{
-              fontSize: 12,
-              marginBottom: 6,
-              color: "#94a3b8",
-            }}
-          >
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
             {tr(
               "auth.passwordHint",
               "At least 6 characters, 1 uppercase, 1 lowercase, 1 special."
@@ -240,31 +230,24 @@ export default function ResetPasswordPage() {
           </div>
 
           {error && (
-            <div style={{ color: "#b91c1c", fontSize: 13, marginBottom: 8 }}>
-              {error}
-            </div>
+            <div style={{ color: "#b91c1c", fontSize: 13 }}>{error}</div>
           )}
-
           {success && (
-            <div style={{ color: "#15803d", fontSize: 13, marginBottom: 8 }}>
-              {success}
-            </div>
+            <div style={{ color: "#15803d", fontSize: 13 }}>{success}</div>
           )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !ready}
             style={{
               width: "100%",
+              marginTop: 8,
               background: "#0f172a",
               color: "#fff",
-              border: "none",
               borderRadius: 14,
               padding: "10px 12px",
               fontWeight: 700,
-              cursor: "pointer",
-              marginTop: 4,
-              opacity: loading ? 0.7 : 1,
+              opacity: loading || !ready ? 0.6 : 1,
             }}
           >
             {loading
