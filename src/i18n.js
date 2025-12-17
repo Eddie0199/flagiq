@@ -138,6 +138,8 @@ const STRINGS = {
 "auth.resetSuccess": "Your password has been updated. You can now return to the app and log in.",
 "auth.resetMismatch": "Passwords do not match.",
 "auth.resetError": "Could not update your password. The link may have expired.",
+    "auth.resetInvalid": "This reset link is invalid or has expired.",
+
 
 
     // errors
@@ -548,6 +550,8 @@ const STRINGS = {
 "auth.resetSuccess": "Tu contraseña se ha actualizado. Ahora puedes volver a la app e iniciar sesión.",
 "auth.resetMismatch": "Las contraseñas no coinciden.",
 "auth.resetError": "No se pudo actualizar tu contraseña. Es posible que el enlace haya caducado.",
+    "auth.resetInvalid": "Este enlace de restablecimiento no es válido o ha caducado.",
+
 
 
     // errores
@@ -957,6 +961,8 @@ const STRINGS = {
 "auth.resetSuccess": "A sua palavra-passe foi atualizada. Já pode voltar à aplicação e iniciar sessão.",
 "auth.resetMismatch": "As palavras-passe não coincidem.",
 "auth.resetError": "Não foi possível atualizar a palavra-passe. O link pode ter expirado.",
+        "auth.resetInvalid": "Este link de redefinição é inválido ou expirou.",
+
 
 
     // erros
@@ -1369,6 +1375,8 @@ const STRINGS = {
 "auth.resetSuccess": "Dein Passwort wurde aktualisiert. Du kannst jetzt zur App zurückkehren und dich einloggen.",
 "auth.resetMismatch": "Die Passwörter stimmen nicht überein.",
 "auth.resetError": "Dein Passwort konnte nicht aktualisiert werden. Der Link ist möglicherweise abgelaufen.",
+        "auth.resetInvalid": "Dieser Zurücksetzungslink ist ungültig oder abgelaufen.",
+
 
 
     // Fehler
@@ -1784,6 +1792,8 @@ const STRINGS = {
 "auth.resetSuccess": "Votre mot de passe a été mis à jour. Vous pouvez maintenant revenir à l’application et vous connecter.",
 "auth.resetMismatch": "Les mots de passe ne correspondent pas.",
 "auth.resetError": "Impossible de mettre à jour votre mot de passe. Le lien a peut-être expiré.",
+        "auth.resetInvalid": "Ce lien de réinitialisation est invalide ou a expiré.",
+
 
 
     // erreurs
@@ -2194,6 +2204,8 @@ const STRINGS = {
 "auth.resetSuccess": "Je wachtwoord is bijgewerkt. Je kunt nu terug naar de app en inloggen.",
 "auth.resetMismatch": "De wachtwoorden komen niet overeen.",
 "auth.resetError": "Je wachtwoord kon niet worden bijgewerkt. De link is mogelijk verlopen.",
+        "auth.resetInvalid": "Deze resetlink is ongeldig of verlopen.",
+
 
 
     // fouten
@@ -2479,5 +2491,6 @@ export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
   return pack[key] || STRINGS.en[key] || key;
 }
+
 
 
