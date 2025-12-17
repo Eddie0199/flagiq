@@ -139,6 +139,8 @@ const STRINGS = {
 "auth.resetMismatch": "Passwords do not match.",
 "auth.resetError": "Could not update your password. The link may have expired.",
     "auth.resetInvalid": "This reset link is invalid or has expired.",
+    "auth.passwordPlaceholder2": "Re-enter your new password",
+
 
 
 
@@ -551,6 +553,7 @@ const STRINGS = {
 "auth.resetMismatch": "Las contraseñas no coinciden.",
 "auth.resetError": "No se pudo actualizar tu contraseña. Es posible que el enlace haya caducado.",
     "auth.resetInvalid": "Este enlace de restablecimiento no es válido o ha caducado.",
+    "auth.passwordPlaceholder2": "Vuelve a introducir tu nueva contraseña",
 
 
 
@@ -947,6 +950,7 @@ const STRINGS = {
     "auth.emailPlaceholder": "Insira o seu e-mail",
     "auth.emailRequired": "O endereço de e-mail é obrigatório.",
     "auth.emailInvalid": "Por favor, insira um endereço de e-mail válido.",
+    "auth.passwordPlaceholder2": "Volta a introduzir a tua nova palavra-passe",
 
     "auth.show": "Mostrar",
     "auth.hide": "Ocultar",
@@ -1376,6 +1380,7 @@ const STRINGS = {
 "auth.resetMismatch": "Die Passwörter stimmen nicht überein.",
 "auth.resetError": "Dein Passwort konnte nicht aktualisiert werden. Der Link ist möglicherweise abgelaufen.",
         "auth.resetInvalid": "Dieser Zurücksetzungslink ist ungültig oder abgelaufen.",
+    "auth.passwordPlaceholder2": "Gib dein neues Passwort erneut ein",
 
 
 
@@ -1793,6 +1798,7 @@ const STRINGS = {
 "auth.resetMismatch": "Les mots de passe ne correspondent pas.",
 "auth.resetError": "Impossible de mettre à jour votre mot de passe. Le lien a peut-être expiré.",
         "auth.resetInvalid": "Ce lien de réinitialisation est invalide ou a expiré.",
+    "auth.passwordPlaceholder2": "Saisissez à nouveau votre nouveau mot de passe",
 
 
 
@@ -2205,6 +2211,7 @@ const STRINGS = {
 "auth.resetMismatch": "De wachtwoorden komen niet overeen.",
 "auth.resetError": "Je wachtwoord kon niet worden bijgewerkt. De link is mogelijk verlopen.",
         "auth.resetInvalid": "Deze resetlink is ongeldig of verlopen.",
+  "auth.passwordPlaceholder2": "Voer je nieuwe wachtwoord opnieuw in",
 
 
 
@@ -2491,6 +2498,7 @@ export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
   return pack[key] || STRINGS.en[key] || key;
 }
+
 
 
 
