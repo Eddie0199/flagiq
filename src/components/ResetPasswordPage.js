@@ -1,7 +1,7 @@
 // src/ResetPasswordPage.js
 import React, { useEffect, useState } from "react";
 import { supabase } from "../supabaseClient";
-import { t as translate } from "./i18n";
+import { t as translate } from "../i18n";
 
 function validatePassword(pwd, tr) {
   if (!pwd || pwd.length < 6) {
