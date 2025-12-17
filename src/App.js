@@ -351,21 +351,6 @@ export default function App() {
     return <ResetPasswordPage />;
   }
 
-  // 🔹 NEW: simple Supabase connectivity test (runs once on load)
-  useEffect(() => {
-    async function testSupabase() {
-      try {
-        const { data, error } = await supabase
-          .from("nonexistent_table")
-          .select("*");
-        console.log("Supabase test:", { data, error });
-      } catch (err) {
-        console.error("Supabase test error:", err);
-      }
-    }
-    testSupabase();
-  }, []);
-
   // preferences
   const [lang, setLang] = useLocalStorage("flagiq:lang", "en");
   const [soundOn, setSoundOn] = useLocalStorage("flagiq:soundOn", true);
