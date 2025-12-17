@@ -11,6 +11,7 @@ import AuthModal from "./components/AuthModal";
 import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
+import ResetPasswordPage from "./components/ResetPasswordPage";
 
 // 🔹 NEW: Supabase client import
 import { supabase } from "./supabaseClient";
