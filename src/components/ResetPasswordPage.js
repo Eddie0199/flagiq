@@ -1,5 +1,5 @@
 // src/components/ResetPasswordPage.js
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { t as translate } from "../i18n";
 
@@ -8,22 +8,13 @@ function validatePassword(pwd, tr) {
     return tr("auth.passwordTooShort", "Password must be at least 6 characters.");
   }
   if (!/[A-Z]/.test(pwd)) {
-    return tr(
-      "auth.passwordNeedUpper",
-      "Password must contain at least 1 uppercase letter."
-    );
+    return tr("auth.passwordNeedUpper", "Password must contain at least 1 uppercase letter.");
   }
   if (!/[a-z]/.test(pwd)) {
-    return tr(
-      "auth.passwordNeedLower",
-      "Password must contain at least 1 lowercase letter."
-    );
+    return tr("auth.passwordNeedLower", "Password must contain at least 1 lowercase letter.");
   }
   if (!/[^A-Za-z0-9]/.test(pwd)) {
-    return tr(
-      "auth.passwordNeedSpecial",
-      "Password must contain at least 1 special character."
-    );
+    return tr("auth.passwordNeedSpecial", "Password must contain at least 1 special character.");
   }
   return "";
 }
@@ -32,8 +23,13 @@ export default function ResetPasswordPage() {
   const initialLang = window.localStorage.getItem("flagLang") || "en";
   const [lang, setLang] = useState(initialLang);
 
+  // ✅ Fix missing translations: if translate() returns the key itself, use fallback
   const tr = useMemo(() => {
-    return (key, fallback) => translate(lang, key) || fallback;
+    return (key, fallback) => {
+      const val = translate(lang, key);
+      if (!val || val === key) return fallback;
+      return val;
+    };
   }, [lang]);
 
   const [pwd1, setPwd1] = useState("");
@@ -48,6 +44,15 @@ export default function ResetPasswordPage() {
     setLang(next);
     window.localStorage.setItem("flagLang", next);
   }
+
+  // ✅ After success, optionally redirect home
+  useEffect(() => {
+    if (!success) return;
+    const t = setTimeout(() => {
+      window.location.assign("/");
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [success]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -73,12 +78,7 @@ export default function ResetPasswordPage() {
 
     if (updateError) {
       console.error("Reset password error:", updateError);
-      setError(
-        tr(
-          "auth.resetInvalid",
-          "This reset link is invalid or has expired."
-        )
-      );
+      setError(tr("auth.resetInvalid", "This reset link is invalid or has expired."));
       return;
     }
 
@@ -92,12 +92,13 @@ export default function ResetPasswordPage() {
     setPwd2("");
   }
 
+  // ✅ iOS zoom prevention: keep inputs/selects at 16px+
   const inputStyle = {
     width: "100%",
     padding: "10px 12px",
-    borderRadius: 10,
+    borderRadius: 12,
     border: "1px solid #e2e8f0",
-    fontSize: 16, // ✅ stops iOS zoom
+    fontSize: 16,
     lineHeight: "20px",
     boxSizing: "border-box",
     outline: "none",
@@ -106,41 +107,40 @@ export default function ResetPasswordPage() {
   return (
     <div
       style={{
-        minHeight: "100vh",
+        height: "100dvh",          // ✅ better than 100vh on mobile
+        minHeight: "100dvh",
+        overflow: "hidden",        // ✅ prevents page scroll
         background: "linear-gradient(135deg,#0f172a,#1d293b)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: 16,
+        padding: 12,
         boxSizing: "border-box",
-        WebkitTextSizeAdjust: "100%", // ✅ helps prevent odd iOS scaling
+        WebkitTextSizeAdjust: "100%",
       }}
     >
       <div
         style={{
           width: "min(420px, 100%)",
+          maxHeight: "calc(100dvh - 24px)", // ✅ keep inside viewport
+          overflowY: "auto",                // ✅ only scroll if genuinely needed
+          WebkitOverflowScrolling: "touch",
           background: "#fff",
           borderRadius: 18,
           boxShadow: "0 20px 60px rgba(15,23,42,.35)",
-          padding: "18px 20px 22px",
+          padding: "14px 16px 16px",
         }}
       >
         {/* Language selector */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginBottom: 10,
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
           <select
             value={lang}
             onChange={handleLangChange}
             aria-label="Language"
             style={{
-              fontSize: 16, // ✅ keep >=16 to avoid zoom
+              fontSize: 16,
               padding: "8px 10px",
-              borderRadius: 10,
+              borderRadius: 12,
               border: "1px solid #e2e8f0",
               background: "#fff",
               cursor: "pointer",
@@ -155,19 +155,20 @@ export default function ResetPasswordPage() {
           </select>
         </div>
 
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 6px 0" }}>
           {tr("auth.resetTitle", "Reset your password")}
         </h1>
-        <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
+
+        <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 14px 0" }}>
           {tr("auth.resetIntro", "Choose a new password for your FlagIQ account.")}
         </p>
 
         <form onSubmit={handleSubmit}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+          <label style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>
             {tr("auth.password", "Password")}
           </label>
 
-          <div style={{ position: "relative", marginBottom: 10 }}>
+          <div style={{ position: "relative", marginBottom: 12 }}>
             <input
               type={showPwd ? "text" : "password"}
               value={pwd1}
@@ -175,7 +176,6 @@ export default function ResetPasswordPage() {
               placeholder={tr("auth.passwordPlaceholder", "Enter your new password")}
               style={inputStyle}
               autoComplete="new-password"
-              inputMode="text"
             />
             <button
               type="button"
@@ -196,7 +196,7 @@ export default function ResetPasswordPage() {
             </button>
           </div>
 
-          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
+          <label style={{ display: "block", fontWeight: 700, marginBottom: 6 }}>
             {tr("auth.passwordConfirm", "Confirm password")}
           </label>
 
@@ -205,12 +205,11 @@ export default function ResetPasswordPage() {
             value={pwd2}
             onChange={(e) => setPwd2(e.target.value)}
             placeholder={tr("auth.passwordPlaceholder2", "Re-enter your new password")}
-            style={{ ...inputStyle, marginBottom: 8 }}
+            style={{ ...inputStyle, marginBottom: 10 }}
             autoComplete="new-password"
-            inputMode="text"
           />
 
-          <div style={{ fontSize: 12, marginBottom: 8, color: "#94a3b8" }}>
+          <div style={{ fontSize: 12, marginBottom: 10, color: "#94a3b8" }}>
             {tr(
               "auth.passwordHint",
               "At least 6 characters, 1 uppercase, 1 lowercase, 1 special."
@@ -226,6 +225,20 @@ export default function ResetPasswordPage() {
           {success ? (
             <div style={{ color: "#15803d", fontSize: 13, marginBottom: 10 }}>
               {success}
+              <div style={{ marginTop: 10 }}>
+                <a
+                  href="/"
+                  style={{
+                    display: "inline-block",
+                    fontSize: 14,
+                    textDecoration: "none",
+                    fontWeight: 700,
+                    color: "#0f172a",
+                  }}
+                >
+                  {tr("auth.backHome", "Back to FlagIQ")}
+                </a>
+              </div>
             </div>
           ) : null}
 
@@ -239,10 +252,9 @@ export default function ResetPasswordPage() {
               border: "none",
               borderRadius: 14,
               padding: "12px 12px",
-              fontSize: 16, // ✅ keep >=16
-              fontWeight: 700,
+              fontSize: 16,
+              fontWeight: 800,
               cursor: "pointer",
-              marginTop: 4,
               opacity: loading ? 0.7 : 1,
             }}
           >
@@ -253,4 +265,5 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+
 
