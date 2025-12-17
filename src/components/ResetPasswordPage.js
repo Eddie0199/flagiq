@@ -1,5 +1,5 @@
-// src/ResetPasswordPage.js
-import React, { useEffect, useState } from "react";
+// src/components/ResetPasswordPage.js
+import React, { useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { t as translate } from "../i18n";
 
@@ -29,8 +29,12 @@ function validatePassword(pwd, tr) {
 }
 
 export default function ResetPasswordPage() {
-  const savedLang = window.localStorage.getItem("flagLang") || "en";
-  const tr = (key, fallback) => translate(savedLang, key) || fallback;
+  const initialLang = window.localStorage.getItem("flagLang") || "en";
+  const [lang, setLang] = useState(initialLang);
+
+  const tr = useMemo(() => {
+    return (key, fallback) => translate(lang, key) || fallback;
+  }, [lang]);
 
   const [pwd1, setPwd1] = useState("");
   const [pwd2, setPwd2] = useState("");
@@ -38,62 +42,17 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [ready, setReady] = useState(false);
 
-  // 🔑 Establish recovery session
-  useEffect(() => {
-    let unsub = null;
-
-    async function init() {
-      setError("");
-      setReady(false);
-
-      // PKCE-style reset links (?code=...)
-      const url = new URL(window.location.href);
-      const code = url.searchParams.get("code");
-      if (code) {
-        const { error: exErr } =
-          await supabase.auth.exchangeCodeForSession(code);
-        if (exErr) {
-          setError(
-            tr(
-              "auth.resetInvalid",
-              "This reset link is invalid or has expired."
-            )
-          );
-          return;
-        }
-        setReady(true);
-        return;
-      }
-
-      // Hash-token / PASSWORD_RECOVERY flow
-      const { data } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-          setReady(true);
-        }
-      });
-      unsub = data?.subscription;
-
-      const { data: sess } = await supabase.auth.getSession();
-      if (sess?.session) setReady(true);
-    }
-
-    init();
-    return () => unsub?.unsubscribe();
-  }, []);
+  function handleLangChange(e) {
+    const next = e.target.value;
+    setLang(next);
+    window.localStorage.setItem("flagLang", next);
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSuccess("");
-
-    if (!ready) {
-      setError(
-        tr("auth.resetInvalid", "This reset link is invalid or has expired.")
-      );
-      return;
-    }
 
     if (!pwd1 || !pwd2 || pwd1 !== pwd2) {
       setError(tr("auth.resetMismatch", "Passwords do not match."));
@@ -113,10 +72,11 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (updateError) {
+      console.error("Reset password error:", updateError);
       setError(
         tr(
-          "auth.resetError",
-          "Could not update your password. The link may have expired."
+          "auth.resetInvalid",
+          "This reset link is invalid or has expired."
         )
       );
       return;
@@ -132,6 +92,17 @@ export default function ResetPasswordPage() {
     setPwd2("");
   }
 
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1px solid #e2e8f0",
+    fontSize: 16, // ✅ stops iOS zoom
+    lineHeight: "20px",
+    boxSizing: "border-box",
+    outline: "none",
+  };
+
   return (
     <div
       style={{
@@ -141,6 +112,8 @@ export default function ResetPasswordPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: 16,
+        boxSizing: "border-box",
+        WebkitTextSizeAdjust: "100%", // ✅ helps prevent odd iOS scaling
       }}
     >
       <div
@@ -149,59 +122,81 @@ export default function ResetPasswordPage() {
           background: "#fff",
           borderRadius: 18,
           boxShadow: "0 20px 60px rgba(15,23,42,.35)",
-          padding: "20px 22px 22px",
+          padding: "18px 20px 22px",
         }}
       >
+        {/* Language selector */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginBottom: 10,
+          }}
+        >
+          <select
+            value={lang}
+            onChange={handleLangChange}
+            aria-label="Language"
+            style={{
+              fontSize: 16, // ✅ keep >=16 to avoid zoom
+              padding: "8px 10px",
+              borderRadius: 10,
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              cursor: "pointer",
+            }}
+          >
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="pt">Português</option>
+            <option value="de">Deutsch</option>
+            <option value="fr">Français</option>
+            <option value="nl">Nederlands</option>
+          </select>
+        </div>
+
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>
           {tr("auth.resetTitle", "Reset your password")}
         </h1>
-
         <p style={{ fontSize: 14, color: "#64748b", marginBottom: 16 }}>
-          {tr(
-            "auth.resetIntro",
-            "Choose a new password for your FlagIQ account."
-          )}
+          {tr("auth.resetIntro", "Choose a new password for your FlagIQ account.")}
         </p>
 
         <form onSubmit={handleSubmit}>
-          <label style={{ fontWeight: 600 }}>
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
             {tr("auth.password", "Password")}
           </label>
 
-          <div style={{ position: "relative", marginBottom: 8 }}>
+          <div style={{ position: "relative", marginBottom: 10 }}>
             <input
               type={showPwd ? "text" : "password"}
               value={pwd1}
               onChange={(e) => setPwd1(e.target.value)}
-              placeholder={tr(
-                "auth.passwordPlaceholder",
-                "Enter your new password"
-              )}
-              style={{
-                width: "100%",
-                padding: "8px 10px",
-                borderRadius: 10,
-                border: "1px solid #e2e8f0",
-              }}
+              placeholder={tr("auth.passwordPlaceholder", "Enter your new password")}
+              style={inputStyle}
+              autoComplete="new-password"
+              inputMode="text"
             />
             <button
               type="button"
               onClick={() => setShowPwd((p) => !p)}
               style={{
                 position: "absolute",
-                right: 8,
-                top: 6,
-                background: "none",
+                right: 10,
+                top: 10,
                 border: "none",
+                background: "transparent",
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: 14,
+                color: "#0f172a",
+                padding: 4,
               }}
             >
               {showPwd ? tr("auth.hide", "Hide") : tr("auth.show", "Show")}
             </button>
           </div>
 
-          <label style={{ fontWeight: 600 }}>
+          <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
             {tr("auth.passwordConfirm", "Confirm password")}
           </label>
 
@@ -209,53 +204,53 @@ export default function ResetPasswordPage() {
             type={showPwd ? "text" : "password"}
             value={pwd2}
             onChange={(e) => setPwd2(e.target.value)}
-            placeholder={tr(
-              "auth.passwordPlaceholder",
-              "Re-enter your new password"
-            )}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              borderRadius: 10,
-              border: "1px solid #e2e8f0",
-              marginBottom: 6,
-            }}
+            placeholder={tr("auth.passwordPlaceholder2", "Re-enter your new password")}
+            style={{ ...inputStyle, marginBottom: 8 }}
+            autoComplete="new-password"
+            inputMode="text"
           />
 
-          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
+          <div style={{ fontSize: 12, marginBottom: 8, color: "#94a3b8" }}>
             {tr(
               "auth.passwordHint",
               "At least 6 characters, 1 uppercase, 1 lowercase, 1 special."
             )}
           </div>
 
-          {error && (
-            <div style={{ color: "#b91c1c", fontSize: 13 }}>{error}</div>
-          )}
-          {success && (
-            <div style={{ color: "#15803d", fontSize: 13 }}>{success}</div>
-          )}
+          {error ? (
+            <div style={{ color: "#b91c1c", fontSize: 13, marginBottom: 10 }}>
+              {error}
+            </div>
+          ) : null}
+
+          {success ? (
+            <div style={{ color: "#15803d", fontSize: 13, marginBottom: 10 }}>
+              {success}
+            </div>
+          ) : null}
 
           <button
             type="submit"
-            disabled={loading || !ready}
+            disabled={loading}
             style={{
               width: "100%",
-              marginTop: 8,
               background: "#0f172a",
               color: "#fff",
+              border: "none",
               borderRadius: 14,
-              padding: "10px 12px",
+              padding: "12px 12px",
+              fontSize: 16, // ✅ keep >=16
               fontWeight: 700,
-              opacity: loading || !ready ? 0.6 : 1,
+              cursor: "pointer",
+              marginTop: 4,
+              opacity: loading ? 0.7 : 1,
             }}
           >
-            {loading
-              ? tr("loading", "Loading…")
-              : tr("auth.resetSubmit", "Save new password")}
+            {loading ? tr("loading", "Loading…") : tr("auth.resetSubmit", "Save new password")}
           </button>
         </form>
       </div>
     </div>
   );
 }
+
