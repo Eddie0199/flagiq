@@ -182,9 +182,7 @@ export default function AuthModal({
     const em = resetEmail.trim();
 
     if (!em) {
-      setResetErr(
-        tr("auth.emailRequired", "Email address is required.")
-      );
+      setResetErr(tr("auth.emailRequired", "Email address is required."));
       return;
     }
     if (!emailRx.test(em)) {
@@ -192,18 +190,20 @@ export default function AuthModal({
       return;
     }
 
+    // Ensure the email always redirects to your app reset page
+    const redirectTo = `${window.location.origin}/reset-password`;
+
     try {
       setResetLoading(true);
-      const { error } = await supabase.auth.resetPasswordForEmail(em);
+      const { error } = await supabase.auth.resetPasswordForEmail(em, {
+        redirectTo,
+      });
       setResetLoading(false);
 
       if (error) {
         console.error("Reset error:", error);
         setResetErr(
-          tr(
-            "auth.resetError",
-            "Could not send reset link. Please try again."
-          )
+          tr("auth.resetError", "Could not send reset link. Please try again.")
         );
         return;
       }
@@ -218,10 +218,7 @@ export default function AuthModal({
       console.error("Reset error:", err);
       setResetLoading(false);
       setResetErr(
-        tr(
-          "auth.resetError",
-          "Could not send reset link. Please try again."
-        )
+        tr("auth.resetError", "Could not send reset link. Please try again.")
       );
     }
   }
@@ -237,7 +234,6 @@ export default function AuthModal({
     setIsResetMode(false);
     setResetErr("");
     setResetMsg("");
-    // keep login fields as they are so user can go back easily
   }
 
   return (
@@ -360,10 +356,7 @@ export default function AuthModal({
               <input
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
-                placeholder={tr(
-                  "auth.emailPlaceholder",
-                  "Enter your email"
-                )}
+                placeholder={tr("auth.emailPlaceholder", "Enter your email")}
                 style={{
                   width: "100%",
                   padding: "8px 10px",
@@ -465,10 +458,7 @@ export default function AuthModal({
                 type="password"
                 value={loginPwd}
                 onChange={(e) => setLoginPwd(e.target.value)}
-                placeholder={tr(
-                  "auth.passwordPlaceholder",
-                  "Enter your password"
-                )}
+                placeholder={tr("auth.passwordPlaceholder", "Enter your password")}
                 style={{
                   width: "100%",
                   padding: "8px 10px",
@@ -605,10 +595,7 @@ export default function AuthModal({
                   type={showPwd ? "text" : "password"}
                   value={suPwd}
                   onChange={(e) => setSuPwd(e.target.value)}
-                  placeholder={tr(
-                    "auth.passwordPlaceholder",
-                    "Enter your password"
-                  )}
+                  placeholder={tr("auth.passwordPlaceholder", "Enter your password")}
                   style={{
                     width: "100%",
                     padding: "8px 10px",
@@ -675,6 +662,8 @@ export default function AuthModal({
     </div>
   );
 }
+
+
 
 
 
