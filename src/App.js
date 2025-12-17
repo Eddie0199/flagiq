@@ -341,7 +341,16 @@ function usePerUserHints(username) {
 }
 
 // ================= Main App =================
+function isResetPasswordRoute() {
+  return window.location.pathname === "/reset-password";
+}
+
 export default function App() {
+  // 🔐 Handle Supabase password reset redirect
+  if (isResetPasswordRoute()) {
+    return <ResetPasswordPage />;
+  }
+
   // 🔹 NEW: simple Supabase connectivity test (runs once on load)
   useEffect(() => {
     async function testSupabase() {
