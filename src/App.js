@@ -15,6 +15,12 @@ import ResetPasswordPage from "./components/ResetPasswordPage";
 
 // 🔹 NEW: Supabase client import
 import { supabase } from "./supabaseClient";
+import {
+  ensurePlayerState,
+  getPlayerState,
+  updatePlayerState,
+} from "./playerStateApi";
+
 
 const VERSION = "v1.1";
 
@@ -363,6 +369,8 @@ export default function App() {
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
+  const [backendLoaded, setBackendLoaded] = useState(false);
+
 
   // remember where to go back to when leaving the store
   const [lastNonStoreScreen, setLastNonStoreScreen] = useState("home");
@@ -375,26 +383,73 @@ export default function App() {
     {}
   );
 
+  useEffect(() => {
+  if (!activeUser || !backendLoaded) return;
+
+  const starsByMode = {
+    classic: JSON.parse(
+      localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
+    ),
+    timetrial: JSON.parse(
+      localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
+    ),
+  };
+
+  updatePlayerState(activeUser, {
+    stars_by_mode: starsByMode,
+  });
+}, [starsByLevel, activeUser, backendLoaded, mode]);
+
+
+
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
 
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
-  // load coins from localStorage whenever activeUser changes
-  useEffect(() => {
-    if (!activeUser) {
-      setCoins(0);
-      return;
-    }
+useEffect(() => {
+  if (!activeUser) {
+    setCoins(0);
+    setBackendLoaded(false);
+    return;
+  }
+
+  (async () => {
     try {
-      const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
-      const parsed = raw != null ? Number(raw) : 0;
-      setCoins(Number.isFinite(parsed) ? parsed : 0);
-    } catch {
-      setCoins(0);
+      await ensurePlayerState(activeUser);
+
+      const state = await getPlayerState(activeUser);
+if (state) {
+  setCoins(Number(state.coins) || 0);
+
+  Object.entries(state.stars_by_mode || {}).forEach(
+    ([modeKey, starsMap]) => {
+      localStorage.setItem(
+        `flagiq:u:${activeUser}:${modeKey}:starsBest`,
+        JSON.stringify(starsMap || {})
+      );
     }
-  }, [activeUser]);
+  );
+}
+
+setBackendLoaded(true);
+
+      }
+    } catch {
+  // fallback to local only
+  try {
+    const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
+    setCoins(raw ? Number(raw) : 0);
+  } catch {}
+
+  // ✅ allow later sync back to backend
+  setBackendLoaded(true);
+}
+
+  })();
+}, [activeUser]);
+
 
   // helper to update coins AND persist to localStorage
   const applyCoinsUpdate = (valueOrUpdater) => {
@@ -412,6 +467,15 @@ export default function App() {
       return safe;
     });
   };
+
+  useEffect(() => {
+  if (!activeUser || !backendLoaded) return;
+
+  updatePlayerState(activeUser, {
+    coins,
+  });
+}, [coins, activeUser, backendLoaded]);
+
 
   // Hearts are now stored globally per device, not per user,
   // so they persist reliably across refreshes.
