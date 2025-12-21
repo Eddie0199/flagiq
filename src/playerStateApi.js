@@ -1,34 +1,43 @@
 // src/playerStateApi.js
 import { supabase } from "./supabaseClient";
 
-const MODE_KEYS = ["classic", "timeTrial"];
-
-export async function ensurePlayerRows(userId) {
-  if (!userId) return;
-
-  // 1) Ensure the base row exists (coins etc)
-  const { error: baseErr } = await supabase
+export async function ensurePlayerState(userId) {
+  const { data, error } = await supabase
     .from("player_state")
-    .upsert(
-      { user_id: userId, coins: 0 },
-      { onConflict: "user_id" }
-    );
+    .select("user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (baseErr) throw baseErr;
+  if (error) throw error;
+  if (data) return true;
 
-  // 2) Ensure per-mode rows exist (stars/unlocks)
-  // Adjust column names to match what YOU created in SQL.
-  // Example assumes: player_mode_state(user_id, mode_key, stars_by_level, unlocked_until)
-  const modeRows = MODE_KEYS.map((mode) => ({
-    user_id: userId,
-    mode_key: mode,
-    stars_by_level: {},    // json/jsonb
-    unlocked_until: 5      // first 5 levels unlocked
-  }));
+  const { error: insertError } = await supabase
+    .from("player_state")
+    .insert([{ user_id: userId }]);
 
-  const { error: modeErr } = await supabase
-    .from("player_mode_state")
-    .upsert(modeRows, { onConflict: "user_id,mode_key" });
+  if (insertError) throw insertError;
+  return true;
+}
 
-  if (modeErr) throw modeErr;
+export async function getPlayerState(userId) {
+  const { data, error } = await supabase
+    .from("player_state")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updatePlayerState(userId, patch) {
+  const { data, error } = await supabase
+    .from("player_state")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
 }
