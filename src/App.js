@@ -437,7 +437,6 @@ if (state) {
 
 setBackendLoaded(true);
 
-      }
     } catch (e) {
   // fallback to local only
   try {
