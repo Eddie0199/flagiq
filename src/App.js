@@ -213,14 +213,15 @@ function useLocalStorage(key, init) {
     try {
       const v = localStorage.getItem(key);
       return v ? JSON.parse(v) : init;
-    } catch {
+    } catch (e) {
       return init;
     }
   });
   useEffect(() => {
     try {
       localStorage.setItem(key, JSON.stringify(val));
-    } catch {}
+    } catch (e) {}
+
   }, [key, val]);
   return [val, setVal];
 }
@@ -233,7 +234,7 @@ function useUserStorage(username, suffix, init) {
     try {
       const v = localStorage.getItem(key);
       setVal(v ? JSON.parse(v) : init);
-    } catch {
+    } catch (e) {
       setVal(init);
     }
   }, [username, suffix]);
@@ -241,7 +242,8 @@ function useUserStorage(username, suffix, init) {
     if (!key) return;
     try {
       localStorage.setItem(key, JSON.stringify(val));
-    } catch {}
+    } catch (e) {}
+
   }, [key, val]);
   return [val, setVal];
 }
@@ -265,7 +267,7 @@ function getModeStatsFromLocal(username, mode) {
       level: lastLevel,
       stars: totalStars,
     };
-  } catch {
+  } catch (e) {
     return { level: 0, stars: 0 };
   }
 }
@@ -318,7 +320,7 @@ function loadHintsForUser(username) {
           : {}),
       };
     }
-  } catch {
+  } catch (e) {
     // ignore
   }
   return DEFAULT_HINTS;
@@ -338,7 +340,7 @@ function usePerUserHints(username) {
     if (!username) return;
     try {
       localStorage.setItem(`flagiq:u:${username}:hints`, JSON.stringify(hints));
-    } catch {
+    } catch (e) {
       // ignore
     }
   }, [username, hints]);
@@ -436,12 +438,13 @@ if (state) {
 setBackendLoaded(true);
 
       }
-    } catch {
+    } catch (e) {
   // fallback to local only
   try {
     const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
     setCoins(raw ? Number(raw) : 0);
-  } catch {}
+  } catch (e) {}
+
 
   // ✅ allow later sync back to backend
   setBackendLoaded(true);
@@ -462,7 +465,8 @@ setBackendLoaded(true);
       if (activeUser) {
         try {
           localStorage.setItem(`flagiq:u:${activeUser}:coins`, String(safe));
-        } catch {}
+        } catch (e) {}
+
       }
       return safe;
     });
