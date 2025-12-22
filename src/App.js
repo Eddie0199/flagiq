@@ -248,27 +248,28 @@ function useUserStorage(username, suffix, init) {
   return [val, setVal];
 }
 
-// read per-mode stats for homepage directly from the per-mode starsBest maps
-function getModeStatsFromLocal(username, mode) {
-  if (!username) return { level: 0, stars: 0 };
+// read per-mode stats for homepage based on stars map
+function getModeStatsFromStars(starsMap) {
+  const totalStars = sumStars(starsMap);
+  if (totalStars === 0) {
+    return { level: 0, stars: 0 };
+  }
 
+  const lastLevel = lastCompletedLevel(starsMap);
+  return {
+    level: lastLevel,
+    stars: totalStars,
+  };
+}
+
+function readLocalStars(username, mode) {
+  if (!username) return {};
   try {
     const raw = localStorage.getItem(`flagiq:u:${username}:${mode}:starsBest`);
-    const starsMap =
-      raw && raw !== "null" && raw !== "undefined" ? JSON.parse(raw) : {};
-
-    const totalStars = sumStars(starsMap);
-    if (totalStars === 0) {
-      return { level: 0, stars: 0 };
-    }
-
-    const lastLevel = lastCompletedLevel(starsMap);
-    return {
-      level: lastLevel,
-      stars: totalStars,
-    };
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
   } catch (e) {
-    return { level: 0, stars: 0 };
+    return {};
   }
 }
 
@@ -379,30 +380,11 @@ export default function App() {
 
   // per-user data
   const [levelId, setLevelId] = useUserStorage(activeUser, `${mode}:level`, 1);
-  const [starsByLevel, setStarsByLevel] = useUserStorage(
-    activeUser,
-    `${mode}:starsBest`,
-    {}
-  );
-
-  useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
-
-  const starsByMode = {
-    classic: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-    ),
-    timetrial: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-    ),
-  };
-
-  updatePlayerState(activeUser, {
-    stars_by_mode: starsByMode,
+  const [starsByMode, setStarsByMode] = useState({
+    classic: {},
+    timetrial: {},
   });
-}, [starsByLevel, activeUser, backendLoaded, mode]);
-
-
+  const starsByLevel = starsByMode[mode] || {};
 
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
@@ -410,47 +392,76 @@ export default function App() {
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
-useEffect(() => {
-  if (!activeUser) {
-    setCoins(0);
-    setBackendLoaded(false);
-    return;
-  }
-
-  (async () => {
-    try {
-      await ensurePlayerState(activeUser);
-
-      const state = await getPlayerState(activeUser);
-if (state) {
-  setCoins(Number(state.coins) || 0);
-
-  Object.entries(state.stars_by_mode || {}).forEach(
-    ([modeKey, starsMap]) => {
-      localStorage.setItem(
-        `flagiq:u:${activeUser}:${modeKey}:starsBest`,
-        JSON.stringify(starsMap || {})
-      );
+  useEffect(() => {
+    if (!activeUser) {
+      setCoins(0);
+      setStarsByMode({ classic: {}, timetrial: {} });
+      setBackendLoaded(false);
+      return;
     }
-  );
-}
 
-setBackendLoaded(true);
+    (async () => {
+      try {
+        await ensurePlayerState(activeUser);
 
-    } catch (e) {
-  // fallback to local only
-  try {
-    const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
-    setCoins(raw ? Number(raw) : 0);
-  } catch (e) {}
+        const state = await getPlayerState(activeUser);
+        if (state) {
+          setCoins(Number(state.coins) || 0);
 
+          const backendStars =
+            state.stars_by_mode && typeof state.stars_by_mode === "object"
+              ? state.stars_by_mode
+              : {};
 
-  // ✅ allow later sync back to backend
-  setBackendLoaded(true);
-}
+          const classicFromBackend =
+            backendStars.classic && typeof backendStars.classic === "object"
+              ? backendStars.classic
+              : {};
+          const timeTrialFromBackend =
+            backendStars.timetrial && typeof backendStars.timetrial === "object"
+              ? backendStars.timetrial
+              : {};
 
-  })();
-}, [activeUser]);
+          const mergedStars = {
+            classic: Object.keys(classicFromBackend).length
+              ? classicFromBackend
+              : readLocalStars(activeUser, "classic"),
+            timetrial: Object.keys(timeTrialFromBackend).length
+              ? timeTrialFromBackend
+              : readLocalStars(activeUser, "timetrial"),
+          };
+
+          setStarsByMode(mergedStars);
+
+          Object.entries(mergedStars).forEach(([modeKey, starsMap]) => {
+            try {
+              localStorage.setItem(
+                `flagiq:u:${activeUser}:${modeKey}:starsBest`,
+                JSON.stringify(starsMap || {})
+              );
+            } catch (e) {}
+          });
+        }
+
+        setBackendLoaded(true);
+      } catch (e) {
+        // fallback to local only
+        try {
+          const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
+          setCoins(raw ? Number(raw) : 0);
+        } catch (e2) {}
+
+        const fallbackStars = {
+          classic: readLocalStars(activeUser, "classic"),
+          timetrial: readLocalStars(activeUser, "timetrial"),
+        };
+        setStarsByMode(fallbackStars);
+
+        // ✅ allow later sync back to backend
+        setBackendLoaded(true);
+      }
+    })();
+  }, [activeUser]);
 
 
   // helper to update coins AND persist to localStorage
@@ -471,13 +482,57 @@ setBackendLoaded(true);
     });
   };
 
-  useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+  const handleBestStarsChange = (modeKey, levelNumber, stars) => {
+    if (!modeKey || !Number.isFinite(Number(levelNumber))) return;
 
-  updatePlayerState(activeUser, {
-    coins,
-  });
-}, [coins, activeUser, backendLoaded]);
+    setStarsByMode((prev) => {
+      const currentMode = prev[modeKey] || {};
+      const levelKey = String(levelNumber);
+      const prevBest = Number(currentMode[levelKey]) || 0;
+      const nextBest = Math.max(prevBest, Number(stars) || 0);
+
+      if (nextBest === prevBest) return prev;
+
+      return {
+        ...prev,
+        [modeKey]: {
+          ...currentMode,
+          [levelKey]: nextBest,
+        },
+      };
+    });
+  };
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    updatePlayerState(activeUser, {
+      coins,
+    });
+  }, [coins, activeUser, backendLoaded]);
+
+  useEffect(() => {
+    if (!activeUser) return;
+
+    Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
+      try {
+        localStorage.setItem(
+          `flagiq:u:${activeUser}:${modeKey}:starsBest`,
+          JSON.stringify(starsMap || {})
+        );
+      } catch (e) {}
+    });
+
+    if (!backendLoaded) return;
+
+    (async () => {
+      try {
+        await updatePlayerState(activeUser, { stars_by_mode: starsByMode });
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [starsByMode, activeUser, backendLoaded]);
 
 
   // Hearts are now stored globally per device, not per user,
@@ -586,8 +641,8 @@ setBackendLoaded(true);
   const closeAuth = () => setAuthOpen(false);
 
   // NEW: per-mode stats for homepage cards, based ONLY on per-mode starsBest maps
-  const classicStats = getModeStatsFromLocal(activeUser, "classic");
-  const timetrialStats = getModeStatsFromLocal(activeUser, "timetrial");
+  const classicStats = getModeStatsFromStars(starsByMode.classic || {});
+  const timetrialStats = getModeStatsFromStars(starsByMode.timetrial || {});
 
   const handleHomeStart = (nextMode) => {
     if (!loggedIn) {
@@ -665,6 +720,7 @@ setBackendLoaded(true);
           onStart={handleHomeStart}
           classicStats={classicStats}
           timetrialStats={timetrialStats}
+          starsByMode={starsByMode}
           t={t}
           lang={lang}
           setHints={setHints}
@@ -693,6 +749,7 @@ setBackendLoaded(true);
             onLockedAttempt={(info) => setLockInfo(info)}
             username={activeUser}
             mode={mode}
+            starsByLevel={starsByLevel}
           />
         </>
       )}
@@ -720,7 +777,8 @@ setBackendLoaded(true);
             levelId={levelId}
             levels={levels}
             currentStars={Number(starsByLevel[levelId]) || 0}
-            setStarsByLevel={setStarsByLevel}
+            starsByLevel={starsByLevel}
+            onBestStarsChange={handleBestStarsChange}
             onRunLost={onRunLost}
             soundCorrect={soundCorrect}
             soundWrong={soundWrong}

@@ -1,11 +1,7 @@
 // src/components/GameScreen.js
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
-import {
-  recordLevelResultByUser,
-  getLevelStatsByUser,
-  addCoinsByUser,
-} from "./ProgressByUser";
+import { addCoinsByUser } from "./ProgressByUser";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -41,7 +37,8 @@ export default function GameScreen({
   levelId,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
-  setStarsByLevel,
+  starsByLevel,
+  onBestStarsChange,
   onRunLost,
   soundCorrect,
   soundWrong,
@@ -333,11 +330,9 @@ export default function GameScreen({
       : "Classic";
 
   // ---------- best-ever stars for badge (from persistent store) ----------
-  const bestLevelStats = useMemo(
-    () => getLevelStatsByUser(usernameForProgress, mode, levelId),
-    [usernameForProgress, mode, levelId]
+  const bestStars = Number(
+    starsByLevel?.[levelId] ?? starsByLevel?.[String(levelId)] ?? 0
   );
-  const bestStars = Number(bestLevelStats?.stars || 0);
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
@@ -443,20 +438,10 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore =
-              Number(bestLevelStats?.stars || 0) > 0;
+            const alreadyCompletedBefore = Number(bestStars) > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              return { ...prev, [levelId]: nextBest };
-            });
-
-            // persist per-username progress (CLASSIC)
-            recordLevelResultByUser(usernameForProgress, "classic", levelId, {
-              stars,
-            });
+            onBestStarsChange?.("classic", levelId, stars);
 
             // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {
@@ -508,22 +493,10 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore =
-              Number(bestLevelStats?.stars || 0) > 0;
+            const alreadyCompletedBefore = Number(bestStars) > 0;
 
-            let shouldGiveCoins = false; // kept local for clarity, but controlled by bestLevelStats
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              const nextMap = { ...prev, [levelId]: nextBest };
-              // we no longer base coins on prevBest here
-              return nextMap;
-            });
-
-            // persist per-username progress (TIME TRIAL)
-            recordLevelResultByUser(usernameForProgress, "timetrial", levelId, {
-              stars,
-            });
+            let shouldGiveCoins = false; // kept local for clarity, but controlled by bestStars
+            onBestStarsChange?.("timetrial", levelId, stars);
 
             // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {

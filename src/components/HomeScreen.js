@@ -1,6 +1,5 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
 import React, { useEffect, useMemo, useState } from "react";
-import { getLevelStatsByUser } from "./ProgressByUser"; // use per-level stats
 
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 const SPIN_STORAGE_KEY = "flaggame_last_spin_at";
@@ -20,65 +19,17 @@ function lastCompletedLevel(starsMap) {
   return last || 1;
 }
 
-// build a stars map for the current user/mode, merging NEW + LEGACY stores
-function getStarsMapFromStore(username, mode) {
-  const map = {};
-  if (!username) return map;
-
-  // LEGACY map: flagiq:u:<user>:<mode>:starsBest
-  let legacy = {};
-  try {
-    const rawLegacy = localStorage.getItem(
-      `flagiq:u:${username}:${mode}:starsBest`
-    );
-    if (rawLegacy) {
-      const parsed = JSON.parse(rawLegacy);
-      if (parsed && typeof parsed === "object") {
-        legacy = parsed;
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  for (let id = 1; id <= TOTAL_LEVELS; id++) {
-    let best = 0;
-
-    // NEW per-level storage (ProgressByUser)
-    try {
-      const stats = getLevelStatsByUser(username, mode, id);
-      best = Number(stats?.stars || 0);
-    } catch {
-      // ignore
-    }
-
-    // LEGACY storage value
-    const legacyVal = Number(legacy[id] || 0);
-
-    // take the better of the two
-    map[id] = Math.max(best, legacyVal);
-  }
-
-  return map;
-}
-
 // per-mode stats for the homepage cards
-function getPerModeStats(username, mode) {
-  if (!username) return { level: 0, stars: 0 };
+function getPerModeStats(starsMap) {
+  const safeMap = starsMap || {};
+  const totalStars = sumStars(safeMap);
 
-  try {
-    const starsMap = getStarsMapFromStore(username, mode);
-    const totalStars = sumStars(starsMap);
-
-    if (totalStars === 0) {
-      return { level: 0, stars: 0 }; // not started
-    }
-
-    const last = lastCompletedLevel(starsMap); // highest level id with >0 stars
-    return { level: last, stars: totalStars };
-  } catch {
-    return { level: 0, stars: 0 };
+  if (totalStars === 0) {
+    return { level: 0, stars: 0 }; // not started
   }
+
+  const last = lastCompletedLevel(safeMap); // highest level id with >0 stars
+  return { level: last, stars: totalStars };
 }
 
 // grid layout
@@ -469,6 +420,7 @@ export default function HomeScreen({
   onStart,
   classicStats, // still accepted but unused; we rely on fresh calc
   timetrialStats, // (kept for backward compatibility with App)
+  starsByMode = {},
   t,
   lang,
   setHints, // pass from parent so spinner can add hints
@@ -487,12 +439,12 @@ export default function HomeScreen({
 
   // per-mode stats derived from the same store logic as App.js
   const classicFromStore = useMemo(
-    () => getPerModeStats(username, "classic"),
-    [username]
+    () => getPerModeStats(starsByMode.classic || {}),
+    [starsByMode]
   );
   const timetrialFromStore = useMemo(
-    () => getPerModeStats(username, "timetrial"),
-    [username]
+    () => getPerModeStats(starsByMode.timetrial || {}),
+    [starsByMode]
   );
 
   const Card = ({ color, icon, title, stats, onClick, mode }) => {

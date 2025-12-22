@@ -9,7 +9,6 @@ import {
   UNLOCK_THRESHOLD,
   starsNeededForLevelId, // use App's exact rule for the popup
 } from "../App";
-import { getLevelStatsByUser } from "./ProgressByUser";
 
 function StarsBadge({ total }) {
   return (
@@ -54,18 +53,12 @@ export default function LevelScreen({
   onLockedAttempt, // ← OPTIONAL: when a locked tile is tapped, we’ll call this with details
   username, // must match GameScreen username
   mode = "classic", // or "timetrial"
+  starsByLevel = {},
 }) {
-  const userKey = (username && String(username)) || "guest";
-
-  // read best-ever stars per level from persistent store
-  const starsByLevelFromStore = useMemo(() => {
-    const map = {};
-    for (let id = 1; id <= TOTAL_LEVELS; id++) {
-      const stats = getLevelStatsByUser(userKey, mode, id);
-      map[id] = Number(stats?.stars || 0);
-    }
-    return map;
-  }, [userKey, mode]);
+  const starsByLevelFromStore = useMemo(
+    () => ({ ...starsByLevel }),
+    [starsByLevel]
+  );
 
   const totalStars = useMemo(
     () =>
