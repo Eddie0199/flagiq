@@ -13,13 +13,12 @@ import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 
-// 🔹 NEW: Supabase client import
-import { supabase } from "./supabaseClient";
 import {
   ensurePlayerState,
   getPlayerState,
+  setProgress,
   updatePlayerState,
-} from "./playerStateApi";
+} from "./playerState";
 
 
 const VERSION = "v1.1";
@@ -373,6 +372,10 @@ export default function App() {
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
+  const progressRef = useRef({
+    classic: { starsByLevel: {}, unlockedUntil: 5 },
+    timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
+  });
 
 
   // remember where to go back to when leaving the store
@@ -402,33 +405,46 @@ export default function App() {
 
     (async () => {
       try {
-        await ensurePlayerState(activeUser);
+        await ensurePlayerState();
 
-        const state = await getPlayerState(activeUser);
+        const state = await getPlayerState();
         if (state) {
           setCoins(Number(state.coins) || 0);
 
-          const backendStars =
-            state.stars_by_mode && typeof state.stars_by_mode === "object"
-              ? state.stars_by_mode
-              : {};
+          const progress = state.progress || {};
 
-          const classicFromBackend =
-            backendStars.classic && typeof backendStars.classic === "object"
-              ? backendStars.classic
-              : {};
-          const timeTrialFromBackend =
-            backendStars.timetrial && typeof backendStars.timetrial === "object"
-              ? backendStars.timetrial
-              : {};
+          const classicProgress =
+            progress.classic && typeof progress.classic === "object"
+              ? progress.classic
+              : { starsByLevel: {} };
+          const timeTrialProgress =
+            progress.timeTrial && typeof progress.timeTrial === "object"
+              ? progress.timeTrial
+              : progress.timetrial && typeof progress.timetrial === "object"
+              ? progress.timetrial
+              : { starsByLevel: {} };
 
           const mergedStars = {
-            classic: Object.keys(classicFromBackend).length
-              ? classicFromBackend
+            classic: Object.keys(classicProgress.starsByLevel || {}).length
+              ? classicProgress.starsByLevel
               : readLocalStars(activeUser, "classic"),
-            timetrial: Object.keys(timeTrialFromBackend).length
-              ? timeTrialFromBackend
+            timetrial: Object.keys(timeTrialProgress.starsByLevel || {}).length
+              ? timeTrialProgress.starsByLevel
               : readLocalStars(activeUser, "timetrial"),
+          };
+
+          progressRef.current = {
+            classic: {
+              unlockedUntil:
+                classicProgress.unlockedUntil ?? classicProgress.unlocked_until,
+              starsByLevel: mergedStars.classic,
+            },
+            timeTrial: {
+              unlockedUntil:
+                timeTrialProgress.unlockedUntil ??
+                timeTrialProgress.unlocked_until,
+              starsByLevel: mergedStars.timetrial,
+            },
           };
 
           setStarsByMode(mergedStars);
@@ -456,6 +472,11 @@ export default function App() {
           timetrial: readLocalStars(activeUser, "timetrial"),
         };
         setStarsByMode(fallbackStars);
+
+        progressRef.current = {
+          classic: { starsByLevel: fallbackStars.classic, unlockedUntil: 5 },
+          timeTrial: { starsByLevel: fallbackStars.timetrial, unlockedUntil: 5 },
+        };
 
         // ✅ allow later sync back to backend
         setBackendLoaded(true);
@@ -506,9 +527,7 @@ export default function App() {
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
 
-    updatePlayerState(activeUser, {
-      coins,
-    });
+    updatePlayerState({ coins }).catch((e) => console.error(e));
   }, [coins, activeUser, backendLoaded]);
 
   useEffect(() => {
@@ -527,7 +546,24 @@ export default function App() {
 
     (async () => {
       try {
-        await updatePlayerState(activeUser, { stars_by_mode: starsByMode });
+        const currentProgress = progressRef.current || {
+          classic: { starsByLevel: {}, unlockedUntil: 5 },
+          timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
+        };
+
+        const nextProgress = {
+          classic: {
+            ...currentProgress.classic,
+            starsByLevel: starsByMode.classic || {},
+          },
+          timeTrial: {
+            ...currentProgress.timeTrial,
+            starsByLevel: starsByMode.timetrial || {},
+          },
+        };
+
+        progressRef.current = nextProgress;
+        await setProgress(nextProgress);
       } catch (e) {
         console.error(e);
       }
