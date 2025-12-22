@@ -369,6 +369,7 @@ export default function App() {
 
   const [users, setUsers] = useLocalStorage("flagiq:users", {});
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
+  const [, setActiveUserName] = useLocalStorage("flagiq:activeUserName", "");
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
@@ -376,6 +377,49 @@ export default function App() {
 
   // remember where to go back to when leaving the store
   const [lastNonStoreScreen, setLastNonStoreScreen] = useState("home");
+
+  // Sync Supabase auth session to local UI state
+  useEffect(() => {
+    let unsubscribed = false;
+
+    const applyUser = (user) => {
+      if (unsubscribed) return;
+      if (user?.id) {
+        setActiveUser(user.id);
+        setActiveUserName(
+          user.user_metadata?.username || user.email || user.user_metadata?.name || ""
+        );
+      } else {
+        setActiveUser("");
+        setActiveUserName("");
+        setBackendLoaded(false);
+      }
+    };
+
+    supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to get current user", error);
+          return;
+        }
+        applyUser(data?.user);
+      })
+      .catch((e) => console.error("auth.getUser error", e));
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        applyUser(null);
+        return;
+      }
+      applyUser(session?.user);
+    });
+
+    return () => {
+      unsubscribed = true;
+      listener?.subscription?.unsubscribe();
+    };
+  }, [setActiveUser, setActiveUserName]);
 
   // per-user data
   const [levelId, setLevelId] = useUserStorage(activeUser, `${mode}:level`, 1);
@@ -386,21 +430,21 @@ export default function App() {
   );
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded) return;
 
-  const starsByMode = {
-    classic: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-    ),
-    timetrial: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-    ),
-  };
+    const starsByMode = {
+      classic: JSON.parse(
+        localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
+      ),
+      timetrial: JSON.parse(
+        localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
+      ),
+    };
 
-  updatePlayerState(activeUser, {
-    stars_by_mode: starsByMode,
-  });
-}, [starsByLevel, activeUser, backendLoaded, mode]);
+    updatePlayerState({
+      stars_by_mode: starsByMode,
+    });
+  }, [starsByLevel, activeUser, backendLoaded, mode]);
 
 
 
@@ -410,47 +454,46 @@ export default function App() {
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
-useEffect(() => {
-  if (!activeUser) {
-    setCoins(0);
-    setBackendLoaded(false);
-    return;
-  }
-
-  (async () => {
-    try {
-      await ensurePlayerState(activeUser);
-
-      const state = await getPlayerState(activeUser);
-if (state) {
-  setCoins(Number(state.coins) || 0);
-
-  Object.entries(state.stars_by_mode || {}).forEach(
-    ([modeKey, starsMap]) => {
-      localStorage.setItem(
-        `flagiq:u:${activeUser}:${modeKey}:starsBest`,
-        JSON.stringify(starsMap || {})
-      );
+  useEffect(() => {
+    if (!activeUser) {
+      setCoins(0);
+      setBackendLoaded(false);
+      return;
     }
-  );
-}
 
-setBackendLoaded(true);
+    (async () => {
+      try {
+        await ensurePlayerState();
 
-    } catch (e) {
-  // fallback to local only
-  try {
-    const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
-    setCoins(raw ? Number(raw) : 0);
-  } catch (e) {}
+        const state = await getPlayerState();
+        if (state) {
+          setCoins(Number(state.coins) || 0);
 
+          Object.entries(state.stars_by_mode || {}).forEach(
+            ([modeKey, starsMap]) => {
+              localStorage.setItem(
+                `flagiq:u:${activeUser}:${modeKey}:starsBest`,
+                JSON.stringify(starsMap || {})
+              );
+            }
+          );
+        }
 
-  // ✅ allow later sync back to backend
-  setBackendLoaded(true);
-}
+        setBackendLoaded(true);
+      } catch (e) {
+        // fallback to local only
+        try {
+          const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
+          setCoins(raw ? Number(raw) : 0);
+        } catch (e) {
+          // ignore
+        }
 
-  })();
-}, [activeUser]);
+        // ✅ allow later sync back to backend
+        setBackendLoaded(true);
+      }
+    })();
+  }, [activeUser]);
 
 
   // helper to update coins AND persist to localStorage
@@ -472,12 +515,12 @@ setBackendLoaded(true);
   };
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded) return;
 
-  updatePlayerState(activeUser, {
-    coins,
-  });
-}, [coins, activeUser, backendLoaded]);
+    updatePlayerState({
+      coins,
+    });
+  }, [coins, activeUser, backendLoaded]);
 
 
   // Hearts are now stored globally per device, not per user,
@@ -830,8 +873,9 @@ setBackendLoaded(true);
           setTab={setAuthTab}
           users={users}
           setUsers={setUsers}
-          onLoggedIn={(u) => {
-            setActiveUser(u);
+          onLoggedIn={(user) => {
+            if (user?.id) setActiveUser(user.id);
+            if (user?.username) setActiveUserName(user.username);
             setScreen("home");
           }}
         />

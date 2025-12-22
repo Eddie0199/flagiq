@@ -1,7 +1,17 @@
 // src/playerStateApi.js
 import { supabase } from "./supabaseClient";
 
-export async function ensurePlayerState(userId) {
+async function requireUserId() {
+  const { data, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  const userId = data?.user?.id;
+  if (!userId) throw new Error("Not authenticated.");
+  return userId;
+}
+
+export async function ensurePlayerState() {
+  const userId = await requireUserId();
+
   const { data, error } = await supabase
     .from("player_state")
     .select("user_id")
@@ -19,7 +29,9 @@ export async function ensurePlayerState(userId) {
   return true;
 }
 
-export async function getPlayerState(userId) {
+export async function getPlayerState() {
+  const userId = await requireUserId();
+
   const { data, error } = await supabase
     .from("player_state")
     .select("*")
@@ -30,7 +42,9 @@ export async function getPlayerState(userId) {
   return data;
 }
 
-export async function updatePlayerState(userId, patch) {
+export async function updatePlayerState(patch) {
+  const userId = await requireUserId();
+
   const { data, error } = await supabase
     .from("player_state")
     .update({ ...patch, updated_at: new Date().toISOString() })
