@@ -374,7 +374,7 @@ export default function App() {
   const [backendLoaded, setBackendLoaded] = useState(false);
   const progressRef = useRef({
     classic: { starsByLevel: {}, unlockedUntil: 5 },
-    timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
+    timetrial: { starsByLevel: {}, unlockedUntil: 5 },
   });
 
 
@@ -418,10 +418,10 @@ export default function App() {
               ? progress.classic
               : { starsByLevel: {} };
           const timeTrialProgress =
-            progress.timeTrial && typeof progress.timeTrial === "object"
-              ? progress.timeTrial
-              : progress.timetrial && typeof progress.timetrial === "object"
+            progress.timetrial && typeof progress.timetrial === "object"
               ? progress.timetrial
+              : progress.timeTrial && typeof progress.timeTrial === "object"
+              ? progress.timeTrial
               : { starsByLevel: {} };
 
           const mergedStars = {
@@ -439,7 +439,7 @@ export default function App() {
                 classicProgress.unlockedUntil ?? classicProgress.unlocked_until,
               starsByLevel: mergedStars.classic,
             },
-            timeTrial: {
+            timetrial: {
               unlockedUntil:
                 timeTrialProgress.unlockedUntil ??
                 timeTrialProgress.unlocked_until,
@@ -475,7 +475,7 @@ export default function App() {
 
         progressRef.current = {
           classic: { starsByLevel: fallbackStars.classic, unlockedUntil: 5 },
-          timeTrial: { starsByLevel: fallbackStars.timetrial, unlockedUntil: 5 },
+          timetrial: { starsByLevel: fallbackStars.timetrial, unlockedUntil: 5 },
         };
 
         // ✅ allow later sync back to backend
@@ -548,7 +548,7 @@ export default function App() {
       try {
         const currentProgress = progressRef.current || {
           classic: { starsByLevel: {}, unlockedUntil: 5 },
-          timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
+          timetrial: { starsByLevel: {}, unlockedUntil: 5 },
         };
 
         const nextProgress = {
@@ -556,8 +556,8 @@ export default function App() {
             ...currentProgress.classic,
             starsByLevel: starsByMode.classic || {},
           },
-          timeTrial: {
-            ...currentProgress.timeTrial,
+          timetrial: {
+            ...currentProgress.timetrial,
             starsByLevel: starsByMode.timetrial || {},
           },
         };

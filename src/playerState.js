@@ -9,14 +9,15 @@ import { supabase } from "./supabaseClient";
  * - progress JSON with per-mode:
  *    { starsByLevel: { "1": 3, "2": 2, ... }, unlockedUntil: 5 }
  *
- * Mode keys are confirmed: "classic" and "timeTrial"
+ * Mode keys are confirmed: "classic" and "timetrial"
  */
 
-export const MODE_KEYS = ["classic", "timeTrial"];
+// NOTE: UI uses "timetrial" (lowercase). Normalise legacy "timeTrial" too.
+export const MODE_KEYS = ["classic", "timetrial"];
 
 const DEFAULT_PROGRESS = {
   classic: { starsByLevel: {}, unlockedUntil: 5 },
-  timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
+  timetrial: { starsByLevel: {}, unlockedUntil: 5 },
 };
 
 // --- helpers ---
@@ -26,8 +27,15 @@ function normaliseProgress(progress) {
 
   if (!progress || typeof progress !== "object") return base;
 
+  // support legacy "timeTrial" by aliasing to "timetrial"
+  const maybeLegacy = progress.timeTrial || progress.timetrial;
+  const mergedProgress = {
+    ...progress,
+    ...(maybeLegacy ? { timetrial: maybeLegacy } : {}),
+  };
+
   for (const mode of MODE_KEYS) {
-    const m = progress[mode];
+    const m = mergedProgress[mode];
     if (!m || typeof m !== "object") continue;
 
     // starsByLevel
@@ -50,7 +58,7 @@ function mapModeText(modeText) {
   if (MODE_KEYS.includes(key)) return key;
 
   const lower = key.toLowerCase();
-  if (lower === "timetrial") return "timeTrial";
+  if (lower === "timetrial") return "timetrial";
   if (lower === "classic") return "classic";
 
   return null;
