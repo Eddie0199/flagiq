@@ -44,6 +44,72 @@ function normaliseProgress(progress) {
   return base;
 }
 
+function mapModeText(modeText) {
+  if (!modeText) return null;
+  const key = String(modeText);
+  if (MODE_KEYS.includes(key)) return key;
+
+  const lower = key.toLowerCase();
+  if (lower === "timetrial") return "timeTrial";
+  if (lower === "classic") return "classic";
+
+  return null;
+}
+
+function buildProgressFromModeRows(rows, fallbackProgress) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return normaliseProgress(fallbackProgress);
+  }
+
+  const fromRows = {};
+
+  rows.forEach((row) => {
+    const modeKey = mapModeText(row.mode_text);
+    if (!modeKey) return;
+
+    fromRows[modeKey] = {
+      starsByLevel:
+        row.stars_by_level && typeof row.stars_by_level === "object"
+          ? row.stars_by_level
+          : {},
+      unlockedUntil: Number.isFinite(row.unlocked_until)
+        ? row.unlocked_until
+        : undefined,
+    };
+  });
+
+  const fallback = normaliseProgress(fallbackProgress);
+  const merged = normaliseProgress(fromRows);
+
+  for (const mode of MODE_KEYS) {
+    if (!Object.keys(merged[mode].starsByLevel || {}).length) {
+      merged[mode].starsByLevel = fallback[mode].starsByLevel;
+    }
+    if (!Number.isFinite(merged[mode].unlockedUntil)) {
+      merged[mode].unlockedUntil = fallback[mode].unlockedUntil;
+    }
+  }
+
+  return merged;
+}
+
+async function upsertModeStates(userId, progress) {
+  const nowIso = new Date().toISOString();
+  const rows = MODE_KEYS.map((mode) => ({
+    user_id: userId,
+    mode_text: mode,
+    stars_by_level: progress?.[mode]?.starsByLevel || {},
+    unlocked_until: progress?.[mode]?.unlockedUntil ?? DEFAULT_PROGRESS[mode].unlockedUntil,
+    updated_at: nowIso,
+  }));
+
+  const { error } = await supabase
+    .from("player_mode_state")
+    .upsert(rows, { onConflict: "user_id,mode_text" });
+
+  if (error) throw error;
+}
+
 async function requireUserId() {
   const { data, error } = await supabase.auth.getUser();
   if (error) throw error;
@@ -71,6 +137,22 @@ export async function ensurePlayerState() {
   );
 
   if (error) throw error;
+
+  // Also ensure per-mode rows exist
+  const nowIso = new Date().toISOString();
+  const seedRows = MODE_KEYS.map((mode) => ({
+    user_id: userId,
+    mode_text: mode,
+    stars_by_level: {},
+    unlocked_until: DEFAULT_PROGRESS[mode].unlockedUntil,
+    updated_at: nowIso,
+  }));
+
+  const { error: modeError } = await supabase
+    .from("player_mode_state")
+    .upsert(seedRows, { onConflict: "user_id,mode_text" });
+
+  if (modeError) throw modeError;
   return true;
 }
 
@@ -80,15 +162,22 @@ export async function ensurePlayerState() {
 export async function getPlayerState() {
   const userId = await requireUserId();
 
-  const { data, error } = await supabase
+  const [{ data, error }, { data: modeRows, error: modeError }] = await Promise.all([
+    supabase
     .from("player_state")
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .single(),
+    supabase
+      .from("player_mode_state")
+      .select("mode_text, stars_by_level, unlocked_until")
+      .eq("user_id", userId),
+  ]);
 
   if (error) throw error;
+  if (modeError) throw modeError;
 
-  const progress = normaliseProgress(data.progress);
+  const progress = buildProgressFromModeRows(modeRows, data.progress);
 
   return {
     ...data,
@@ -132,17 +221,21 @@ export async function setProgress(nextProgress) {
 
   const normalised = normaliseProgress(nextProgress);
 
+  const nowIso = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("player_state")
     .update({
       progress: normalised,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     })
     .eq("user_id", userId)
     .select("*")
     .single();
 
   if (error) throw error;
+
+  await upsertModeStates(userId, normalised);
 
   return {
     ...data,
