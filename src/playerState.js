@@ -172,10 +172,10 @@ export async function getPlayerState() {
 
   const [{ data, error }, { data: modeRows, error: modeError }] = await Promise.all([
     supabase
-    .from("player_state")
-    .select("*")
-    .eq("user_id", userId)
-    .single(),
+      .from("player_state")
+      .select("*")
+      .eq("user_id", userId)
+      .single(),
     supabase
       .from("player_mode_state")
       .select("mode_text, stars_by_level, unlocked_until")
@@ -186,6 +186,9 @@ export async function getPlayerState() {
   if (modeError) throw modeError;
 
   const progress = buildProgressFromModeRows(modeRows, data.progress);
+
+  // keep the per-mode table in sync with whatever we loaded (including legacy JSON)
+  await upsertModeStates(userId, progress);
 
   return {
     ...data,
