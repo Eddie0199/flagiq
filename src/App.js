@@ -725,6 +725,47 @@ export default function App() {
     });
   }, [activeUser, backendLoaded, hearts, lastTick]);
 
+  // Persist level progress + stars to backend so it is restored across devices
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    const readStarsMap = (modeKey) => {
+      try {
+        const raw = localStorage.getItem(
+          `flagiq:u:${activeUser}:${modeKey}:starsBest`
+        );
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    };
+
+    const classicStars = readStarsMap("classic");
+    const timeTrialStars = readStarsMap("timetrial");
+
+    const progressPayload = {
+      classic: {
+        starsByLevel: classicStars,
+        unlockedUntil: computeUnlockedLevels(classicStars),
+      },
+      timetrial: {
+        starsByLevel: timeTrialStars,
+        unlockedUntil: computeUnlockedLevels(timeTrialStars),
+      },
+    };
+
+    const starsByModePayload = {
+      classic: classicStars,
+      timetrial: timeTrialStars,
+    };
+
+    updatePlayerState(activeUser, {
+      progress: progressPayload,
+      stars_by_mode: starsByModePayload,
+    });
+  }, [activeUser, backendLoaded, mode, starsByLevel]);
+
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
   const [settingsOpen, setSettingsOpen] = useState(false);
