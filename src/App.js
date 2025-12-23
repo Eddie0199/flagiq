@@ -813,15 +813,33 @@ export default function App() {
   }
 
   function onRunLost() {
+    let nextHearts = null;
+
     setHeartsState((prev) => {
       const current = prev ?? { count: MAX_HEARTS, lastTick: Date.now() };
       const wasFull = current.count === MAX_HEARTS;
       const newCount = Math.max(0, current.count - 1);
-      return {
+      nextHearts = {
         count: newCount,
         lastTick: wasFull ? Date.now() : current.lastTick,
       };
+      return nextHearts;
     });
+
+    if (activeUser && backendLoaded && nextHearts) {
+      const lastRegenIso = new Date(
+        Number.isFinite(Number(nextHearts.lastTick))
+          ? Number(nextHearts.lastTick)
+          : Date.now()
+      ).toISOString();
+
+      updatePlayerState(activeUser, {
+        hearts: { ...nextHearts },
+        hearts_current: nextHearts.count,
+        hearts_max: MAX_HEARTS,
+        hearts_last_regen_at: lastRegenIso,
+      });
+    }
   }
 
   const audioCtxRef = useRef(null);
