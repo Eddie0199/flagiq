@@ -486,14 +486,9 @@ export default function HomeScreen({
   const text = (key, fallback) => (t && lang ? t(lang, key) : fallback);
 
   // per-mode stats derived from the same store logic as App.js
-  const classicFromStore = useMemo(
-    () => getPerModeStats(username, "classic"),
-    [username]
-  );
-  const timetrialFromStore = useMemo(
-    () => getPerModeStats(username, "timetrial"),
-    [username]
-  );
+  // compute on every render so newly loaded progress shows immediately
+  const classicFromStore = getPerModeStats(username, "classic");
+  const timetrialFromStore = getPerModeStats(username, "timetrial");
 
   const Card = ({ color, icon, title, stats, onClick, mode }) => {
     const level = Number(stats?.level ?? 0);
