@@ -491,6 +491,11 @@ export default function App() {
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
 
+  // Backend inventory (includes hints). We keep a copy so we can merge
+  // additional keys the backend might have without losing them when we
+  // update hints.
+  const [inventory, setInventory] = useState(null);
+
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
@@ -498,6 +503,7 @@ export default function App() {
     if (!activeUser) {
       setCoins(0);
       setBackendLoaded(false);
+      setInventory(null);
       return;
     }
 
@@ -508,6 +514,25 @@ export default function App() {
         const state = await getPlayerState(activeUser);
         if (state) {
           setCoins(Number(state.coins) || 0);
+
+          const backendInventory =
+            state.inventory || state.inventory_state || state.items || {};
+          setInventory(
+            backendInventory && typeof backendInventory === "object"
+              ? backendInventory
+              : {}
+          );
+
+          const backendHints =
+            (backendInventory && backendInventory.hints) ||
+            (backendInventory && backendInventory.boosters);
+          if (backendHints && typeof backendHints === "object") {
+            setHints((prev) => ({
+              ...DEFAULT_HINTS,
+              ...prev,
+              ...backendHints,
+            }));
+          }
 
           const persistStarsForMode = (modeKey, starsMap, mergeWithExisting) => {
             const normalisedMode = normalizeModeKey(modeKey);
@@ -608,6 +633,18 @@ export default function App() {
       coins,
     });
   }, [coins, activeUser, backendLoaded]);
+
+  // Persist hints to backend inventory, keeping any other inventory keys intact
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    setInventory((prev) => {
+      const base = prev && typeof prev === "object" ? prev : {};
+      const next = { ...base, hints };
+      updatePlayerState(activeUser, { inventory: next });
+      return next;
+    });
+  }, [hints, activeUser, backendLoaded]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
