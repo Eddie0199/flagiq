@@ -115,6 +115,21 @@ export function computeUnlockedLevels(starsMap) {
   return unlocked;
 }
 
+function normalizeStarsByMode(raw) {
+  if (!raw) return {};
+
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  return raw;
+}
+
 export function starsNeededForLevelId(levelId, starsMap) {
   const blockEnd = Math.min(Math.ceil(levelId / BATCH) * BATCH, TOTAL_LEVELS);
   const required = BLOCK_REQUIRE[blockEnd] ?? 0;
@@ -436,7 +451,7 @@ export default function App() {
         if (state) {
           setCoins(Number(state.coins) || 0);
 
-          const starsByMode = state.stars_by_mode || {};
+          const starsByMode = normalizeStarsByMode(state.stars_by_mode);
 
           Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
             const safeStars = starsMap || {};
