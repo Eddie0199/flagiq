@@ -348,6 +348,32 @@ function getModeStatsFromLocal(username, mode) {
 // ----- per-user hints hook (with migration from old keys) -----
 const DEFAULT_HINTS = { remove2: 3, autoPass: 1, pause: 2 };
 
+const LEGACY_HINT_KEY_MAP = {
+  "Remove Two": "remove2",
+  InstantCorrect: "autoPass",
+  "Extra Time": "pause",
+};
+
+function normalizeInventory(rawInventory) {
+  const base = rawInventory && typeof rawInventory === "object" ? rawInventory : {};
+
+  const legacyHints = {};
+  const cleanedEntries = Object.entries(base).filter(([key, value]) => {
+    if (LEGACY_HINT_KEY_MAP[key]) {
+      if (Number.isFinite(value)) {
+        legacyHints[LEGACY_HINT_KEY_MAP[key]] = value;
+      }
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    cleaned: Object.fromEntries(cleanedEntries),
+    legacyHints,
+  };
+}
+
 function loadHintsForUser(username) {
   try {
     if (username) {
@@ -515,13 +541,11 @@ export default function App() {
         if (state) {
           setCoins(Number(state.coins) || 0);
 
-          const backendInventory =
-            state.inventory || state.inventory_state || state.items || {};
-          setInventory(
-            backendInventory && typeof backendInventory === "object"
-              ? backendInventory
-              : {}
+          const { cleaned: backendInventory, legacyHints } = normalizeInventory(
+            state.inventory || state.inventory_state || state.items || {}
           );
+
+          setInventory(backendInventory);
 
           const backendHints =
             (backendInventory && backendInventory.hints) ||
@@ -531,6 +555,13 @@ export default function App() {
               ...DEFAULT_HINTS,
               ...prev,
               ...backendHints,
+              ...legacyHints,
+            }));
+          } else if (Object.keys(legacyHints).length > 0) {
+            setHints((prev) => ({
+              ...DEFAULT_HINTS,
+              ...prev,
+              ...legacyHints,
             }));
           }
 
@@ -639,8 +670,8 @@ export default function App() {
     if (!activeUser || !backendLoaded) return;
 
     setInventory((prev) => {
-      const base = prev && typeof prev === "object" ? prev : {};
-      const next = { ...base, hints };
+      const { cleaned } = normalizeInventory(prev);
+      const next = { ...cleaned, hints };
       updatePlayerState(activeUser, { inventory: next });
       return next;
     });
