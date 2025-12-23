@@ -13,6 +13,17 @@ import { supabase } from "./supabaseClient";
  */
 
 export const MODE_KEYS = ["classic", "timeTrial"];
+const MODE_ALIASES = {
+  timetrial: "timeTrial",
+};
+
+function normaliseModeKey(mode) {
+  if (!mode) return null;
+  const lower = String(mode).toLowerCase();
+  if (MODE_KEYS.includes(lower)) return lower;
+  if (MODE_ALIASES[lower]) return MODE_ALIASES[lower];
+  return null;
+}
 
 const DEFAULT_PROGRESS = {
   classic: { starsByLevel: {}, unlockedUntil: 5 },
@@ -26,8 +37,11 @@ function normaliseProgress(progress) {
 
   if (!progress || typeof progress !== "object") return base;
 
-  for (const mode of MODE_KEYS) {
-    const m = progress[mode];
+  for (const [rawMode, value] of Object.entries(progress || {})) {
+    const mode = normaliseModeKey(rawMode);
+    if (!mode || !base[mode]) continue;
+
+    const m = value;
     if (!m || typeof m !== "object") continue;
 
     // starsByLevel
@@ -154,7 +168,8 @@ export async function setProgress(nextProgress) {
  * Set unlockedUntil for a mode.
  */
 export async function setUnlockedUntil(mode, unlockedUntil) {
-  if (!MODE_KEYS.includes(mode)) {
+  const modeKey = normaliseModeKey(mode);
+  if (!modeKey) {
     throw new Error(`Invalid mode: ${mode}`);
   }
   if (!Number.isFinite(unlockedUntil) || unlockedUntil < 0) {
@@ -164,8 +179,8 @@ export async function setUnlockedUntil(mode, unlockedUntil) {
   const state = await getPlayerState();
   const next = { ...state.progress };
 
-  next[mode] = {
-    ...next[mode],
+  next[modeKey] = {
+    ...next[modeKey],
     unlockedUntil,
   };
 
@@ -177,7 +192,8 @@ export async function setUnlockedUntil(mode, unlockedUntil) {
  * Level is stored as string key in starsByLevel.
  */
 export async function setLevelStars(mode, levelNumber, stars) {
-  if (!MODE_KEYS.includes(mode)) {
+  const modeKey = normaliseModeKey(mode);
+  if (!modeKey) {
     throw new Error(`Invalid mode: ${mode}`);
   }
 
@@ -196,14 +212,14 @@ export async function setLevelStars(mode, levelNumber, stars) {
   const state = await getPlayerState();
   const next = { ...state.progress };
 
-  const modeObj = next[mode] || { starsByLevel: {}, unlockedUntil: 5 };
+  const modeObj = next[modeKey] || { starsByLevel: {}, unlockedUntil: 5 };
   const starsByLevel = { ...(modeObj.starsByLevel || {}) };
 
   // Keep best stars achieved (never downgrade)
   const prev = Number(starsByLevel[levelKey] || 0);
   starsByLevel[levelKey] = Math.max(prev, st);
 
-  next[mode] = { ...modeObj, starsByLevel };
+  next[modeKey] = { ...modeObj, starsByLevel };
 
   return setProgress(next);
 }

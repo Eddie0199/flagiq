@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { getLevelStatsByUser } from "./ProgressByUser"; // use per-level stats
 
 const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
-const SPIN_STORAGE_KEY = "flaggame_last_spin_at";
+export const SPIN_STORAGE_KEY = "flaggame_last_spin_at";
 
 // match App.js constants
 const TOTAL_LEVELS = 30;
@@ -99,7 +99,7 @@ function formatMs(ms) {
 }
 
 // =============== DAILY BOOSTER (3×3 pick) ===============
-function DailySpinButton({ t, lang, onReward }) {
+function DailySpinButton({ t, lang, onReward, lastSpinAt, onSpinRecorded }) {
   const [isOpen, setIsOpen] = useState(false);
   const [canSpin, setCanSpin] = useState(true);
   const [remainingMs, setRemainingMs] = useState(0);
@@ -158,14 +158,17 @@ function DailySpinButton({ t, lang, onReward }) {
 
   // cooldown init
   useEffect(() => {
-    const last = localStorage.getItem(SPIN_STORAGE_KEY);
+    const last = lastSpinAt ?? Number(localStorage.getItem(SPIN_STORAGE_KEY));
     if (!last) return;
     const diff = Date.now() - Number(last);
     if (diff < SPIN_COOLDOWN_MS) {
       setCanSpin(false);
       setRemainingMs(SPIN_COOLDOWN_MS - diff);
+    } else {
+      setCanSpin(true);
+      setRemainingMs(0);
     }
-  }, []);
+  }, [lastSpinAt]);
 
   // countdown
   useEffect(() => {
@@ -217,8 +220,10 @@ function DailySpinButton({ t, lang, onReward }) {
 
     // cooldown
     setCanSpin(false);
+    const now = Date.now();
     setRemainingMs(SPIN_COOLDOWN_MS);
-    localStorage.setItem(SPIN_STORAGE_KEY, String(Date.now()));
+    localStorage.setItem(SPIN_STORAGE_KEY, String(now));
+    onSpinRecorded && onSpinRecorded(now);
 
     // deliver reward → hints (parent owns persistence)
     onReward && onReward(reward);
@@ -472,6 +477,8 @@ export default function HomeScreen({
   t,
   lang,
   setHints, // pass from parent so spinner can add hints
+  lastSpinAt,
+  onSpinRecorded,
 }) {
   // no scroll
   useEffect(() => {
@@ -588,6 +595,8 @@ export default function HomeScreen({
           <DailySpinButton
             t={t}
             lang={lang}
+            lastSpinAt={lastSpinAt}
+            onSpinRecorded={onSpinRecorded}
             onReward={(reward) => {
               if (!setHints) return;
 

@@ -14,12 +14,13 @@ import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 
 // 🔹 NEW: Supabase client import
-import { supabase } from "./supabaseClient";
 import {
   ensurePlayerState,
   getPlayerState,
+  setProgress,
   updatePlayerState,
-} from "./playerStateApi";
+} from "./playerState";
+import { SPIN_STORAGE_KEY } from "./components/HomeScreen";
 
 
 const VERSION = "v1.1";
@@ -33,6 +34,11 @@ export const BLOCK_REQUIRE = { 5: 0, 10: 12, 15: 24, 20: 36, 25: 48, 30: 60 };
 
 export const MAX_HEARTS = 5;
 export const REGEN_MS = 10 * 60 * 1000;
+
+const MODE_PROGRESS_KEYS = [
+  { backend: "classic", local: "classic" },
+  { backend: "timeTrial", local: "timetrial" },
+];
 
 // ----- helpers -----
 export const shuffle = (arr) =>
@@ -275,6 +281,73 @@ function getModeStatsFromLocal(username, mode) {
 // ----- per-user hints hook (with migration from old keys) -----
 const DEFAULT_HINTS = { remove2: 3, autoPass: 1, pause: 2 };
 
+function normaliseHints(obj) {
+  return {
+    ...DEFAULT_HINTS,
+    ...(obj && typeof obj === "object" ? obj : {}),
+  };
+}
+
+function readStarsMapFromLocal(username, localMode) {
+  if (!username) return {};
+  try {
+    const raw = localStorage.getItem(`flagiq:u:${username}:${localMode}:starsBest`);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function writeStarsMapToLocal(username, localMode, starsMap) {
+  if (!username) return;
+  try {
+    localStorage.setItem(
+      `flagiq:u:${username}:${localMode}:starsBest`,
+      JSON.stringify(starsMap || {})
+    );
+  } catch (e) {
+    // ignore
+  }
+}
+
+function buildProgressPayloadFromLocal(username) {
+  const payload = {};
+  MODE_PROGRESS_KEYS.forEach(({ backend, local }) => {
+    const starsByLevel = readStarsMapFromLocal(username, local);
+    payload[backend] = {
+      starsByLevel,
+      unlockedUntil: computeUnlockedLevels(starsByLevel),
+    };
+  });
+  return payload;
+}
+
+function persistBackendProgressToLocal({
+  username,
+  progress,
+  currentMode,
+  setStarsByLevel,
+}) {
+  MODE_PROGRESS_KEYS.forEach(({ backend, local }) => {
+    const modeData = progress?.[backend] || progress?.[local] || {};
+    const starsByLevel = modeData?.starsByLevel || {};
+    writeStarsMapToLocal(username, local, starsByLevel);
+    if (currentMode === local) {
+      setStarsByLevel(starsByLevel);
+    }
+  });
+}
+
+function readLocalSpinTimestamp() {
+  try {
+    const raw = localStorage.getItem(SPIN_STORAGE_KEY);
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function loadHintsForUser(username) {
   try {
     if (username) {
@@ -372,6 +445,8 @@ export default function App() {
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [lastSpinAt, setLastSpinAt] = useState(() => readLocalSpinTimestamp());
 
 
   // remember where to go back to when leaving the store
@@ -385,72 +460,80 @@ export default function App() {
     {}
   );
 
-  useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
-
-  const starsByMode = {
-    classic: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-    ),
-    timetrial: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-    ),
-  };
-
-  updatePlayerState(activeUser, {
-    stars_by_mode: starsByMode,
-  });
-}, [starsByLevel, activeUser, backendLoaded, mode]);
-
-
-
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
 
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
-useEffect(() => {
-  if (!activeUser) {
-    setCoins(0);
-    setBackendLoaded(false);
-    return;
-  }
-
-  (async () => {
-    try {
-      await ensurePlayerState(activeUser);
-
-      const state = await getPlayerState(activeUser);
-if (state) {
-  setCoins(Number(state.coins) || 0);
-
-  Object.entries(state.stars_by_mode || {}).forEach(
-    ([modeKey, starsMap]) => {
-      localStorage.setItem(
-        `flagiq:u:${activeUser}:${modeKey}:starsBest`,
-        JSON.stringify(starsMap || {})
-      );
+  useEffect(() => {
+    if (!activeUser) {
+      setCoins(0);
+      setBackendLoaded(true);
+      setBackendOnline(false);
+      setLastSpinAt(readLocalSpinTimestamp());
+      return;
     }
-  );
-}
 
-setBackendLoaded(true);
+    setBackendLoaded(false);
+    setBackendOnline(false);
 
-    } catch (e) {
-  // fallback to local only
-  try {
-    const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
-    setCoins(raw ? Number(raw) : 0);
-  } catch (e) {}
+    (async () => {
+      try {
+        await ensurePlayerState();
+        const state = await getPlayerState();
+        setBackendOnline(true);
 
+        setCoins(Number(state?.coins) || 0);
+        persistBackendProgressToLocal({
+          username: activeUser,
+          progress: state?.progress || {},
+          currentMode: mode,
+          setStarsByLevel,
+        });
 
-  // ✅ allow later sync back to backend
-  setBackendLoaded(true);
-}
+        const backendHints = normaliseHints(state?.hints);
+        setHints(backendHints);
+        try {
+          localStorage.setItem(
+            `flagiq:u:${activeUser}:hints`,
+            JSON.stringify(backendHints)
+          );
+        } catch (e) {}
 
-  })();
-}, [activeUser]);
+        if (state?.preferred_lang) {
+          setLang(state.preferred_lang);
+        }
+
+        const spinTs = state?.last_spin_at
+          ? new Date(state.last_spin_at).getTime()
+          : null;
+        const safeSpin = Number.isFinite(spinTs)
+          ? spinTs
+          : readLocalSpinTimestamp();
+        if (safeSpin) {
+          setLastSpinAt(safeSpin);
+          try {
+            localStorage.setItem(SPIN_STORAGE_KEY, String(safeSpin));
+          } catch (e) {}
+        }
+      } catch (e) {
+        console.error("Supabase player_state fetch failed", e);
+        setBackendOnline(false);
+        try {
+          const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
+          setCoins(raw ? Number(raw) : 0);
+        } catch (err) {
+          setCoins(0);
+        }
+        setHints(normaliseHints(loadHintsForUser(activeUser)));
+        setLastSpinAt(readLocalSpinTimestamp());
+        setStarsByLevel(readStarsMapFromLocal(activeUser, mode));
+      } finally {
+        setBackendLoaded(true);
+      }
+    })();
+  }, [activeUser, mode, setStarsByLevel, setHints, setLang]);
 
 
   // helper to update coins AND persist to localStorage
@@ -472,13 +555,40 @@ setBackendLoaded(true);
   };
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded || !backendOnline) return;
+    const payload = buildProgressPayloadFromLocal(activeUser);
+    setProgress(payload).catch((err) =>
+      console.error("Failed to sync progress to Supabase", err)
+    );
+  }, [starsByLevel, activeUser, backendLoaded, backendOnline, mode]);
 
-  updatePlayerState(activeUser, {
-    coins,
-  });
-}, [coins, activeUser, backendLoaded]);
+  useEffect(() => {
+    if (!activeUser || !backendLoaded || !backendOnline) return;
+    updatePlayerState({ coins }).catch((err) =>
+      console.error("Failed to sync coins to Supabase", err)
+    );
+  }, [coins, activeUser, backendLoaded, backendOnline]);
 
+  useEffect(() => {
+    if (!activeUser || !backendLoaded || !backendOnline) return;
+    updatePlayerState({ hints }).catch((err) =>
+      console.error("Failed to sync hints to Supabase", err)
+    );
+  }, [hints, activeUser, backendLoaded, backendOnline]);
+
+  useEffect(() => {
+    if (!loggedIn || !backendLoaded || !backendOnline) return;
+    updatePlayerState({ preferred_lang: lang }).catch((err) =>
+      console.error("Failed to sync language to Supabase", err)
+    );
+  }, [lang, loggedIn, backendLoaded, backendOnline]);
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded || !backendOnline || !lastSpinAt) return;
+    updatePlayerState({ last_spin_at: new Date(lastSpinAt).toISOString() }).catch(
+      (err) => console.error("Failed to sync spin timestamp", err)
+    );
+  }, [activeUser, backendLoaded, backendOnline, lastSpinAt]);
 
   // Hearts are now stored globally per device, not per user,
   // so they persist reliably across refreshes.
@@ -668,6 +778,15 @@ setBackendLoaded(true);
           t={t}
           lang={lang}
           setHints={setHints}
+          lastSpinAt={lastSpinAt}
+          onSpinRecorded={(ts) => {
+            const n = Number(ts);
+            if (!Number.isFinite(n)) return;
+            setLastSpinAt(n);
+            try {
+              localStorage.setItem(SPIN_STORAGE_KEY, String(n));
+            } catch (e) {}
+          }}
         />
       )}
 
