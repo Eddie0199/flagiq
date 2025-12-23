@@ -348,6 +348,32 @@ function getModeStatsFromLocal(username, mode) {
 // ----- per-user hints hook (with migration from old keys) -----
 const DEFAULT_HINTS = { remove2: 3, autoPass: 1, pause: 2 };
 
+const LEGACY_HINT_KEY_MAP = {
+  "Remove Two": "remove2",
+  InstantCorrect: "autoPass",
+  "Extra Time": "pause",
+};
+
+function normalizeInventory(rawInventory) {
+  const base = rawInventory && typeof rawInventory === "object" ? rawInventory : {};
+
+  const legacyHints = {};
+  const cleanedEntries = Object.entries(base).filter(([key, value]) => {
+    if (LEGACY_HINT_KEY_MAP[key]) {
+      if (Number.isFinite(value)) {
+        legacyHints[LEGACY_HINT_KEY_MAP[key]] = value;
+      }
+      return false;
+    }
+    return true;
+  });
+
+  return {
+    cleaned: Object.fromEntries(cleanedEntries),
+    legacyHints,
+  };
+}
+
 function loadHintsForUser(username) {
   try {
     if (username) {
@@ -491,6 +517,11 @@ export default function App() {
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
 
+  // Backend inventory (includes hints). We keep a copy so we can merge
+  // additional keys the backend might have without losing them when we
+  // update hints.
+  const [inventory, setInventory] = useState(null);
+
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
@@ -498,6 +529,7 @@ export default function App() {
     if (!activeUser) {
       setCoins(0);
       setBackendLoaded(false);
+      setInventory(null);
       return;
     }
 
@@ -508,6 +540,30 @@ export default function App() {
         const state = await getPlayerState(activeUser);
         if (state) {
           setCoins(Number(state.coins) || 0);
+
+          const { cleaned: backendInventory, legacyHints } = normalizeInventory(
+            state.inventory || state.inventory_state || state.items || {}
+          );
+
+          setInventory(backendInventory);
+
+          const backendHints =
+            (backendInventory && backendInventory.hints) ||
+            (backendInventory && backendInventory.boosters);
+          if (backendHints && typeof backendHints === "object") {
+            setHints((prev) => ({
+              ...DEFAULT_HINTS,
+              ...prev,
+              ...backendHints,
+              ...legacyHints,
+            }));
+          } else if (Object.keys(legacyHints).length > 0) {
+            setHints((prev) => ({
+              ...DEFAULT_HINTS,
+              ...prev,
+              ...legacyHints,
+            }));
+          }
 
           const persistStarsForMode = (modeKey, starsMap, mergeWithExisting) => {
             const normalisedMode = normalizeModeKey(modeKey);
@@ -608,6 +664,18 @@ export default function App() {
       coins,
     });
   }, [coins, activeUser, backendLoaded]);
+
+  // Persist hints to backend inventory, keeping any other inventory keys intact
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    setInventory((prev) => {
+      const { cleaned } = normalizeInventory(prev);
+      const next = { ...cleaned, hints };
+      updatePlayerState(activeUser, { inventory: next });
+      return next;
+    });
+  }, [hints, activeUser, backendLoaded]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
