@@ -394,9 +394,55 @@ export default function App() {
 
   const [users, setUsers] = useLocalStorage("flagiq:users", {});
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
+  const [activeUserId, setActiveUserId] = useLocalStorage(
+    "flagiq:activeUserId",
+    ""
+  );
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
-  const loggedIn = !!activeUser;
+  const loggedIn = !!activeUserId;
   const [backendLoaded, setBackendLoaded] = useState(false);
+
+  // keep Supabase auth session in sync and recover username if missing
+  useEffect(() => {
+    let unsub = null;
+
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data?.user;
+        if (user) {
+          setActiveUserId(user.id);
+          const username =
+            user.user_metadata?.username || user.email || activeUser || "";
+          if (!activeUser) setActiveUser(username);
+        } else {
+          setActiveUserId("");
+        }
+      } catch (e) {
+        // ignore and keep local state
+      }
+    })();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const user = session?.user;
+        if (user) {
+          setActiveUserId(user.id);
+          const username =
+            user.user_metadata?.username || user.email || activeUser || "";
+          if (!activeUser) setActiveUser(username);
+        } else {
+          setActiveUserId("");
+        }
+      }
+    );
+
+    unsub = listener?.subscription?.unsubscribe;
+
+    return () => {
+      if (typeof unsub === "function") unsub();
+    };
+  }, [activeUser, setActiveUser, setActiveUserId]);
 
 
   // remember where to go back to when leaving the store
@@ -411,7 +457,7 @@ export default function App() {
   );
 
   useEffect(() => {
-    if (!activeUser || !backendLoaded) return;
+    if (!activeUserId || !backendLoaded) return;
 
     const starsByMode = {
       classic: JSON.parse(
@@ -422,10 +468,10 @@ export default function App() {
       ),
     };
 
-    updatePlayerState(activeUser, {
+    updatePlayerState(activeUserId, {
       stars_by_mode: starsByMode,
     });
-  }, [starsByLevel, activeUser, backendLoaded, mode]);
+  }, [starsByLevel, activeUser, activeUserId, backendLoaded, mode]);
 
 
 
@@ -436,17 +482,26 @@ export default function App() {
   const [coins, setCoins] = useState(0);
 
   useEffect(() => {
-    if (!activeUser) {
-      setCoins(0);
+    if (!activeUserId) {
+      // fallback to local-only mode if the user isn't authenticated
       setBackendLoaded(false);
+      try {
+        const raw = activeUser
+          ? localStorage.getItem(`flagiq:u:${activeUser}:coins`)
+          : null;
+        setCoins(raw ? Number(raw) : 0);
+      } catch (e) {
+        setCoins(0);
+      }
+      setBackendLoaded(true);
       return;
     }
 
     (async () => {
       try {
-        await ensurePlayerState(activeUser);
+        await ensurePlayerState(activeUserId);
 
-        const state = await getPlayerState(activeUser);
+        const state = await getPlayerState(activeUserId);
         if (state) {
           setCoins(Number(state.coins) || 0);
           setHints(inventoryToHints(state.inventory));
@@ -473,7 +528,7 @@ export default function App() {
         setBackendLoaded(true);
       }
     })();
-  }, [activeUser, setHints]);
+  }, [activeUser, activeUserId, setHints]);
 
   // helper to update coins AND persist to localStorage
   const applyCoinsUpdate = (valueOrUpdater) => {
@@ -493,20 +548,20 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!activeUser || !backendLoaded) return;
+    if (!activeUserId || !backendLoaded) return;
 
-    updatePlayerState(activeUser, {
+    updatePlayerState(activeUserId, {
       coins,
     });
-  }, [coins, activeUser, backendLoaded]);
+  }, [coins, activeUserId, backendLoaded]);
 
   useEffect(() => {
-    if (!activeUser || !backendLoaded) return;
+    if (!activeUserId || !backendLoaded) return;
 
-    updatePlayerState(activeUser, {
+    updatePlayerState(activeUserId, {
       inventory: hintsToInventory(hints),
     });
-  }, [activeUser, backendLoaded, hints]);
+  }, [activeUserId, backendLoaded, hints]);
 
 
   // Hearts are now stored globally per device, not per user,
@@ -826,6 +881,7 @@ export default function App() {
           activeUser={activeUser}
           setActiveUser={(u) => {
             setActiveUser(u);
+            setActiveUserId("");
             if (!u) setScreen("home");
           }}
           setScreen={setScreen}
@@ -860,7 +916,8 @@ export default function App() {
           users={users}
           setUsers={setUsers}
           onLoggedIn={(u) => {
-            setActiveUser(u);
+            setActiveUser(u?.username || "");
+            setActiveUserId(u?.id || "");
             setScreen("home");
           }}
         />
