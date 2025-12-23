@@ -6,6 +6,7 @@ import {
   getLevelStatsByUser,
   addCoinsByUser,
 } from "./ProgressByUser";
+import { getPlayerState } from "../playerStateApi";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -15,6 +16,20 @@ const TT_MS_PER_Q = 10000;
 const TT_TICK_MS = 120;
 const TT_STAR3 = 8000;
 const TT_STAR2 = 6000;
+
+const DEFAULT_HINT_COUNTS = { remove2: 0, autoPass: 0, pause: 0 };
+
+function normaliseHints(rawHints) {
+  if (!rawHints || typeof rawHints !== "object") return { ...DEFAULT_HINT_COUNTS };
+
+  const { remove2, autoPass, pause } = rawHints;
+
+  return {
+    remove2: Number.isFinite(Number(remove2)) ? Number(remove2) : 0,
+    autoPass: Number.isFinite(Number(autoPass)) ? Number(autoPass) : 0,
+    pause: Number.isFinite(Number(pause)) ? Number(pause) : 0,
+  };
+}
 
 // helper to store hint-popup per user per device
 const getHintSeenKey = (playerId) => `hasSeenHintInfo_${playerId || "default"}`;
@@ -232,6 +247,7 @@ export default function GameScreen({
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [wrongAnswers, setWrongAnswers] = useState([]);
   const [hintError, setHintError] = useState("");
+  const [backendHints, setBackendHints] = useState(null);
 
   // time trial
   const [ttScore, setTtScore] = useState(0);
@@ -243,6 +259,47 @@ export default function GameScreen({
 
   // ⭐ this run's stars (what we show on the success screen)
   const [runStars, setRunStars] = useState(0);
+
+  // Pull latest hint counts from backend so the game shows server truth.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchHintsFromBackend() {
+      if (!activeUser) {
+        setBackendHints(null);
+        return;
+      }
+
+      try {
+        const state = await getPlayerState(activeUser);
+        const rawHints = state?.hints;
+        if (!rawHints || cancelled) return;
+
+        const nextHints = normaliseHints(rawHints);
+        setBackendHints(nextHints);
+
+        if (setHints) {
+          setHints((prev) => ({
+            ...normaliseHints(prev),
+            ...nextHints,
+          }));
+        }
+      } catch (e) {
+        if (!cancelled) setBackendHints(null);
+      }
+    }
+
+    fetchHintsFromBackend();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeUser, setHints]);
+
+  const effectiveHints = useMemo(
+    () => normaliseHints(backendHints || hints || DEFAULT_HINT_COUNTS),
+    [backendHints, hints]
+  );
 
   // reset base state on level/mode change
   useEffect(() => {
@@ -344,8 +401,8 @@ export default function GameScreen({
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
-    if (!hints || !setHints) return;
-    if ((hints.remove2 ?? 0) <= 0) {
+    if (!setHints) return;
+    if ((effectiveHints.remove2 ?? 0) <= 0) {
       setHintError(t && lang ? t(lang, "hint.notEnough") : "Not enough hints.");
       setTimeout(() => setHintError(""), 1400);
       return;
@@ -361,13 +418,13 @@ export default function GameScreen({
     setWrongAnswers((prev) => [...prev, ...toDisable]);
     setHints((prev) => ({
       ...prev,
-      remove2: Math.max(0, (prev?.remove2 ?? 0) - 1),
+      remove2: Math.max(0, (prev?.remove2 ?? effectiveHints.remove2 ?? 0) - 1),
     }));
   }
 
   function handleUseAutoPass() {
-    if (!hints || !setHints) return;
-    if ((hints.autoPass ?? 0) <= 0) {
+    if (!setHints) return;
+    if ((effectiveHints.autoPass ?? 0) <= 0) {
       setHintError(t && lang ? t(lang, "hint.notEnough") : "Not enough hints.");
       setTimeout(() => setHintError(""), 1400);
       return;
@@ -378,14 +435,14 @@ export default function GameScreen({
     handleAnswer(current.correct.name, { fromHint: true });
     setHints((prev) => ({
       ...prev,
-      autoPass: Math.max(0, (prev?.autoPass ?? 0) - 1),
+      autoPass: Math.max(0, (prev?.autoPass ?? effectiveHints.autoPass ?? 0) - 1),
     }));
   }
 
   function handleUsePause() {
     if (mode !== "timetrial") return;
-    if (!hints || !setHints) return;
-    if ((hints.pause ?? 0) <= 0) {
+    if (!setHints) return;
+    if ((effectiveHints.pause ?? 0) <= 0) {
       setHintError(t && lang ? t(lang, "hint.notEnough") : "Not enough hints.");
       setTimeout(() => setHintError(""), 1400);
       return;
@@ -395,7 +452,7 @@ export default function GameScreen({
     setTtPaused(true);
     setHints((prev) => ({
       ...prev,
-      pause: Math.max(0, (prev?.pause ?? 0) - 1),
+      pause: Math.max(0, (prev?.pause ?? effectiveHints.pause ?? 0) - 1),
     }));
     setTimeout(() => {
       setTtPaused(false);
@@ -1070,11 +1127,13 @@ export default function GameScreen({
               marginBottom: 12,
               alignItems: "center",
             }}
-          >
+            >
             {/* Remove 2 */}
             <button
               onClick={handleUseRemove2}
-              disabled={!hints || hints.remove2 <= 0 || selectedAnswer !== null}
+              disabled={
+                !effectiveHints || effectiveHints.remove2 <= 0 || selectedAnswer !== null
+              }
               title={
                 t && lang
                   ? t(lang, "hint.remove2Desc")
@@ -1085,26 +1144,27 @@ export default function GameScreen({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                background: !hints || hints.remove2 <= 0 ? "#e2e8f0" : "#fff",
+                background:
+                  !effectiveHints || effectiveHints.remove2 <= 0 ? "#e2e8f0" : "#fff",
                 border: "1px solid #cbd5f5",
                 borderRadius: 999,
                 padding: "5px 10px",
                 fontSize: 12,
                 cursor:
-                  !hints || hints.remove2 <= 0 || selectedAnswer !== null
+                  !effectiveHints || effectiveHints.remove2 <= 0 || selectedAnswer !== null
                     ? "not-allowed"
                     : "pointer",
               }}
             >
               <span aria-hidden="true">🎯</span>
-              <span>{hints?.remove2 ?? 0}</span>
+              <span>{effectiveHints?.remove2 ?? 0}</span>
             </button>
 
             {/* Auto pass */}
             <button
               onClick={handleUseAutoPass}
               disabled={
-                !hints || hints.autoPass <= 0 || selectedAnswer !== null
+                !effectiveHints || effectiveHints.autoPass <= 0 || selectedAnswer !== null
               }
               title={
                 t && lang
@@ -1116,19 +1176,20 @@ export default function GameScreen({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                background: !hints || hints.autoPass <= 0 ? "#e2e8f0" : "#fff",
+                background:
+                  !effectiveHints || effectiveHints.autoPass <= 0 ? "#e2e8f0" : "#fff",
                 border: "1px solid #cbd5f5",
                 borderRadius: 999,
                 padding: "5px 10px",
                 fontSize: 12,
                 cursor:
-                  !hints || hints.autoPass <= 0 || selectedAnswer !== null
+                  !effectiveHints || effectiveHints.autoPass <= 0 || selectedAnswer !== null
                     ? "not-allowed"
                     : "pointer",
               }}
             >
               <span aria-hidden="true">✅</span>
-              <span>{hints?.autoPass ?? 0}</span>
+              <span>{effectiveHints?.autoPass ?? 0}</span>
             </button>
 
             {/* Pause */}
@@ -1136,8 +1197,8 @@ export default function GameScreen({
               onClick={handleUsePause}
               disabled={
                 mode !== "timetrial" ||
-                !hints ||
-                hints.pause <= 0 ||
+                !effectiveHints ||
+                effectiveHints.pause <= 0 ||
                 selectedAnswer !== null
               }
               title={
@@ -1151,7 +1212,9 @@ export default function GameScreen({
                 alignItems: "center",
                 gap: 6,
                 background:
-                  mode !== "timetrial" || !hints || hints.pause <= 0
+                  mode !== "timetrial" ||
+                  !effectiveHints ||
+                  effectiveHints.pause <= 0
                     ? "#e2e8f0"
                     : "#fff",
                 border: "1px solid #cbd5f5",
@@ -1160,15 +1223,15 @@ export default function GameScreen({
                 fontSize: 12,
                 cursor:
                   mode !== "timetrial" ||
-                  !hints ||
-                  hints.pause <= 0 ||
+                  !effectiveHints ||
+                  effectiveHints.pause <= 0 ||
                   selectedAnswer !== null
                     ? "not-allowed"
                     : "pointer",
               }}
             >
               <span aria-hidden="true">⏸️</span>
-              <span>{hints?.pause ?? 0}</span>
+              <span>{effectiveHints?.pause ?? 0}</span>
             </button>
 
             {/* info */}
