@@ -386,21 +386,21 @@ export default function App() {
   );
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded) return;
 
-  const starsByMode = {
-    classic: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-    ),
-    timetrial: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-    ),
-  };
+    const starsByMode = {
+      classic: JSON.parse(
+        localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
+      ),
+      timetrial: JSON.parse(
+        localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
+      ),
+    };
 
-  updatePlayerState(activeUser, {
-    stars_by_mode: starsByMode,
-  });
-}, [starsByLevel, activeUser, backendLoaded, mode]);
+    updatePlayerState(activeUser, {
+      stars_by_mode: starsByMode,
+    });
+  }, [starsByLevel, activeUser, backendLoaded, mode]);
 
 
 
@@ -410,47 +410,69 @@ export default function App() {
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
-useEffect(() => {
-  if (!activeUser) {
-    setCoins(0);
-    setBackendLoaded(false);
-    return;
-  }
-
-  (async () => {
-    try {
-      await ensurePlayerState(activeUser);
-
-      const state = await getPlayerState(activeUser);
-if (state) {
-  setCoins(Number(state.coins) || 0);
-
-  Object.entries(state.stars_by_mode || {}).forEach(
-    ([modeKey, starsMap]) => {
-      localStorage.setItem(
-        `flagiq:u:${activeUser}:${modeKey}:starsBest`,
-        JSON.stringify(starsMap || {})
-      );
+  useEffect(() => {
+    if (!activeUser) {
+      setCoins(0);
+      setBackendLoaded(false);
+      return;
     }
-  );
-}
 
-setBackendLoaded(true);
+    (async () => {
+      try {
+        await ensurePlayerState(activeUser);
 
-    } catch (e) {
-  // fallback to local only
-  try {
-    const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
-    setCoins(raw ? Number(raw) : 0);
-  } catch (e) {}
+        const state = await getPlayerState(activeUser);
+        if (state) {
+          setCoins(Number(state.coins) || 0);
 
+          const starsByMode = state.stars_by_mode || {};
 
-  // ✅ allow later sync back to backend
-  setBackendLoaded(true);
-}
+          Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
+            const safeStars = starsMap || {};
+            localStorage.setItem(
+              `flagiq:u:${activeUser}:${modeKey}:starsBest`,
+              JSON.stringify(safeStars)
+            );
 
-  })();
-}, [activeUser]);
+            // immediately hydrate the current mode so progress shows up from backend
+            if (modeKey === mode) {
+              setStarsByLevel(safeStars);
+            }
+          });
+
+          const backendLang =
+            state.preferred_lang || state.lang || state.language || "";
+          if (backendLang && backendLang !== lang) {
+            setLang(backendLang);
+          }
+
+          const backendHearts =
+            state.hearts || state.hearts_state || state.lives_state;
+          if (
+            backendHearts &&
+            Number.isFinite(Number(backendHearts.count)) &&
+            Number.isFinite(Number(backendHearts.lastTick))
+          ) {
+            setHeartsState({
+              count: Number(backendHearts.count),
+              lastTick: Number(backendHearts.lastTick),
+            });
+          }
+        }
+
+        setBackendLoaded(true);
+      } catch (e) {
+        // fallback to local only
+        try {
+          const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
+          setCoins(raw ? Number(raw) : 0);
+        } catch (e) {}
+
+        // ✅ allow later sync back to backend
+        setBackendLoaded(true);
+      }
+    })();
+  }, [activeUser, lang, mode]);
 
 
   // helper to update coins AND persist to localStorage
@@ -472,22 +494,38 @@ setBackendLoaded(true);
   };
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded) return;
 
-  updatePlayerState(activeUser, {
-    coins,
-  });
-}, [coins, activeUser, backendLoaded]);
+    updatePlayerState(activeUser, {
+      coins,
+    });
+  }, [coins, activeUser, backendLoaded]);
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    updatePlayerState(activeUser, {
+      preferred_lang: lang,
+    });
+  }, [lang, activeUser, backendLoaded]);
 
 
-  // Hearts are now stored globally per device, not per user,
-  // so they persist reliably across refreshes.
+  // Hearts are stored locally for offline durability and synced to the backend
+  // when a user is logged in.
   const [heartsState, setHeartsState] = useLocalStorage("flagiq:hearts", {
     count: MAX_HEARTS,
     lastTick: Date.now(),
   });
   const hearts = heartsState?.count ?? MAX_HEARTS;
   const lastTick = heartsState?.lastTick ?? Date.now();
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    updatePlayerState(activeUser, {
+      hearts: { count: hearts, lastTick },
+    });
+  }, [activeUser, backendLoaded, hearts, lastTick]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
