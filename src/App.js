@@ -275,6 +275,31 @@ function getModeStatsFromLocal(username, mode) {
 // ----- per-user hints hook (with migration from old keys) -----
 const DEFAULT_HINTS = { remove2: 3, autoPass: 1, pause: 2 };
 
+function inventoryToHints(inventory) {
+  if (!inventory || typeof inventory !== "object") return DEFAULT_HINTS;
+
+  const hints = inventory.hints || {};
+
+  return {
+    remove2: Number(hints["Remove Two"]) || 0,
+    autoPass: Number(hints.InstantCorrect) || 0,
+    pause: Number(hints["Extra Time"]) || 0,
+  };
+}
+
+function hintsToInventory(hints) {
+  const safe = hints || DEFAULT_HINTS;
+
+  return {
+    hints: {
+      "Remove Two": Number(safe.remove2) || 0,
+      InstantCorrect: Number(safe.autoPass) || 0,
+      "Extra Time": Number(safe.pause) || 0,
+    },
+    boosters: {},
+  };
+}
+
 function loadHintsForUser(username) {
   try {
     if (username) {
@@ -386,21 +411,21 @@ export default function App() {
   );
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded) return;
 
-  const starsByMode = {
-    classic: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-    ),
-    timetrial: JSON.parse(
-      localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-    ),
-  };
+    const starsByMode = {
+      classic: JSON.parse(
+        localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
+      ),
+      timetrial: JSON.parse(
+        localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
+      ),
+    };
 
-  updatePlayerState(activeUser, {
-    stars_by_mode: starsByMode,
-  });
-}, [starsByLevel, activeUser, backendLoaded, mode]);
+    updatePlayerState(activeUser, {
+      stars_by_mode: starsByMode,
+    });
+  }, [starsByLevel, activeUser, backendLoaded, mode]);
 
 
 
@@ -410,48 +435,45 @@ export default function App() {
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
 
-useEffect(() => {
-  if (!activeUser) {
-    setCoins(0);
-    setBackendLoaded(false);
-    return;
-  }
-
-  (async () => {
-    try {
-      await ensurePlayerState(activeUser);
-
-      const state = await getPlayerState(activeUser);
-if (state) {
-  setCoins(Number(state.coins) || 0);
-
-  Object.entries(state.stars_by_mode || {}).forEach(
-    ([modeKey, starsMap]) => {
-      localStorage.setItem(
-        `flagiq:u:${activeUser}:${modeKey}:starsBest`,
-        JSON.stringify(starsMap || {})
-      );
+  useEffect(() => {
+    if (!activeUser) {
+      setCoins(0);
+      setBackendLoaded(false);
+      return;
     }
-  );
-}
 
-setBackendLoaded(true);
+    (async () => {
+      try {
+        await ensurePlayerState(activeUser);
 
-    } catch (e) {
-  // fallback to local only
-  try {
-    const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
-    setCoins(raw ? Number(raw) : 0);
-  } catch (e) {}
+        const state = await getPlayerState(activeUser);
+        if (state) {
+          setCoins(Number(state.coins) || 0);
+          setHints(inventoryToHints(state.inventory));
 
+          Object.entries(state.stars_by_mode || {}).forEach(
+            ([modeKey, starsMap]) => {
+              localStorage.setItem(
+                `flagiq:u:${activeUser}:${modeKey}:starsBest`,
+                JSON.stringify(starsMap || {})
+              );
+            }
+          );
+        }
 
-  // ✅ allow later sync back to backend
-  setBackendLoaded(true);
-}
+        setBackendLoaded(true);
+      } catch (e) {
+        // fallback to local only
+        try {
+          const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
+          setCoins(raw ? Number(raw) : 0);
+        } catch (e) {}
 
-  })();
-}, [activeUser]);
-
+        // ✅ allow later sync back to backend
+        setBackendLoaded(true);
+      }
+    })();
+  }, [activeUser, setHints]);
 
   // helper to update coins AND persist to localStorage
   const applyCoinsUpdate = (valueOrUpdater) => {
@@ -465,19 +487,26 @@ setBackendLoaded(true);
         try {
           localStorage.setItem(`flagiq:u:${activeUser}:coins`, String(safe));
         } catch (e) {}
-
       }
       return safe;
     });
   };
 
   useEffect(() => {
-  if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded) return;
 
-  updatePlayerState(activeUser, {
-    coins,
-  });
-}, [coins, activeUser, backendLoaded]);
+    updatePlayerState(activeUser, {
+      coins,
+    });
+  }, [coins, activeUser, backendLoaded]);
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    updatePlayerState(activeUser, {
+      inventory: hintsToInventory(hints),
+    });
+  }, [activeUser, backendLoaded, hints]);
 
 
   // Hearts are now stored globally per device, not per user,
