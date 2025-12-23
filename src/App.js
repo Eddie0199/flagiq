@@ -612,14 +612,29 @@ export default function App() {
 
           const backendHearts =
             state.hearts || state.hearts_state || state.lives_state;
+
+          // Support discrete heart columns (hearts_current/hearts_last_regen_at)
+          const heartsFromDiscrete = Number.isFinite(
+            Number(state.hearts_current)
+          )
+            ? {
+                count: Number(state.hearts_current),
+                lastTick: state.hearts_last_regen_at
+                  ? new Date(state.hearts_last_regen_at).getTime()
+                  : Date.now(),
+              }
+            : null;
+
+          const resolvedHearts = backendHearts || heartsFromDiscrete;
+
           if (
-            backendHearts &&
-            Number.isFinite(Number(backendHearts.count)) &&
-            Number.isFinite(Number(backendHearts.lastTick))
+            resolvedHearts &&
+            Number.isFinite(Number(resolvedHearts.count)) &&
+            Number.isFinite(Number(resolvedHearts.lastTick))
           ) {
             setHeartsState({
-              count: Number(backendHearts.count),
-              lastTick: Number(backendHearts.lastTick),
+              count: Number(resolvedHearts.count),
+              lastTick: Number(resolvedHearts.lastTick),
             });
           }
         }
@@ -698,8 +713,15 @@ export default function App() {
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
 
+    const lastRegenIso = new Date(
+      Number.isFinite(Number(lastTick)) ? Number(lastTick) : Date.now()
+    ).toISOString();
+
     updatePlayerState(activeUser, {
       hearts: { count: hearts, lastTick },
+      hearts_current: hearts,
+      hearts_max: MAX_HEARTS,
+      hearts_last_regen_at: lastRegenIso,
     });
   }, [activeUser, backendLoaded, hearts, lastTick]);
 
