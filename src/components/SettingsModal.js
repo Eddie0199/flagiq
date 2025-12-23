@@ -20,6 +20,7 @@ export default function SettingsModal({
   setLang,
   activeUser,
   setActiveUser,
+  setActiveUserLabel,
   LANGS = [],
   t,
   onResetProgress, // dev-only callback from App (optional)
@@ -257,6 +258,7 @@ export default function SettingsModal({
           <button
             onClick={() => {
               setActiveUser("");
+              setActiveUserLabel && setActiveUserLabel("");
               onClose();
             }}
             style={{

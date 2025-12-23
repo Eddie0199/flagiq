@@ -369,9 +369,20 @@ export default function App() {
 
   const [users, setUsers] = useLocalStorage("flagiq:users", {});
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
+  const [activeUserLabel, setActiveUserLabel] = useLocalStorage(
+    "flagiq:activeUserLabel",
+    ""
+  );
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
+
+
+  useEffect(() => {
+    if (activeUser && !activeUserLabel) {
+      setActiveUserLabel(activeUser);
+    }
+  }, [activeUser, activeUserLabel, setActiveUserLabel]);
 
 
   // remember where to go back to when leaving the store
@@ -835,8 +846,12 @@ export default function App() {
           activeUser={activeUser}
           setActiveUser={(u) => {
             setActiveUser(u);
-            if (!u) setScreen("home");
+            if (!u) {
+              setActiveUserLabel("");
+              setScreen("home");
+            }
           }}
+          setActiveUserLabel={setActiveUserLabel}
           setScreen={setScreen}
           LANGS={LANGS}
           t={t}
@@ -869,7 +884,13 @@ export default function App() {
           users={users}
           setUsers={setUsers}
           onLoggedIn={(u) => {
-            setActiveUser(u);
+            if (u && typeof u === "object") {
+              setActiveUser(u.id || "");
+              setActiveUserLabel(u.label || u.id || "");
+            } else {
+              setActiveUser(u);
+              setActiveUserLabel(u);
+            }
             setScreen("home");
           }}
         />
