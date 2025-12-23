@@ -754,10 +754,24 @@ export default function App() {
       const current = prev ?? { count: MAX_HEARTS, lastTick: Date.now() };
       const wasFull = current.count === MAX_HEARTS;
       const newCount = Math.max(0, current.count - 1);
-      return {
+      const next = {
         count: newCount,
         lastTick: wasFull ? Date.now() : current.lastTick,
       };
+
+      if (activeUser && backendLoaded) {
+        const payload = {
+          hearts: next,
+          hearts_state: next,
+          lives_state: next,
+          hearts_current: newCount,
+          hearts_max: MAX_HEARTS,
+          hearts_last_regen_at: next.lastTick,
+        };
+        updatePlayerState(activeUser, payload);
+      }
+
+      return next;
     });
   }
 
