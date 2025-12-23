@@ -612,14 +612,29 @@ export default function App() {
 
           const backendHearts =
             state.hearts || state.hearts_state || state.lives_state;
+
+          // Support discrete heart columns (hearts_current/hearts_last_regen_at)
+          const heartsFromDiscrete = Number.isFinite(
+            Number(state.hearts_current)
+          )
+            ? {
+                count: Number(state.hearts_current),
+                lastTick: state.hearts_last_regen_at
+                  ? new Date(state.hearts_last_regen_at).getTime()
+                  : Date.now(),
+              }
+            : null;
+
+          const resolvedHearts = backendHearts || heartsFromDiscrete;
+
           if (
-            backendHearts &&
-            Number.isFinite(Number(backendHearts.count)) &&
-            Number.isFinite(Number(backendHearts.lastTick))
+            resolvedHearts &&
+            Number.isFinite(Number(resolvedHearts.count)) &&
+            Number.isFinite(Number(resolvedHearts.lastTick))
           ) {
             setHeartsState({
-              count: Number(backendHearts.count),
-              lastTick: Number(backendHearts.lastTick),
+              count: Number(resolvedHearts.count),
+              lastTick: Number(resolvedHearts.lastTick),
             });
           }
         }
@@ -698,10 +713,58 @@ export default function App() {
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
 
+    const lastRegenIso = new Date(
+      Number.isFinite(Number(lastTick)) ? Number(lastTick) : Date.now()
+    ).toISOString();
+
     updatePlayerState(activeUser, {
       hearts: { count: hearts, lastTick },
+      hearts_current: hearts,
+      hearts_max: MAX_HEARTS,
+      hearts_last_regen_at: lastRegenIso,
     });
   }, [activeUser, backendLoaded, hearts, lastTick]);
+
+  // Persist level progress + stars to backend so it is restored across devices
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+
+    const readStarsMap = (modeKey) => {
+      try {
+        const raw = localStorage.getItem(
+          `flagiq:u:${activeUser}:${modeKey}:starsBest`
+        );
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (e) {
+        return {};
+      }
+    };
+
+    const classicStars = readStarsMap("classic");
+    const timeTrialStars = readStarsMap("timetrial");
+
+    const progressPayload = {
+      classic: {
+        starsByLevel: classicStars,
+        unlockedUntil: computeUnlockedLevels(classicStars),
+      },
+      timetrial: {
+        starsByLevel: timeTrialStars,
+        unlockedUntil: computeUnlockedLevels(timeTrialStars),
+      },
+    };
+
+    const starsByModePayload = {
+      classic: classicStars,
+      timetrial: timeTrialStars,
+    };
+
+    updatePlayerState(activeUser, {
+      progress: progressPayload,
+      stars_by_mode: starsByModePayload,
+    });
+  }, [activeUser, backendLoaded, mode, starsByLevel]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
@@ -750,15 +813,33 @@ export default function App() {
   }
 
   function onRunLost() {
+    let nextHearts = null;
+
     setHeartsState((prev) => {
       const current = prev ?? { count: MAX_HEARTS, lastTick: Date.now() };
       const wasFull = current.count === MAX_HEARTS;
       const newCount = Math.max(0, current.count - 1);
-      return {
+      nextHearts = {
         count: newCount,
         lastTick: wasFull ? Date.now() : current.lastTick,
       };
+      return nextHearts;
     });
+
+    if (activeUser && backendLoaded && nextHearts) {
+      const lastRegenIso = new Date(
+        Number.isFinite(Number(nextHearts.lastTick))
+          ? Number(nextHearts.lastTick)
+          : Date.now()
+      ).toISOString();
+
+      updatePlayerState(activeUser, {
+        hearts: { ...nextHearts },
+        hearts_current: nextHearts.count,
+        hearts_max: MAX_HEARTS,
+        hearts_last_regen_at: lastRegenIso,
+      });
+    }
   }
 
   const audioCtxRef = useRef(null);
