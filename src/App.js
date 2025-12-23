@@ -130,6 +130,64 @@ function normalizeStarsByMode(raw) {
   return raw;
 }
 
+function normalizeModeKey(rawMode) {
+  const m = String(rawMode || "").toLowerCase();
+  if (m === "timetrial" || m === "time trial") return "timetrial";
+  return m || "classic";
+}
+
+function normalizeProgress(raw) {
+  const base = {
+    classic: { starsByLevel: {}, unlockedUntil: 5 },
+    timetrial: { starsByLevel: {}, unlockedUntil: 5 },
+  };
+
+  if (!raw) return base;
+
+  let parsed = raw;
+
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      return base;
+    }
+  }
+
+  if (!parsed || typeof parsed !== "object") return base;
+
+  Object.entries(parsed).forEach(([modeKey, value]) => {
+    const normalisedMode = normalizeModeKey(modeKey);
+    const target = base[normalisedMode];
+    if (!target || !value || typeof value !== "object") return;
+
+    if (value.starsByLevel && typeof value.starsByLevel === "object") {
+      target.starsByLevel = { ...value.starsByLevel };
+    }
+
+    if (Number.isFinite(value.unlockedUntil)) {
+      target.unlockedUntil = value.unlockedUntil;
+    }
+  });
+
+  return base;
+}
+
+function mergeStarsMaps(a = {}, b = {}) {
+  const out = {};
+  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+  keys.forEach((k) => {
+    const av = Number(a?.[k] || 0);
+    const bv = Number(b?.[k] || 0);
+    const best = Math.max(
+      Number.isFinite(av) ? av : 0,
+      Number.isFinite(bv) ? bv : 0
+    );
+    out[k] = best;
+  });
+  return out;
+}
+
 export function starsNeededForLevelId(levelId, starsMap) {
   const blockEnd = Math.min(Math.ceil(levelId / BATCH) * BATCH, TOTAL_LEVELS);
   const required = BLOCK_REQUIRE[blockEnd] ?? 0;
@@ -451,19 +509,43 @@ export default function App() {
         if (state) {
           setCoins(Number(state.coins) || 0);
 
-          const starsByMode = normalizeStarsByMode(state.stars_by_mode);
+          const persistStarsForMode = (modeKey, starsMap, mergeWithExisting) => {
+            const normalisedMode = normalizeModeKey(modeKey);
+            const existing = mergeWithExisting
+              ? (() => {
+                  try {
+                    const raw = localStorage.getItem(
+                      `flagiq:u:${activeUser}:${normalisedMode}:starsBest`
+                    );
+                    return raw ? JSON.parse(raw) : {};
+                  } catch (e) {
+                    return {};
+                  }
+                })()
+              : {};
 
-          Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
-            const safeStars = starsMap || {};
+            const merged = mergeStarsMaps(existing, starsMap || {});
+
             localStorage.setItem(
-              `flagiq:u:${activeUser}:${modeKey}:starsBest`,
-              JSON.stringify(safeStars)
+              `flagiq:u:${activeUser}:${normalisedMode}:starsBest`,
+              JSON.stringify(merged)
             );
 
             // immediately hydrate the current mode so progress shows up from backend
-            if (modeKey === mode) {
-              setStarsByLevel(safeStars);
+            if (normalisedMode === mode) {
+              setStarsByLevel(merged);
             }
+          };
+
+          const progress = normalizeProgress(state.progress);
+          Object.entries(progress).forEach(([modeKey, modeProgress]) => {
+            persistStarsForMode(modeKey, modeProgress?.starsByLevel, false);
+          });
+
+          const starsByMode = normalizeStarsByMode(state.stars_by_mode);
+          Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
+            // merge stars_by_mode on top of progress so we keep the best values
+            persistStarsForMode(modeKey, starsMap, true);
           });
 
           const backendLang =
