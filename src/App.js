@@ -321,6 +321,22 @@ function useUserStorage(username, suffix, init) {
   return [val, setVal];
 }
 
+function heartsStorageKey(username) {
+  return username ? `flagiq:u:${username}:hearts` : "flagiq:hearts:anon";
+}
+
+function normalizeHeartsState(raw) {
+  const fallback = { count: MAX_HEARTS, lastTick: Date.now() };
+  if (!raw) return fallback;
+
+  const { count, lastTick } = raw || {};
+  if (!Number.isFinite(Number(count)) || !Number.isFinite(Number(lastTick))) {
+    return fallback;
+  }
+
+  return { count: Number(count), lastTick: Number(lastTick) };
+}
+
 // read per-mode stats for homepage directly from the per-mode starsBest maps
 function getModeStatsFromLocal(username, mode) {
   if (!username) return { level: 0, stars: 0 };
@@ -475,6 +491,7 @@ export default function App() {
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
+  const [heartsHydrated, setHeartsHydrated] = useState(false);
 
 
   useEffect(() => {
@@ -526,10 +543,15 @@ export default function App() {
   const [coins, setCoins] = useState(0);
 
   useEffect(() => {
+    setHeartsHydrated(false);
+  }, [activeUser]);
+
+  useEffect(() => {
     if (!activeUser) {
       setCoins(0);
       setBackendLoaded(false);
       setInventory(null);
+      setHeartsHydrated(false);
       return;
     }
 
@@ -625,6 +647,7 @@ export default function App() {
         }
 
         setBackendLoaded(true);
+        setHeartsHydrated(true);
       } catch (e) {
         // fallback to local only
         try {
@@ -634,6 +657,7 @@ export default function App() {
 
         // ✅ allow later sync back to backend
         setBackendLoaded(true);
+        setHeartsHydrated(true);
       }
     })();
   }, [activeUser, lang, mode]);
@@ -688,20 +712,44 @@ export default function App() {
 
   // Hearts are stored locally for offline durability and synced to the backend
   // when a user is logged in.
-  const [heartsState, setHeartsState] = useLocalStorage("flagiq:hearts", {
-    count: MAX_HEARTS,
-    lastTick: Date.now(),
+  const [heartsState, setHeartsState] = useState(() => {
+    try {
+      const raw = localStorage.getItem(heartsStorageKey(activeUser));
+      return normalizeHeartsState(raw ? JSON.parse(raw) : null);
+    } catch (e) {
+      return normalizeHeartsState(null);
+    }
   });
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(heartsStorageKey(activeUser));
+      const next = normalizeHeartsState(raw ? JSON.parse(raw) : null);
+      setHeartsState(next);
+    } catch (e) {
+      setHeartsState(normalizeHeartsState(null));
+    }
+  }, [activeUser]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        heartsStorageKey(activeUser),
+        JSON.stringify(normalizeHeartsState(heartsState))
+      );
+    } catch (e) {}
+  }, [activeUser, heartsState]);
+
   const hearts = heartsState?.count ?? MAX_HEARTS;
   const lastTick = heartsState?.lastTick ?? Date.now();
 
   useEffect(() => {
-    if (!activeUser || !backendLoaded) return;
+    if (!activeUser || !backendLoaded || !heartsHydrated) return;
 
     updatePlayerState(activeUser, {
       hearts: { count: hearts, lastTick },
     });
-  }, [activeUser, backendLoaded, hearts, lastTick]);
+  }, [activeUser, backendLoaded, hearts, heartsHydrated, lastTick]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
