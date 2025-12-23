@@ -337,7 +337,10 @@ export default function GameScreen({
     () => getLevelStatsByUser(usernameForProgress, mode, levelId),
     [usernameForProgress, mode, levelId]
   );
-  const bestStars = Number(bestLevelStats?.stars || 0);
+  const bestStars = Math.max(
+    Number(bestLevelStats?.stars || 0),
+    Number(currentStars || 0)
+  );
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
@@ -443,8 +446,7 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore =
-              Number(bestLevelStats?.stars || 0) > 0;
+            const alreadyCompletedBefore = bestStars > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
             setStarsByLevel((prev) => {
@@ -508,8 +510,7 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore =
-              Number(bestLevelStats?.stars || 0) > 0;
+            const alreadyCompletedBefore = bestStars > 0;
 
             let shouldGiveCoins = false; // kept local for clarity, but controlled by bestLevelStats
             setStarsByLevel((prev) => {

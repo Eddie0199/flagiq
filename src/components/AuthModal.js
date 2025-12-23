@@ -106,7 +106,11 @@ export default function AuthModal({
     const user = data.user;
     const username = user?.user_metadata?.username || user?.email || em;
 
-    onLoggedIn && onLoggedIn(username);
+    onLoggedIn &&
+      onLoggedIn({
+        id: user?.id || username,
+        label: username,
+      });
     onClose && onClose();
   }
 
@@ -169,7 +173,11 @@ export default function AuthModal({
     const user = data.user;
     const username = user?.user_metadata?.username || u;
 
-    onLoggedIn && onLoggedIn(username);
+    onLoggedIn &&
+      onLoggedIn({
+        id: user?.id || username,
+        label: username,
+      });
     onClose && onClose();
   }
 

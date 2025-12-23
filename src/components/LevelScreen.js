@@ -46,6 +46,41 @@ function computeUnlockedFromStars(starsMap) {
   return unlocked;
 }
 
+// Merge per-level storage with legacy starsBest map (used by backend hydration)
+function getStarsMapFromStore(username, mode) {
+  const map = {};
+  if (!username) return map;
+
+  let legacy = {};
+  try {
+    const rawLegacy = localStorage.getItem(
+      `flagiq:u:${username}:${mode}:starsBest`
+    );
+    if (rawLegacy) {
+      const parsed = JSON.parse(rawLegacy);
+      if (parsed && typeof parsed === "object") legacy = parsed;
+    }
+  } catch {
+    // ignore
+  }
+
+  for (let id = 1; id <= TOTAL_LEVELS; id++) {
+    let best = 0;
+
+    try {
+      const stats = getLevelStatsByUser(username, mode, id);
+      best = Number(stats?.stars || 0);
+    } catch {
+      // ignore
+    }
+
+    const legacyVal = Number(legacy[id] || 0);
+    map[id] = Math.max(best, legacyVal);
+  }
+
+  return map;
+}
+
 export default function LevelScreen({
   t,
   lang,
@@ -58,14 +93,10 @@ export default function LevelScreen({
   const userKey = (username && String(username)) || "guest";
 
   // read best-ever stars per level from persistent store
-  const starsByLevelFromStore = useMemo(() => {
-    const map = {};
-    for (let id = 1; id <= TOTAL_LEVELS; id++) {
-      const stats = getLevelStatsByUser(userKey, mode, id);
-      map[id] = Number(stats?.stars || 0);
-    }
-    return map;
-  }, [userKey, mode]);
+  const starsByLevelFromStore = useMemo(
+    () => getStarsMapFromStore(userKey, mode),
+    [userKey, mode]
+  );
 
   const totalStars = useMemo(
     () =>
