@@ -11,14 +11,27 @@ function formatRemaining(ms) {
   return `${m}:${ss}`;
 }
 
-function HeartsPill({ count, lastTick, t, lang }) {
+function HeartsPill({ hearts, t, lang }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  const count = Number.isFinite(Number(hearts?.current))
+    ? Number(hearts.current)
+    : Number(hearts?.count || 0);
+  const max = Number.isFinite(Number(hearts?.max))
+    ? Number(hearts.max)
+    : MAX_HEARTS;
+  const lastTick =
+    hearts?.lastRegenAt ??
+    hearts?.lastTick ??
+    hearts?.hearts_last_regen_at ??
+    Date.now();
+
   const nextMs = Math.max(0, REGEN_MS - (now - lastTick));
-  const showTimer = count < MAX_HEARTS;
+  const showTimer = count < max;
 
   return (
     <div
@@ -208,8 +221,7 @@ export default function Header({
       <div style={{ justifySelf: "center" }}>
         {showHearts && hearts ? (
           <HeartsPill
-            count={hearts.count}
-            lastTick={hearts.lastTick}
+            hearts={hearts}
             t={t}
             lang={lang}
           />

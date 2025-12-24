@@ -33,6 +33,11 @@ export const BLOCK_REQUIRE = { 5: 0, 10: 12, 15: 24, 20: 36, 25: 48, 30: 60 };
 
 export const MAX_HEARTS = 5;
 export const REGEN_MS = 10 * 60 * 1000;
+export const DEFAULT_HEARTS_STATE = {
+  current: MAX_HEARTS,
+  max: MAX_HEARTS,
+  lastRegenAt: null,
+};
 
 // ----- helpers -----
 export const shuffle = (arr) =>
@@ -248,6 +253,56 @@ export function buildLevels(flags) {
     levels.push({ id: i, pool, questionCount: 10 });
   }
   return levels;
+}
+
+function normalizeHeartsState(raw) {
+  const base = raw && typeof raw === "object" ? raw : {};
+
+  const maxRaw =
+    base.max ?? base.hearts_max ?? base.maxHearts ?? base.countMax ?? MAX_HEARTS;
+  const max = Number.isFinite(Number(maxRaw)) && Number(maxRaw) > 0
+    ? Number(maxRaw)
+    : MAX_HEARTS;
+
+  const currentRaw =
+    base.current ?? base.hearts_current ?? base.count ?? base.hearts ?? max;
+  const current = clamp(
+    Number.isFinite(Number(currentRaw)) ? Number(currentRaw) : max,
+    0,
+    max
+  );
+
+  let last = base.lastRegenAt ?? base.hearts_last_regen_at ?? base.lastTick;
+  if (last === undefined) last = null;
+  let lastRegenAt = null;
+  if (last !== null) {
+    const numeric = Number(last);
+    if (Number.isFinite(numeric)) {
+      lastRegenAt = numeric;
+    } else {
+      const parsed = Date.parse(last);
+      lastRegenAt = Number.isFinite(parsed) ? parsed : null;
+    }
+  }
+
+  return { current, max, lastRegenAt };
+}
+
+function getHeartsStorageKey(username) {
+  return username ? `flagiq:u:${username}:hearts` : null;
+}
+
+function loadHeartsForUser(username) {
+  const key = getHeartsStorageKey(username);
+  if (!key) return DEFAULT_HEARTS_STATE;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return DEFAULT_HEARTS_STATE;
+    const parsed = JSON.parse(raw);
+    return normalizeHeartsState(parsed);
+  } catch (e) {
+    return DEFAULT_HEARTS_STATE;
+  }
 }
 
 // ---- storage hooks ----
@@ -524,14 +579,18 @@ export default function App() {
 
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
+  const [heartsState, setHeartsState] = useState(DEFAULT_HEARTS_STATE);
 
   useEffect(() => {
     if (!activeUser) {
       setCoins(0);
+      setHeartsState(DEFAULT_HEARTS_STATE);
       setBackendLoaded(false);
       setInventory(null);
       return;
     }
+    setBackendLoaded(false);
+    setHeartsState(loadHeartsForUser(activeUser));
 
     (async () => {
       try {
@@ -575,18 +634,22 @@ export default function App() {
             setLang(backendLang);
           }
 
-          const backendHearts =
-            state.hearts || state.hearts_state || state.lives_state;
-          if (
-            backendHearts &&
-            Number.isFinite(Number(backendHearts.count)) &&
-            Number.isFinite(Number(backendHearts.lastTick))
-          ) {
-            setHeartsState({
-              count: Number(backendHearts.count),
-              lastTick: Number(backendHearts.lastTick),
-            });
-          }
+          const backendHearts = normalizeHeartsState({
+            hearts_current: state.hearts_current,
+            hearts_max: state.hearts_max,
+            hearts_last_regen_at: state.hearts_last_regen_at,
+          });
+          setHeartsState(backendHearts);
+          try {
+            localStorage.setItem(
+              getHeartsStorageKey(activeUser),
+              JSON.stringify({
+                hearts_current: backendHearts.current,
+                hearts_max: backendHearts.max,
+                hearts_last_regen_at: backendHearts.lastRegenAt,
+              })
+            );
+          } catch (e) {}
         }
 
         setBackendLoaded(true);
@@ -596,6 +659,7 @@ export default function App() {
           const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
           setCoins(raw ? Number(raw) : 0);
         } catch (e) {}
+        setHeartsState(loadHeartsForUser(activeUser));
 
         // ✅ allow later sync back to backend
         setBackendLoaded(true);
@@ -650,23 +714,33 @@ export default function App() {
     });
   }, [lang, activeUser, backendLoaded]);
 
-
-  // Hearts are stored locally for offline durability and synced to the backend
-  // when a user is logged in.
-  const [heartsState, setHeartsState] = useLocalStorage("flagiq:hearts", {
-    count: MAX_HEARTS,
-    lastTick: Date.now(),
-  });
-  const hearts = heartsState?.count ?? MAX_HEARTS;
-  const lastTick = heartsState?.lastTick ?? Date.now();
+  useEffect(() => {
+    if (!activeUser) return;
+    try {
+      const key = getHeartsStorageKey(activeUser);
+      if (!key) return;
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          hearts_current: heartsState.current,
+          hearts_max: heartsState.max,
+          hearts_last_regen_at: heartsState.lastRegenAt,
+        })
+      );
+    } catch (e) {}
+  }, [activeUser, heartsState]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
 
     updatePlayerState(activeUser, {
-      hearts: { count: hearts, lastTick },
+      hearts_current: heartsState.current,
+      hearts_max: heartsState.max,
+      hearts_last_regen_at: heartsState.lastRegenAt
+        ? new Date(heartsState.lastRegenAt).toISOString()
+        : null,
     });
-  }, [activeUser, backendLoaded, hearts, lastTick]);
+  }, [activeUser, backendLoaded, heartsState]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
@@ -675,23 +749,48 @@ export default function App() {
   const [noLivesOpen, setNoLivesOpen] = useState(false);
 
   const [levels] = useState(() => buildLevels(FLAGS));
+  const heartsCurrent = heartsState?.current ?? MAX_HEARTS;
+  const heartsMax = heartsState?.max ?? MAX_HEARTS;
+  const lastRegenAt = heartsState?.lastRegenAt ?? null;
 
   // regen loop
   useEffect(() => {
     if (!loggedIn) return;
-    const id = setInterval(() => {
+
+    const tick = () => {
       setHeartsState((prev) => {
-        if (!prev) return { count: MAX_HEARTS, lastTick: Date.now() };
-        let { count, lastTick } = prev;
-        if (count >= MAX_HEARTS) return prev;
+        const currentState = normalizeHeartsState(prev);
+        if (currentState.current >= currentState.max) return currentState;
+
         const now = Date.now();
-        const grown = Math.floor((now - lastTick) / REGEN_MS);
-        if (grown <= 0) return prev;
-        count = Math.min(MAX_HEARTS, count + grown);
-        lastTick = count >= MAX_HEARTS ? now : lastTick + grown * REGEN_MS;
-        return { count, lastTick };
+        const baseline = currentState.lastRegenAt ?? now;
+        const elapsed = now - baseline;
+        const regenCount = Math.floor(elapsed / REGEN_MS);
+
+        if (regenCount <= 0) {
+          if (currentState.lastRegenAt === null) {
+            return { ...currentState, lastRegenAt: now };
+          }
+          return currentState;
+        }
+
+        const increment = Math.min(
+          regenCount,
+          currentState.max - currentState.current
+        );
+        const nextCurrent = currentState.current + increment;
+        const nextLast = baseline + regenCount * REGEN_MS;
+
+        return {
+          ...currentState,
+          current: nextCurrent,
+          lastRegenAt: nextLast,
+        };
       });
-    }, 1000);
+    };
+
+    tick();
+    const id = setInterval(tick, 30000);
     return () => clearInterval(id);
   }, [loggedIn, setHeartsState]);
 
@@ -706,7 +805,7 @@ export default function App() {
 
   // ★ IMPORTANT: rely on LevelScreen for lock logic; just check hearts here
   function onLevelClick(id) {
-    if (hearts <= 0) {
+    if (heartsCurrent <= 0) {
       setNoLivesOpen(true);
       return;
     }
@@ -716,12 +815,16 @@ export default function App() {
 
   function onRunLost() {
     setHeartsState((prev) => {
-      const current = prev ?? { count: MAX_HEARTS, lastTick: Date.now() };
-      const wasFull = current.count === MAX_HEARTS;
-      const newCount = Math.max(0, current.count - 1);
+      const current = normalizeHeartsState(prev);
+      const wasFull = current.current >= current.max;
+      const newCount = Math.max(0, current.current - 1);
       return {
-        count: newCount,
-        lastTick: wasFull ? Date.now() : current.lastTick,
+        ...current,
+        current: newCount,
+        lastRegenAt:
+          current.lastRegenAt === null || wasFull
+            ? Date.now()
+            : current.lastRegenAt,
       };
     });
   }
@@ -786,7 +889,7 @@ export default function App() {
   // Buy a single extra heart using coins (prototype only)
   const handleBuyHeartWithCoins = () => {
     const HEART_COST = 50;
-    if (hearts >= MAX_HEARTS) return;
+    if (heartsCurrent >= heartsMax) return;
     if (coins < HEART_COST) return;
 
     // deduct coins
@@ -797,22 +900,21 @@ export default function App() {
 
     // add +1 heart, capped at max
     setHeartsState((prev) => {
-      const current = prev ?? { count: MAX_HEARTS, lastTick: Date.now() };
-      const currentCount =
-        typeof current.count === "number" ? current.count : MAX_HEARTS;
+      const current = normalizeHeartsState(prev);
       return {
         ...current,
-        count: Math.min(MAX_HEARTS, currentCount + 1),
+        current: Math.min(current.max, current.current + 1),
       };
     });
   };
 
   // Refill hearts to max via paid option (no coin impact in prototype)
   const handleRefillHeartsWithMoney = () => {
-    if (hearts >= MAX_HEARTS) return;
+    if (heartsCurrent >= heartsMax) return;
     setHeartsState({
-      count: MAX_HEARTS,
-      lastTick: Date.now(),
+      current: heartsMax,
+      max: heartsMax,
+      lastRegenAt: null,
     });
   };
 
@@ -868,7 +970,11 @@ export default function App() {
           <Header
             showBack
             onBack={goHome}
-            hearts={{ count: hearts, lastTick }}
+            hearts={{
+              current: heartsCurrent,
+              max: heartsMax,
+              lastRegenAt,
+            }}
             username={activeUser}
             onSettings={() => setSettingsOpen(true)}
             showHearts
@@ -895,7 +1001,11 @@ export default function App() {
           <Header
             showBack
             onBack={goLevels}
-            hearts={{ count: hearts, lastTick }}
+            hearts={{
+              current: heartsCurrent,
+              max: heartsMax,
+              lastRegenAt,
+            }}
             username={activeUser}
             onSettings={() => setSettingsOpen(true)}
             showHearts
@@ -955,7 +1065,11 @@ export default function App() {
           <Header
             showBack
             onBack={() => setScreen(lastNonStoreScreen || "levels")}
-            hearts={{ count: hearts, lastTick }}
+            hearts={{
+              current: heartsCurrent,
+              max: heartsMax,
+              lastRegenAt,
+            }}
             username={activeUser}
             onSettings={() => setSettingsOpen(true)}
             showHearts
@@ -972,8 +1086,8 @@ export default function App() {
             // Store passes an *absolute* new total
             onUpdateCoins={(next) => applyCoinsUpdate(next)}
             onBack={() => setScreen(lastNonStoreScreen || "levels")}
-            hearts={hearts}
-            maxHearts={MAX_HEARTS}
+            hearts={heartsCurrent}
+            maxHearts={heartsMax}
             onBuyHeartWithCoins={handleBuyHeartWithCoins}
             onRefillHeartsWithMoney={handleRefillHeartsWithMoney}
           />
@@ -1015,7 +1129,8 @@ export default function App() {
       )}
       {noLivesOpen && (
         <NoLivesModal
-          lastTick={lastTick}
+          lastRegenAt={lastRegenAt}
+          maxHearts={heartsMax}
           onClose={() => setNoLivesOpen(false)}
         />
       )}
