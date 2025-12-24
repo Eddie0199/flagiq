@@ -334,6 +334,45 @@ function getHeartsStorageKey(username) {
   return username ? `flagiq:u:${username}:hearts` : null;
 }
 
+export function applyHeartsRegen(state, now = Date.now()) {
+  const base = normalizeHeartsState(state);
+  const ts = Number.isFinite(Number(now)) ? Number(now) : Date.now();
+
+  if (base.current >= base.max) {
+    return { ...base, lastRegenAt: null, nextRefreshAt: null, added: 0 };
+  }
+
+  if (base.lastRegenAt === null) {
+    return { ...base, nextRefreshAt: null, added: 0 };
+  }
+
+  const elapsedMs = Math.max(0, ts - base.lastRegenAt);
+  const elapsedMins = Math.floor(elapsedMs / 60000);
+  const add = Math.floor(elapsedMins / 10);
+
+  if (add <= 0) {
+    const remainder = REGEN_MS - (elapsedMs % REGEN_MS || 0) || REGEN_MS;
+    return {
+      ...base,
+      nextRefreshAt: ts + remainder,
+      added: 0,
+    };
+  }
+
+  const newCurrent = Math.min(base.max, base.current + add);
+  const filled = newCurrent >= base.max;
+  const nextLast = filled ? null : base.lastRegenAt + add * REGEN_MS;
+  const nextRefreshAt = filled ? null : nextLast + REGEN_MS;
+
+  return {
+    current: newCurrent,
+    max: base.max,
+    lastRegenAt: nextLast,
+    nextRefreshAt,
+    added: newCurrent - base.current,
+  };
+}
+
 function loadHeartsForUser(username) {
   const key = getHeartsStorageKey(username);
   if (!key) return DEFAULT_HEARTS_STATE;
@@ -655,6 +694,16 @@ export default function App() {
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
   const [heartsState, setHeartsState] = useState(DEFAULT_HEARTS_STATE);
+  const backendHeartsRef = useRef(null);
+  const pendingHeartsUpdateRef = useRef(null);
+  const heartsPushTimeoutRef = useRef(null);
+  const [nextHeartsRefreshAt, setNextHeartsRefreshAt] = useState(null);
+
+  useEffect(() => {
+    backendHeartsRef.current = null;
+    pendingHeartsUpdateRef.current = null;
+    setNextHeartsRefreshAt(null);
+  }, [activeUser]);
 
   useEffect(() => {
     if (!activeUser) {
@@ -740,14 +789,19 @@ export default function App() {
             hearts_max: state.hearts_max,
             hearts_last_regen_at: state.hearts_last_regen_at,
           });
-          setHeartsState(backendHearts);
+          const regenerated = applyHeartsRegen(backendHearts, Date.now());
+          backendHeartsRef.current = backendHearts;
+          setHeartsState(regenerated);
+          if (regenerated.added > 0) {
+            pendingHeartsUpdateRef.current = regenerated;
+          }
           try {
             localStorage.setItem(
               getHeartsStorageKey(activeUser),
               JSON.stringify({
-                hearts_current: backendHearts.current,
-                hearts_max: backendHearts.max,
-                hearts_last_regen_at: backendHearts.lastRegenAt,
+                hearts_current: regenerated.current,
+                hearts_max: regenerated.max,
+                hearts_last_regen_at: regenerated.lastRegenAt,
               })
             );
           } catch (e) {}
@@ -792,6 +846,57 @@ export default function App() {
       return safe;
     });
   };
+
+  const flushHeartsUpdate = useCallback(async () => {
+    if (
+      !activeUser ||
+      !backendLoaded ||
+      !pendingHeartsUpdateRef.current ||
+      !isOnline
+    ) {
+      return;
+    }
+
+    const payloadState = normalizeHeartsState(pendingHeartsUpdateRef.current);
+    pendingHeartsUpdateRef.current = null;
+    try {
+      const updated = await updatePlayerState(activeUser, {
+        hearts_current: payloadState.current,
+        hearts_max: payloadState.max,
+        hearts_last_regen_at: payloadState.lastRegenAt
+          ? new Date(payloadState.lastRegenAt).toISOString()
+          : null,
+      });
+      const normalizedUpdated = normalizeHeartsState({
+        hearts_current: updated?.hearts_current ?? payloadState.current,
+        hearts_max: updated?.hearts_max ?? payloadState.max,
+        hearts_last_regen_at:
+          updated?.hearts_last_regen_at ?? payloadState.lastRegenAt,
+      });
+      backendHeartsRef.current = normalizedUpdated;
+      const recomputed = applyHeartsRegen(normalizedUpdated, Date.now());
+      setHeartsState((prev) => ({
+        ...normalizeHeartsState(prev),
+        ...recomputed,
+      }));
+      setNextHeartsRefreshAt(recomputed.nextRefreshAt ?? null);
+    } catch (e) {
+      pendingHeartsUpdateRef.current = payloadState;
+    }
+  }, [activeUser, backendLoaded, isOnline]);
+
+  const queueHeartsUpdate = useCallback(
+    (state) => {
+      if (!activeUser || !backendLoaded) return;
+      pendingHeartsUpdateRef.current = normalizeHeartsState(state);
+      if (heartsPushTimeoutRef.current) return;
+      heartsPushTimeoutRef.current = setTimeout(() => {
+        heartsPushTimeoutRef.current = null;
+        flushHeartsUpdate();
+      }, 200);
+    },
+    [activeUser, backendLoaded, flushHeartsUpdate]
+  );
 
   const handleDailySpinClaim = useCallback(async () => {
     if (!activeUser || !backendLoaded) {
@@ -838,6 +943,10 @@ export default function App() {
       return { success: false, reason: "error" };
     }
   }, [activeUser, backendLoaded]);
+
+  useEffect(() => {
+    flushHeartsUpdate();
+  }, [flushHeartsUpdate]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
@@ -911,18 +1020,6 @@ export default function App() {
     } catch (e) {}
   }, [activeUser, heartsState]);
 
-  useEffect(() => {
-    if (!activeUser || !backendLoaded) return;
-
-    updatePlayerState(activeUser, {
-      hearts_current: heartsState.current,
-      hearts_max: heartsState.max,
-      hearts_last_regen_at: heartsState.lastRegenAt
-        ? new Date(heartsState.lastRegenAt).toISOString()
-        : null,
-    });
-  }, [activeUser, backendLoaded, heartsState]);
-
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -934,46 +1031,112 @@ export default function App() {
   const heartsMax = heartsState?.max ?? MAX_HEARTS;
   const lastRegenAt = heartsState?.lastRegenAt ?? null;
 
-  // regen loop
+  const refreshHeartsFromBackend = useCallback(async () => {
+    if (!activeUser || !backendLoaded || !isOnline) return;
+    try {
+      const latest = await getPlayerState(activeUser);
+      const backendHearts = normalizeHeartsState({
+        hearts_current: latest?.hearts_current,
+        hearts_max: latest?.hearts_max,
+        hearts_last_regen_at: latest?.hearts_last_regen_at,
+      });
+      backendHeartsRef.current = backendHearts;
+      const regenerated = applyHeartsRegen(backendHearts, Date.now());
+      setHeartsState((prev) => ({
+        ...normalizeHeartsState(prev),
+        ...regenerated,
+      }));
+      setNextHeartsRefreshAt(regenerated.nextRefreshAt ?? null);
+      if (regenerated.added > 0) {
+        queueHeartsUpdate(regenerated);
+      }
+    } catch (e) {
+      // ignore fetch errors
+    }
+  }, [activeUser, backendLoaded, isOnline, queueHeartsUpdate]);
+
+  const applyHeartsTick = useCallback(
+    (forcedNow) => {
+      if (!loggedIn) return;
+      const nowTs = Number.isFinite(Number(forcedNow))
+        ? Number(forcedNow)
+        : Date.now();
+
+      setHeartsState((prev) => {
+        const normalized = normalizeHeartsState(prev);
+        const regen = applyHeartsRegen(normalized, nowTs);
+        const capSource =
+          !isOnline && backendHeartsRef.current
+            ? applyHeartsRegen(backendHeartsRef.current, nowTs)
+            : null;
+
+        const cappedCurrent =
+          capSource && regen.current > capSource.current
+            ? capSource.current
+            : regen.current;
+        const cappedLast =
+          capSource && regen.current > capSource.current
+            ? capSource.lastRegenAt
+            : regen.lastRegenAt;
+        const nextRefresh =
+          regen.nextRefreshAt ?? capSource?.nextRefreshAt ?? null;
+
+        const nextState = {
+          ...normalized,
+          ...regen,
+          current: cappedCurrent,
+          lastRegenAt: cappedLast,
+          nextRefreshAt: nextRefresh || null,
+        };
+
+        const actualAdded = Math.max(0, cappedCurrent - normalized.current);
+        if (actualAdded > 0) {
+          queueHeartsUpdate(nextState);
+        }
+        setNextHeartsRefreshAt(nextRefresh || null);
+        return nextState;
+      });
+    },
+    [isOnline, loggedIn, queueHeartsUpdate]
+  );
+
   useEffect(() => {
     if (!loggedIn) return;
-
-    const tick = () => {
-      setHeartsState((prev) => {
-        const currentState = normalizeHeartsState(prev);
-        if (currentState.current >= currentState.max) return currentState;
-
-        const now = Date.now();
-        const baseline = currentState.lastRegenAt ?? now;
-        const elapsed = now - baseline;
-        const regenCount = Math.floor(elapsed / REGEN_MS);
-
-        if (regenCount <= 0) {
-          if (currentState.lastRegenAt === null) {
-            return { ...currentState, lastRegenAt: now };
-          }
-          return currentState;
-        }
-
-        const increment = Math.min(
-          regenCount,
-          currentState.max - currentState.current
-        );
-        const nextCurrent = currentState.current + increment;
-        const nextLast = baseline + regenCount * REGEN_MS;
-
-        return {
-          ...currentState,
-          current: nextCurrent,
-          lastRegenAt: nextLast,
-        };
-      });
+    applyHeartsTick();
+    const id = setInterval(() => applyHeartsTick(), 1500);
+    let timeoutId = null;
+    if (nextHeartsRefreshAt) {
+      const delay = Math.max(500, nextHeartsRefreshAt - Date.now());
+      timeoutId = setTimeout(() => applyHeartsTick(), delay);
+    }
+    return () => {
+      clearInterval(id);
+      if (timeoutId) clearTimeout(timeoutId);
     };
+  }, [applyHeartsTick, loggedIn, nextHeartsRefreshAt]);
 
-    tick();
-    const id = setInterval(tick, 30000);
-    return () => clearInterval(id);
-  }, [loggedIn, setHeartsState]);
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+    if (isOnline) {
+      refreshHeartsFromBackend();
+    }
+  }, [activeUser, backendLoaded, isOnline, refreshHeartsFromBackend]);
+
+  useEffect(() => {
+    if (!activeUser) return;
+    const handleFocus = () => refreshHeartsFromBackend();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        refreshHeartsFromBackend();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [activeUser, refreshHeartsFromBackend]);
 
   // home guard
   useEffect(() => {
@@ -997,16 +1160,19 @@ export default function App() {
   function onRunLost() {
     setHeartsState((prev) => {
       const current = normalizeHeartsState(prev);
-      const wasFull = current.current >= current.max;
-      const newCount = Math.max(0, current.current - 1);
-      return {
+      const nextCurrent = Math.max(0, current.current - 1);
+      const needsRegenStart =
+        nextCurrent < current.max && current.lastRegenAt === null;
+      const nextState = {
         ...current,
-        current: newCount,
-        lastRegenAt:
-          current.lastRegenAt === null || wasFull
-            ? Date.now()
-            : current.lastRegenAt,
+        current: nextCurrent,
+        lastRegenAt: needsRegenStart ? Date.now() : current.lastRegenAt,
+        nextRefreshAt: needsRegenStart
+          ? Date.now() + REGEN_MS
+          : current.nextRefreshAt ?? null,
       };
+      queueHeartsUpdate(nextState);
+      return nextState;
     });
   }
 
@@ -1082,21 +1248,27 @@ export default function App() {
     // add +1 heart, capped at max
     setHeartsState((prev) => {
       const current = normalizeHeartsState(prev);
-      return {
+      const nextCurrent = Math.min(current.max, current.current + 1);
+      const nextState = {
         ...current,
-        current: Math.min(current.max, current.current + 1),
+        current: nextCurrent,
+        lastRegenAt: nextCurrent >= current.max ? null : current.lastRegenAt,
       };
+      queueHeartsUpdate(nextState);
+      return nextState;
     });
   };
 
   // Refill hearts to max via paid option (no coin impact in prototype)
   const handleRefillHeartsWithMoney = () => {
     if (heartsCurrent >= heartsMax) return;
-    setHeartsState({
+    const nextState = {
       current: heartsMax,
       max: heartsMax,
       lastRegenAt: null,
-    });
+    };
+    setHeartsState(nextState);
+    queueHeartsUpdate(nextState);
   };
 
   const modeProgress = progress[mode] || {
@@ -1159,6 +1331,7 @@ export default function App() {
               current: heartsCurrent,
               max: heartsMax,
               lastRegenAt,
+              nextRefreshAt: nextHeartsRefreshAt,
             }}
             username={activeUser}
             onSettings={() => setSettingsOpen(true)}
@@ -1190,6 +1363,7 @@ export default function App() {
               current: heartsCurrent,
               max: heartsMax,
               lastRegenAt,
+              nextRefreshAt: nextHeartsRefreshAt,
             }}
             username={activeUser}
             onSettings={() => setSettingsOpen(true)}
@@ -1254,6 +1428,7 @@ export default function App() {
               current: heartsCurrent,
               max: heartsMax,
               lastRegenAt,
+              nextRefreshAt: nextHeartsRefreshAt,
             }}
             username={activeUser}
             onSettings={() => setSettingsOpen(true)}
