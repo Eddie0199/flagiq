@@ -131,8 +131,11 @@ function normalizeStarsByMode(raw) {
 }
 
 function normalizeModeKey(rawMode) {
-  const m = String(rawMode || "").toLowerCase();
-  if (m === "timetrial" || m === "time trial") return "timeTrial";
+  const raw = String(rawMode || "").trim();
+  const lower = raw.toLowerCase();
+  if (lower === "timetrial" || lower === "time trial") return "timeTrial";
+  if (lower === "classic") return "classic";
+  if (raw === "timeTrial") return "timeTrial";
   return "classic";
 }
 
