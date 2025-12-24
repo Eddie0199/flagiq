@@ -132,14 +132,14 @@ function normalizeStarsByMode(raw) {
 
 function normalizeModeKey(rawMode) {
   const m = String(rawMode || "").toLowerCase();
-  if (m === "timetrial" || m === "time trial") return "timetrial";
-  return m || "classic";
+  if (m === "timetrial" || m === "time trial") return "timeTrial";
+  return "classic";
 }
 
 function normalizeProgress(raw) {
   const base = {
     classic: { starsByLevel: {}, unlockedUntil: 5 },
-    timetrial: { starsByLevel: {}, unlockedUntil: 5 },
+    timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
   };
 
   if (!raw) return base;
@@ -203,73 +203,6 @@ const PROGRESS_SNAPSHOT_KEY = (userId) =>
   `flagiq:u:${userId}:progressSnapshot`;
 const PROGRESS_DIRTY_KEY = (userId) => `flagiq:u:${userId}:progressDirty`;
 
-function readStarsForModeFromLocal(userId, modeKey) {
-  if (!userId) return {};
-  return readJsonFromStorage(`flagiq:u:${userId}:${modeKey}:starsBest`, {});
-}
-
-function buildStarsByModeForUser(userId, activeMode, currentModeStars) {
-  const stored = {
-    classic: readStarsForModeFromLocal(userId, "classic"),
-    timetrial: readStarsForModeFromLocal(userId, "timetrial"),
-  };
-
-  const normalisedMode = normalizeModeKey(activeMode);
-  const key = normalisedMode === "classic" ? "classic" : "timetrial";
-
-  return {
-    ...stored,
-    [key]: mergeStarsMaps(stored[key], currentModeStars),
-  };
-}
-
-function toBackendStarsByMode(starsByMode) {
-  return {
-    classic: starsByMode?.classic || {},
-    timeTrial: starsByMode?.timetrial || starsByMode?.timeTrial || {},
-  };
-}
-
-function toBackendProgress(progress) {
-  const classic = progress?.classic || { starsByLevel: {}, unlockedUntil: 5 };
-  const timeTrial =
-    progress?.timetrial ||
-    progress?.timeTrial || { starsByLevel: {}, unlockedUntil: 5 };
-
-  return {
-    classic,
-    timeTrial,
-  };
-}
-
-function buildProgressPayloadFromStars(starsByMode) {
-  const classicStars = starsByMode?.classic || {};
-  const timeTrialStars = starsByMode?.timetrial || starsByMode?.timeTrial || {};
-
-  return toBackendProgress({
-    classic: {
-      starsByLevel: classicStars,
-      unlockedUntil: computeUnlockedLevels(classicStars),
-    },
-    timetrial: {
-      starsByLevel: timeTrialStars,
-      unlockedUntil: computeUnlockedLevels(timeTrialStars),
-    },
-  });
-}
-
-function persistProgressSnapshot(userId, progressPayload) {
-  if (!userId) return;
-  try {
-    localStorage.setItem(
-      PROGRESS_SNAPSHOT_KEY(userId),
-      JSON.stringify(progressPayload)
-    );
-  } catch (e) {
-    // ignore quota errors
-  }
-}
-
 function markProgressDirty(userId) {
   if (!userId) return;
   try {
@@ -295,6 +228,40 @@ function isProgressDirty(userId) {
   } catch (e) {
     return false;
   }
+}
+
+function persistProgressSnapshot(userId, progressPayload) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(
+      PROGRESS_SNAPSHOT_KEY(userId),
+      JSON.stringify(progressPayload)
+    );
+  } catch (e) {
+    // ignore quota errors
+  }
+}
+
+function normalizeProgressForState(raw) {
+  const base = normalizeProgress(raw);
+  // ensure unlockedUntil respects minimum of 5
+  return {
+    classic: {
+      starsByLevel: base.classic.starsByLevel || {},
+      unlockedUntil: Math.max(5, Number(base.classic.unlockedUntil) || 5),
+    },
+    timeTrial: {
+      starsByLevel: base.timeTrial.starsByLevel || {},
+      unlockedUntil: Math.max(5, Number(base.timeTrial.unlockedUntil) || 5),
+    },
+  };
+}
+
+function buildStarsByModeFromProgress(progress) {
+  return {
+    classic: progress?.classic?.starsByLevel || {},
+    timeTrial: progress?.timeTrial?.starsByLevel || {},
+  };
 }
 
 export function starsNeededForLevelId(levelId, starsMap) {
@@ -603,62 +570,124 @@ export default function App() {
     `${mode}:starsBest`,
     {}
   );
+  const [progressState, setProgressState] = useUserStorage(
+    activeUser,
+    `progress`,
+    normalizeProgressForState(null)
+  );
 
-  const syncProgressToBackend = useCallback(
-    async ({ skipIfOffline = false } = {}) => {
+  const currentModeKey = normalizeModeKey(mode);
+
+  useEffect(() => {
+    const modeProgress = progressState?.[currentModeKey];
+    if (modeProgress && modeProgress.starsByLevel) {
+      setStarsByLevel(modeProgress.starsByLevel);
+    }
+  }, [currentModeKey, progressState, setStarsByLevel]);
+
+  const updateProgressForCompletedLevel = useCallback(
+    (levelNumber, starsEarned) => {
+      const levelKey = String(levelNumber);
+      const earned = Math.max(0, Number(starsEarned) || 0);
+
+      setProgressState((prevRaw) => {
+        const prev = normalizeProgressForState(prevRaw);
+        const modeProgress = prev[currentModeKey] || {
+          starsByLevel: {},
+          unlockedUntil: 5,
+        };
+
+        const oldBest = Number(modeProgress.starsByLevel?.[levelKey] || 0);
+        const newBest = Math.max(oldBest, earned);
+
+        const nextStars = {
+          ...(modeProgress.starsByLevel || {}),
+          [levelKey]: newBest,
+        };
+
+        const unlockedFromStars = Math.max(
+          5,
+          computeUnlockedLevels(nextStars)
+        );
+
+        return {
+          ...prev,
+          [currentModeKey]: {
+            starsByLevel: nextStars,
+            unlockedUntil: unlockedFromStars,
+          },
+        };
+      });
+
+      setStarsByLevel((prev) => {
+        const oldBest = Number(prev?.[levelKey] || 0);
+        const newBest = Math.max(oldBest, earned);
+        return { ...prev, [levelKey]: newBest };
+      });
+    },
+    [currentModeKey, setProgressState, setStarsByLevel]
+  );
+
+  const pushProgressToBackend = useCallback(
+    async (progressPayload) => {
       if (!activeUser || !backendLoaded) return;
-
-      const starsByMode = buildStarsByModeForUser(
-        activeUser,
-        mode,
-        starsByLevel
-      );
-      const progressPayload = buildProgressPayloadFromStars(starsByMode);
 
       persistProgressSnapshot(activeUser, progressPayload);
 
       const offline =
-        skipIfOffline &&
-        typeof navigator !== "undefined" &&
-        navigator.onLine === false;
-
+        typeof navigator !== "undefined" && navigator.onLine === false;
       if (offline) {
         markProgressDirty(activeUser);
         return;
       }
 
+      const starsByMode = buildStarsByModeFromProgress(progressPayload);
+
       try {
         await updatePlayerState(activeUser, {
-          stars_by_mode: toBackendStarsByMode(starsByMode),
           progress: progressPayload,
+          stars_by_mode: {
+            classic: starsByMode.classic,
+            timeTrial: starsByMode.timeTrial,
+          },
         });
         clearProgressDirty(activeUser);
       } catch (e) {
         markProgressDirty(activeUser);
       }
     },
-    [activeUser, backendLoaded, mode, starsByLevel]
+    [activeUser, backendLoaded]
   );
 
   useEffect(() => {
-    syncProgressToBackend({ skipIfOffline: true });
-  }, [syncProgressToBackend]);
+    if (!activeUser || !backendLoaded) return;
+    const payload = normalizeProgressForState(progressState);
+    pushProgressToBackend(payload);
+  }, [progressState, activeUser, backendLoaded, pushProgressToBackend]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
     if (isProgressDirty(activeUser)) {
-      syncProgressToBackend();
+      const payload = normalizeProgressForState(
+        readJsonFromStorage(PROGRESS_SNAPSHOT_KEY(activeUser), progressState)
+      );
+      pushProgressToBackend(payload);
     }
-  }, [activeUser, backendLoaded, syncProgressToBackend]);
+  }, [activeUser, backendLoaded, progressState, pushProgressToBackend]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
-    const onOnline = () => syncProgressToBackend();
+    const onOnline = () => {
+      if (isProgressDirty(activeUser)) {
+        const payload = normalizeProgressForState(
+          readJsonFromStorage(PROGRESS_SNAPSHOT_KEY(activeUser), progressState)
+        );
+        pushProgressToBackend(payload);
+      }
+    };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
-  }, [activeUser, backendLoaded, syncProgressToBackend]);
-
-
+  }, [activeUser, backendLoaded, progressState, pushProgressToBackend]);
 
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
@@ -711,48 +740,43 @@ export default function App() {
             }));
           }
 
-          const persistStarsForMode = (modeKey, starsMap, mergeWithExisting) => {
-            const normalisedMode = normalizeModeKey(modeKey);
-            const existing = mergeWithExisting
-              ? (() => {
-                  try {
-                    const raw = localStorage.getItem(
-                      `flagiq:u:${activeUser}:${normalisedMode}:starsBest`
-                    );
-                    return raw ? JSON.parse(raw) : {};
-                  } catch (e) {
-                    return {};
-                  }
-                })()
-              : {};
-
-            const merged = mergeStarsMaps(existing, starsMap || {});
-
-            localStorage.setItem(
-              `flagiq:u:${activeUser}:${normalisedMode}:starsBest`,
-              JSON.stringify(merged)
-            );
-
-            // immediately hydrate the current mode so progress shows up from backend
-            if (normalisedMode === mode) {
-              setStarsByLevel(merged);
-            }
-          };
-
-          const progress = normalizeProgress(state.progress);
-          Object.entries(progress).forEach(([modeKey, modeProgress]) => {
-            persistStarsForMode(modeKey, modeProgress?.starsByLevel, false);
-          });
-
-          persistProgressSnapshot(
-            activeUser,
-            toBackendProgress(progress)
-          );
-
+          const progressFromBackend = normalizeProgressForState(state.progress);
           const starsByMode = normalizeStarsByMode(state.stars_by_mode);
-          Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
-            // merge stars_by_mode on top of progress so we keep the best values
-            persistStarsForMode(modeKey, starsMap, true);
+
+          const mergedProgress = (() => {
+            const next = { ...progressFromBackend };
+            Object.entries(starsByMode || {}).forEach(([modeKey, starsMap]) => {
+              const key = normalizeModeKey(modeKey);
+              const existing = next[key] || { starsByLevel: {}, unlockedUntil: 5 };
+              const mergedStars = mergeStarsMaps(
+                existing.starsByLevel,
+                starsMap || {}
+              );
+              next[key] = {
+                starsByLevel: mergedStars,
+                unlockedUntil: Math.max(
+                  5,
+                  computeUnlockedLevels(mergedStars)
+                ),
+              };
+            });
+            return next;
+          })();
+
+          setProgressState(mergedProgress);
+          persistProgressSnapshot(activeUser, mergedProgress);
+
+          Object.entries(mergedProgress).forEach(([modeKey, modeProgress]) => {
+            const storageKeyMode =
+              modeKey === "classic" ? "classic" : "timetrial";
+            try {
+              localStorage.setItem(
+                `flagiq:u:${activeUser}:${storageKeyMode}:starsBest`,
+                JSON.stringify(modeProgress.starsByLevel || {})
+              );
+            } catch (e) {
+              // ignore
+            }
           });
 
           const backendLang =
@@ -786,6 +810,7 @@ export default function App() {
         } catch (e) {}
 
         // ✅ allow later sync back to backend
+        markProgressDirty(activeUser);
         setBackendLoaded(true);
       }
     })();
@@ -1087,7 +1112,7 @@ export default function App() {
             levelId={levelId}
             levels={levels}
             currentStars={Number(starsByLevel[levelId]) || 0}
-            setStarsByLevel={setStarsByLevel}
+            onRecordBestStars={updateProgressForCompletedLevel}
             onRunLost={onRunLost}
             soundCorrect={soundCorrect}
             soundWrong={soundWrong}
