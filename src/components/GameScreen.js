@@ -24,7 +24,14 @@ const nextFrame = (fn) => {
 };
 
 const WRONG_ANSWER_RESET_MS = 120;
+const CORRECT_ANSWER_HOLD_MS = 150;
 const PAUSE_HINT_MS = 1500;
+
+const afterCorrectHighlight = (fn) => {
+  nextFrame(() => {
+    setTimeout(fn, CORRECT_ANSWER_HOLD_MS);
+  });
+};
 
 // small stars row
 function StarsInline({ count }) {
@@ -429,7 +436,7 @@ export default function GameScreen({
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
 
-        nextFrame(() => {
+        afterCorrectHighlight(() => {
           if (lastQ) {
             const livesLeft = clamp(3 - skulls, 0, 3);
             const stars = starsFromLives
@@ -484,7 +491,7 @@ export default function GameScreen({
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
 
-        nextFrame(() => {
+        afterCorrectHighlight(() => {
           if (lastQ) {
             // stars based on score AND mistakes
             const maxByMistakes = clamp(3 - skulls, 0, 3);
