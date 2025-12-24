@@ -566,6 +566,12 @@ export default function App() {
   const [screen, setScreen] = useLocalStorage("flagiq:screen", "home");
   const [mode, setMode] = useLocalStorage("flagiq:mode", "classic");
 
+  // Always reset scroll so headers stay visible when switching screens (mobile fix)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.scrollTo(0, 0);
+  }, [screen]);
+
   const [users, setUsers] = useLocalStorage("flagiq:users", {});
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
   const [activeUserLabel, setActiveUserLabel] = useLocalStorage(
