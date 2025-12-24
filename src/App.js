@@ -24,6 +24,39 @@ import {
 
 const VERSION = "v1.1";
 
+const LANGUAGE_STORAGE_KEY = "flagLang";
+const LEGACY_LANGUAGE_KEYS = ["flagiq:lang"];
+const SUPPORTED_LANGUAGE_CODES = new Set(LANGS.map((l) => l.code));
+
+function normalizeLanguageCode(code) {
+  const raw = String(code || "").toLowerCase();
+  return SUPPORTED_LANGUAGE_CODES.has(raw) ? raw : "en";
+}
+
+function persistLanguageToStorage(langCode) {
+  const normalized = normalizeLanguageCode(langCode);
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
+    LEGACY_LANGUAGE_KEYS.forEach((legacyKey) => {
+      localStorage.removeItem(legacyKey);
+    });
+  } catch (e) {}
+  return normalized;
+}
+
+function readLanguageFromStorage() {
+  const keys = [LANGUAGE_STORAGE_KEY, ...LEGACY_LANGUAGE_KEYS];
+  for (const key of keys) {
+    try {
+      const value = localStorage.getItem(key);
+      if (value) {
+        return persistLanguageToStorage(value);
+      }
+    } catch (e) {}
+  }
+  return "en";
+}
+
 // ----- constants -----
 export const TOTAL_LEVELS = 30;
 export const STARS_PER_LEVEL_MAX = 3;
@@ -481,7 +514,13 @@ export default function App() {
   }
 
   // preferences
-  const [lang, setLang] = useLocalStorage("flagiq:lang", "en");
+  const [lang, setLang] = useState(() => readLanguageFromStorage());
+  const [backendPreferredLanguage, setBackendPreferredLanguage] = useState(null);
+  const [pendingPreferredLanguagePush, setPendingPreferredLanguagePush] =
+    useState(false);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine !== false
+  );
   const [soundOn, setSoundOn] = useLocalStorage("flagiq:soundOn", true);
   const [volume, setVolume] = useLocalStorage("flagiq:volume", 0.5);
 
@@ -497,6 +536,32 @@ export default function App() {
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
+
+  const handleLanguageChange = useCallback(
+    (next) => {
+      const normalized = normalizeLanguageCode(next);
+      setLang(normalized);
+      if (activeUser) {
+        setPendingPreferredLanguagePush(true);
+      }
+    },
+    [activeUser]
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    persistLanguageToStorage(lang);
+  }, [lang]);
 
 
   useEffect(() => {
@@ -593,6 +658,8 @@ export default function App() {
 
   useEffect(() => {
     if (!activeUser) {
+      setBackendPreferredLanguage(null);
+      setPendingPreferredLanguagePush(false);
       setCoins(0);
       setHeartsState(DEFAULT_HEARTS_STATE);
       setBackendLoaded(false);
@@ -641,9 +708,31 @@ export default function App() {
           persistProgress(backendProgress);
 
           const backendLang =
-            state.preferred_lang || state.lang || state.language || "";
-          if (backendLang && backendLang !== lang) {
-            setLang(backendLang);
+            state.preferred_language ||
+            state.preferred_lang ||
+            state.lang ||
+            state.language ||
+            "";
+          const normalizedBackendLang = backendLang
+            ? normalizeLanguageCode(backendLang)
+            : "";
+          if (normalizedBackendLang) {
+            setBackendPreferredLanguage(normalizedBackendLang);
+            setPendingPreferredLanguagePush(false);
+            if (normalizedBackendLang !== lang) {
+              setLang(normalizedBackendLang);
+            } else {
+              persistLanguageToStorage(normalizedBackendLang);
+            }
+          } else {
+            setBackendPreferredLanguage(null);
+            const storedLang = normalizeLanguageCode(
+              readLanguageFromStorage() || lang
+            );
+            if (storedLang !== lang) {
+              setLang(storedLang);
+            }
+            setPendingPreferredLanguagePush(true);
           }
 
           const backendHearts = normalizeHeartsState({
@@ -676,12 +765,14 @@ export default function App() {
         } catch (e) {}
         setHeartsState(loadHeartsForUser(activeUser));
         setCooldowns({});
+        setBackendPreferredLanguage((prev) => prev);
+        setPendingPreferredLanguagePush((prev) => prev || !!activeUser);
 
         // ✅ allow later sync back to backend
         setBackendLoaded(true);
       }
     })();
-  }, [activeUser, lang, persistProgress]);
+  }, [activeUser, persistProgress]);
 
 
   // helper to update coins AND persist to localStorage
@@ -771,10 +862,38 @@ export default function App() {
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
 
-    updatePlayerState(activeUser, {
-      preferred_lang: lang,
-    });
-  }, [lang, activeUser, backendLoaded]);
+    const normalized = normalizeLanguageCode(lang);
+    if (
+      backendPreferredLanguage === normalized &&
+      !pendingPreferredLanguagePush
+    ) {
+      return;
+    }
+
+    if (!isOnline) {
+      setPendingPreferredLanguagePush(true);
+      return;
+    }
+
+    (async () => {
+      try {
+        await updatePlayerState(activeUser, {
+          preferred_language: normalized,
+        });
+        setBackendPreferredLanguage(normalized);
+        setPendingPreferredLanguagePush(false);
+      } catch (e) {
+        setPendingPreferredLanguagePush(true);
+      }
+    })();
+  }, [
+    activeUser,
+    backendLoaded,
+    backendPreferredLanguage,
+    isOnline,
+    lang,
+    pendingPreferredLanguagePush,
+  ]);
 
   useEffect(() => {
     if (!activeUser) return;
@@ -1169,7 +1288,7 @@ export default function App() {
           volume={volume}
           setVolume={setVolume}
           lang={lang}
-          setLang={setLang}
+          setLang={handleLanguageChange}
           activeUser={activeUser}
           setActiveUser={(u) => {
             setActiveUser(u);

@@ -5,7 +5,7 @@ import { supabase } from "./supabaseClient";
  * We store:
  * - coins
  * - last_spin_at (cooldown)
- * - preferred_lang
+ * - preferred_language
  * - progress JSON with per-mode:
  *    { starsByLevel: { "1": 3, "2": 2, ... }, unlockedUntil: 5 }
  *
@@ -97,7 +97,7 @@ export async function getPlayerState() {
 }
 
 /**
- * Patch top-level columns: coins, preferred_lang, last_spin_at
+ * Patch top-level columns: coins, preferred_language, last_spin_at
  * NOTE: for progress edits, use setModeProgress / setLevelStars etc.
  */
 export async function updatePlayerState(patch) {
