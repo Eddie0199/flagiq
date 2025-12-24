@@ -61,13 +61,14 @@ export function LockedModal({ info, onClose, lang }) {
   );
 }
 
-export function NoLivesModal({ onClose, lastTick }) {
+export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-  const nextMs = Math.max(0, REGEN_MS - (now - lastTick));
+  const baseline = lastRegenAt ?? Date.now();
+  const nextMs = Math.max(0, REGEN_MS - (now - baseline));
   return (
     <div
       onClick={onClose}
@@ -99,7 +100,7 @@ export function NoLivesModal({ onClose, lastTick }) {
           New life in <b>{formatRemaining(nextMs)}</b>.
         </p>
         <p style={{ margin: "8px 0", color: "#64748b" }}>
-          Lives refill over time (max 5).
+          Lives refill over time (max {maxHearts || 5}).
         </p>
         <div style={{ marginTop: 12 }}>
           <button
