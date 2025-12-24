@@ -1,5 +1,5 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
 
@@ -115,21 +115,6 @@ export function computeUnlockedLevels(starsMap) {
   return unlocked;
 }
 
-function normalizeStarsByMode(raw) {
-  if (!raw) return {};
-
-  if (typeof raw === "string") {
-    try {
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === "object" ? parsed : {};
-    } catch (e) {
-      return {};
-    }
-  }
-
-  return raw;
-}
-
 function normalizeModeKey(rawMode) {
   const m = String(rawMode || "").toLowerCase();
   if (m === "timetrial" || m === "time trial") return "timetrial";
@@ -171,21 +156,6 @@ function normalizeProgress(raw) {
   });
 
   return base;
-}
-
-function mergeStarsMaps(a = {}, b = {}) {
-  const out = {};
-  const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
-  keys.forEach((k) => {
-    const av = Number(a?.[k] || 0);
-    const bv = Number(b?.[k] || 0);
-    const best = Math.max(
-      Number.isFinite(av) ? av : 0,
-      Number.isFinite(bv) ? bv : 0
-    );
-    out[k] = best;
-  });
-  return out;
 }
 
 export function starsNeededForLevelId(levelId, starsMap) {
@@ -321,28 +291,16 @@ function useUserStorage(username, suffix, init) {
   return [val, setVal];
 }
 
-// read per-mode stats for homepage directly from the per-mode starsBest maps
-function getModeStatsFromLocal(username, mode) {
-  if (!username) return { level: 0, stars: 0 };
-
-  try {
-    const raw = localStorage.getItem(`flagiq:u:${username}:${mode}:starsBest`);
-    const starsMap =
-      raw && raw !== "null" && raw !== "undefined" ? JSON.parse(raw) : {};
-
-    const totalStars = sumStars(starsMap);
-    if (totalStars === 0) {
-      return { level: 0, stars: 0 };
-    }
-
-    const lastLevel = lastCompletedLevel(starsMap);
-    return {
-      level: lastLevel,
-      stars: totalStars,
-    };
-  } catch (e) {
+function deriveModeStatsFromProgress(progress, mode) {
+  const starsMap = progress?.[mode]?.starsByLevel || {};
+  const totalStars = sumStars(starsMap);
+  if (totalStars === 0) {
     return { level: 0, stars: 0 };
   }
+  return {
+    level: lastCompletedLevel(starsMap),
+    stars: totalStars,
+  };
 }
 
 // ----- per-user hints hook (with migration from old keys) -----
@@ -489,28 +447,70 @@ export default function App() {
 
   // per-user data
   const [levelId, setLevelId] = useUserStorage(activeUser, `${mode}:level`, 1);
-  const [starsByLevel, setStarsByLevel] = useUserStorage(
-    activeUser,
-    `${mode}:starsBest`,
-    {}
-  );
+  const [progress, setProgress] = useState(() => normalizeProgress());
+  const progressStorageKey = activeUser
+    ? `flagiq:progress:${activeUser}`
+    : null;
 
   useEffect(() => {
-    if (!activeUser || !backendLoaded) return;
+    if (!activeUser) {
+      setProgress(normalizeProgress());
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(progressStorageKey);
+      setProgress(normalizeProgress(raw));
+    } catch (e) {
+      setProgress(normalizeProgress());
+    }
+  }, [activeUser, progressStorageKey]);
 
-    const starsByMode = {
-      classic: JSON.parse(
-        localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-      ),
-      timetrial: JSON.parse(
-        localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-      ),
-    };
+  useEffect(() => {
+    if (!progressStorageKey) return;
+    try {
+      localStorage.setItem(progressStorageKey, JSON.stringify(progress));
+    } catch (e) {}
+  }, [progress, progressStorageKey]);
 
-    updatePlayerState(activeUser, {
-      stars_by_mode: starsByMode,
-    });
-  }, [starsByLevel, activeUser, backendLoaded, mode]);
+  const persistProgress = useCallback(
+    (nextProgress) => {
+      if (!progressStorageKey) return;
+      try {
+        localStorage.setItem(progressStorageKey, JSON.stringify(nextProgress));
+      } catch (e) {}
+    },
+    [progressStorageKey]
+  );
+
+  const updateProgressAfterLevel = useCallback(
+    (modeKey, level, stars) => {
+      setProgress((prev) => {
+        const base = normalizeProgress(prev);
+        const normalizedMode = normalizeModeKey(modeKey);
+        const modeProgress = base[normalizedMode] || {
+          starsByLevel: {},
+          unlockedUntil: BATCH,
+        };
+        const prevStars = Number(modeProgress.starsByLevel?.[level] || 0);
+        const best = Math.max(prevStars, Number(stars || 0));
+        const updatedStars = { ...modeProgress.starsByLevel, [level]: best };
+        const unlocked = computeUnlockedLevels(updatedStars);
+        const next = {
+          ...base,
+          [normalizedMode]: {
+            starsByLevel: updatedStars,
+            unlockedUntil: unlocked,
+          },
+        };
+        persistProgress(next);
+        if (activeUser) {
+          updatePlayerState(activeUser, { progress: next });
+        }
+        return next;
+      });
+    },
+    [activeUser, persistProgress]
+  );
 
 
 
@@ -565,44 +565,9 @@ export default function App() {
             }));
           }
 
-          const persistStarsForMode = (modeKey, starsMap, mergeWithExisting) => {
-            const normalisedMode = normalizeModeKey(modeKey);
-            const existing = mergeWithExisting
-              ? (() => {
-                  try {
-                    const raw = localStorage.getItem(
-                      `flagiq:u:${activeUser}:${normalisedMode}:starsBest`
-                    );
-                    return raw ? JSON.parse(raw) : {};
-                  } catch (e) {
-                    return {};
-                  }
-                })()
-              : {};
-
-            const merged = mergeStarsMaps(existing, starsMap || {});
-
-            localStorage.setItem(
-              `flagiq:u:${activeUser}:${normalisedMode}:starsBest`,
-              JSON.stringify(merged)
-            );
-
-            // immediately hydrate the current mode so progress shows up from backend
-            if (normalisedMode === mode) {
-              setStarsByLevel(merged);
-            }
-          };
-
-          const progress = normalizeProgress(state.progress);
-          Object.entries(progress).forEach(([modeKey, modeProgress]) => {
-            persistStarsForMode(modeKey, modeProgress?.starsByLevel, false);
-          });
-
-          const starsByMode = normalizeStarsByMode(state.stars_by_mode);
-          Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
-            // merge stars_by_mode on top of progress so we keep the best values
-            persistStarsForMode(modeKey, starsMap, true);
-          });
+          const backendProgress = normalizeProgress(state.progress);
+          setProgress(backendProgress);
+          persistProgress(backendProgress);
 
           const backendLang =
             state.preferred_lang || state.lang || state.language || "";
@@ -636,7 +601,7 @@ export default function App() {
         setBackendLoaded(true);
       }
     })();
-  }, [activeUser, lang, mode]);
+  }, [activeUser, lang, persistProgress]);
 
 
   // helper to update coins AND persist to localStorage
@@ -799,9 +764,9 @@ export default function App() {
   };
   const closeAuth = () => setAuthOpen(false);
 
-  // NEW: per-mode stats for homepage cards, based ONLY on per-mode starsBest maps
-  const classicStats = getModeStatsFromLocal(activeUser, "classic");
-  const timetrialStats = getModeStatsFromLocal(activeUser, "timetrial");
+  // NEW: per-mode stats for homepage cards, based on in-memory progress
+  const classicStats = deriveModeStatsFromProgress(progress, "classic");
+  const timetrialStats = deriveModeStatsFromProgress(progress, "timetrial");
 
   const handleHomeStart = (nextMode) => {
     if (!loggedIn) {
@@ -851,6 +816,17 @@ export default function App() {
     });
   };
 
+  const modeProgress = progress[mode] || {
+    starsByLevel: {},
+    unlockedUntil: BATCH,
+  };
+  const starsByLevel = modeProgress.starsByLevel || {};
+  const unlockedFromProgress = Number.isFinite(
+    Number(modeProgress.unlockedUntil)
+  )
+    ? Number(modeProgress.unlockedUntil)
+    : computeUnlockedLevels(starsByLevel || {});
+
   return (
     <div style={{ minHeight: "100vh" }}>
       {/* version badge */}
@@ -882,6 +858,7 @@ export default function App() {
           t={t}
           lang={lang}
           setHints={setHints}
+          progress={progress}
         />
       )}
 
@@ -907,6 +884,7 @@ export default function App() {
             onLockedAttempt={(info) => setLockInfo(info)}
             username={activeUser}
             mode={mode}
+            progress={progress}
           />
         </>
       )}
@@ -934,14 +912,18 @@ export default function App() {
             levelId={levelId}
             levels={levels}
             currentStars={Number(starsByLevel[levelId]) || 0}
-            setStarsByLevel={setStarsByLevel}
+            progress={progress}
+            onProgressUpdate={updateProgressAfterLevel}
             onRunLost={onRunLost}
             soundCorrect={soundCorrect}
             soundWrong={soundWrong}
             onBack={() => setScreen("levels")}
             onNextLevel={() => {
               const next = levelId + 1;
-              const unlocked = computeUnlockedLevels(starsByLevel || {});
+              const unlocked = Math.max(
+                unlockedFromProgress,
+                computeUnlockedLevels(starsByLevel || {})
+              );
               if (next <= unlocked) {
                 setLevelId(next);
                 setScreen("game");
@@ -1069,4 +1051,3 @@ export default function App() {
     </div>
   );
 }
-

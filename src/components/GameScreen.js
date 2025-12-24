@@ -1,11 +1,6 @@
 // src/components/GameScreen.js
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
-import {
-  recordLevelResultByUser,
-  getLevelStatsByUser,
-  addCoinsByUser,
-} from "./ProgressByUser";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -41,7 +36,8 @@ export default function GameScreen({
   levelId,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
-  setStarsByLevel,
+  progress,
+  onProgressUpdate,
   onRunLost,
   soundCorrect,
   soundWrong,
@@ -54,8 +50,6 @@ export default function GameScreen({
   // coins
   activeUser,
   onCoinsChange,
-  // per-account persistence id
-  username,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -73,12 +67,6 @@ export default function GameScreen({
   });
   const hintKey = getHintSeenKey(playerId);
   const [showHintInfo, setShowHintInfo] = useState(false);
-
-  // username used for progress persistence (per-account scope)
-  const usernameForProgress =
-    (username && String(username)) ||
-    (activeUser && String(activeUser)) ||
-    "guest";
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
@@ -333,14 +321,11 @@ export default function GameScreen({
       : "Classic";
 
   // ---------- best-ever stars for badge (from persistent store) ----------
-  const bestLevelStats = useMemo(
-    () => getLevelStatsByUser(usernameForProgress, mode, levelId),
-    [usernameForProgress, mode, levelId]
-  );
-  const bestStars = Math.max(
-    Number(bestLevelStats?.stars || 0),
-    Number(currentStars || 0)
-  );
+  const bestStars = useMemo(() => {
+    const byMode = progress?.[mode];
+    const stored = Number(byMode?.starsByLevel?.[levelId] || 0);
+    return Math.max(stored, Number(currentStars || 0));
+  }, [progress, mode, levelId, currentStars]);
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
@@ -406,9 +391,6 @@ export default function GameScreen({
   function awardCoinsOnce() {
     const reward = 100;
 
-    // Keep lifetime / profile stats in ProgressByUser
-    addCoinsByUser(usernameForProgress, reward);
-
     // Tell App to add `reward` to the current wallet balance
     if (onCoinsChange) {
       onCoinsChange(reward); // treat as delta, not absolute total
@@ -449,16 +431,9 @@ export default function GameScreen({
             const alreadyCompletedBefore = bestStars > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              return { ...prev, [levelId]: nextBest };
-            });
-
-            // persist per-username progress (CLASSIC)
-            recordLevelResultByUser(usernameForProgress, "classic", levelId, {
-              stars,
-            });
+            if (onProgressUpdate) {
+              onProgressUpdate(mode, levelId, stars);
+            }
 
             // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {
@@ -512,19 +487,9 @@ export default function GameScreen({
             // check if this level had *any* stars before (per mode)
             const alreadyCompletedBefore = bestStars > 0;
 
-            let shouldGiveCoins = false; // kept local for clarity, but controlled by bestLevelStats
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              const nextMap = { ...prev, [levelId]: nextBest };
-              // we no longer base coins on prevBest here
-              return nextMap;
-            });
-
-            // persist per-username progress (TIME TRIAL)
-            recordLevelResultByUser(usernameForProgress, "timetrial", levelId, {
-              stars,
-            });
+            if (onProgressUpdate) {
+              onProgressUpdate(mode, levelId, stars);
+            }
 
             // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {
