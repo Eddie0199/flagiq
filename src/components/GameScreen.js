@@ -14,6 +14,18 @@ const TT_STAR2 = 6000;
 // helper to store hint-popup per user per device
 const getHintSeenKey = (playerId) => `hasSeenHintInfo_${playerId || "default"}`;
 
+// schedule work on the next frame (falls back to micro-delay)
+const nextFrame = (fn) => {
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(fn);
+  } else {
+    setTimeout(fn, 0);
+  }
+};
+
+const WRONG_ANSWER_RESET_MS = 120;
+const PAUSE_HINT_MS = 1500;
+
 // small stars row
 function StarsInline({ count }) {
   const arr = [1, 2, 3];
@@ -384,7 +396,7 @@ export default function GameScreen({
     }));
     setTimeout(() => {
       setTtPaused(false);
-    }, 3000);
+    }, PAUSE_HINT_MS);
   }
 
   // ---------- COIN AWARD (per-username store) ----------
@@ -417,7 +429,7 @@ export default function GameScreen({
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
 
-        setTimeout(() => {
+        nextFrame(() => {
           if (lastQ) {
             const livesLeft = clamp(3 - skulls, 0, 3);
             const stars = starsFromLives
@@ -447,7 +459,7 @@ export default function GameScreen({
             setSelectedAnswer(null);
             setWrongAnswers([]);
           }
-        }, 350);
+        });
       } else {
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -459,7 +471,7 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), 300);
+        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
       }
       return;
     }
@@ -472,7 +484,7 @@ export default function GameScreen({
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
 
-        setTimeout(() => {
+        nextFrame(() => {
           if (lastQ) {
             // stars based on score AND mistakes
             const maxByMistakes = clamp(3 - skulls, 0, 3);
@@ -506,7 +518,7 @@ export default function GameScreen({
             setSelectedAnswer(null);
             setWrongAnswers([]);
           }
-        }, 250);
+        });
       } else {
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -518,7 +530,7 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), 250);
+        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
       }
     }
   }
