@@ -967,46 +967,38 @@ export default function App() {
 
       if (normalized.current >= normalized.max) return;
 
-      const baseline = normalized.lastRegenAt ?? Date.now();
-      const nextAt = baseline + REGEN_MS;
-      const delayMs = Math.max(0, nextAt - Date.now());
-      const safeDelay = Math.max(1000, delayMs); // throttle to avoid tight loops
+      const now = Date.now();
+      const baseline = normalized.lastRegenAt ?? now;
+      const elapsed = now - baseline;
+      const regenCount = Math.floor(elapsed / REGEN_MS);
 
+      if (regenCount > 0 && normalized.current < normalized.max) {
+        const increment = Math.min(
+          regenCount,
+          normalized.max - normalized.current
+        );
+        const nextState = {
+          ...normalized,
+          current: normalized.current + increment,
+          lastRegenAt: baseline + regenCount * REGEN_MS,
+        };
+        setHeartsState(nextState);
+        return; // effect will rerun with updated state and reschedule
+      }
+
+      const delayMs = Math.max(1000, baseline + REGEN_MS - now);
       timeoutId = setTimeout(async () => {
         if (cancelled) return;
         const latest = await refreshHeartsFromBackend();
         if (cancelled) return;
-
-        const nextState = normalizeHeartsState(latest || normalized);
-        const nowTs = Date.now();
-        const stillDue =
-          nextState.current < nextState.max &&
-          (nextState.lastRegenAt ?? nowTs) + REGEN_MS <= nowTs;
-
-        if (stillDue) {
-          // Regen should have been applied server-side; try again soon
-          scheduleNextCheck(nextState);
-          return;
-        }
-
-        scheduleNextCheck(nextState);
-      }, safeDelay);
+        scheduleNextCheck(latest || normalized);
+      }, delayMs);
     };
 
-    const normalizedCurrent = normalizeHeartsState(heartsState);
-    const nowTs = Date.now();
-    const dueImmediately =
-      normalizedCurrent.current < normalizedCurrent.max &&
-      (normalizedCurrent.lastRegenAt ?? nowTs) + REGEN_MS <= nowTs;
-
-    if (dueImmediately) {
-      refreshHeartsFromBackend().then((latest) => {
-        if (cancelled) return;
-        scheduleNextCheck(latest || normalizedCurrent);
-      });
-    } else {
-      scheduleNextCheck(normalizedCurrent);
-    }
+    refreshHeartsFromBackend().then((latest) => {
+      if (cancelled) return;
+      scheduleNextCheck(latest || heartsState);
+    });
 
     return () => {
       cancelled = true;
