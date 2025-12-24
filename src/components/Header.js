@@ -24,13 +24,19 @@ function HeartsPill({ hearts, t, lang }) {
   const max = Number.isFinite(Number(hearts?.max))
     ? Number(hearts.max)
     : MAX_HEARTS;
+  const nextRefreshAt = hearts?.nextRefreshAt;
   const lastTick =
     hearts?.lastRegenAt ??
     hearts?.lastTick ??
     hearts?.hearts_last_regen_at ??
     Date.now();
 
-  const nextMs = Math.max(0, REGEN_MS - (now - lastTick));
+  const nextMs = Math.max(
+    0,
+    nextRefreshAt
+      ? nextRefreshAt - now
+      : REGEN_MS - (now - lastTick)
+  );
   const showTimer = count < max;
 
   return (
