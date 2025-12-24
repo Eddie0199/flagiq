@@ -38,6 +38,7 @@ export const DEFAULT_HEARTS_STATE = {
   max: MAX_HEARTS,
   lastRegenAt: null,
 };
+const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 // ----- helpers -----
 export const shuffle = (arr) =>
@@ -47,6 +48,14 @@ export const shuffle = (arr) =>
     .map((x) => x[1]);
 export const pickN = (arr, n) => shuffle([...arr]).slice(0, n);
 export const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const remainingDailySpinMs = (lastClaimedAt) => {
+  if (!lastClaimedAt) return 0;
+  const parsed = Date.parse(lastClaimedAt);
+  if (!Number.isFinite(parsed)) return 0;
+  const elapsed = Date.now() - parsed;
+  if (elapsed < 0) return DAILY_SPIN_COOLDOWN_MS;
+  return Math.max(DAILY_SPIN_COOLDOWN_MS - elapsed, 0);
+};
 
 // flag helper (fix Northern Ireland + fallback map)
 export const flagSrc = (flagOrCode, w = 256) => {
@@ -576,6 +585,7 @@ export default function App() {
   // additional keys the backend might have without losing them when we
   // update hints.
   const [inventory, setInventory] = useState(null);
+  const [cooldowns, setCooldowns] = useState({});
 
   // 🔑 COINS: single source of truth synced with localStorage
   const [coins, setCoins] = useState(0);
@@ -587,9 +597,11 @@ export default function App() {
       setHeartsState(DEFAULT_HEARTS_STATE);
       setBackendLoaded(false);
       setInventory(null);
+      setCooldowns({});
       return;
     }
     setBackendLoaded(false);
+    setCooldowns({});
     setHeartsState(loadHeartsForUser(activeUser));
 
     (async () => {
@@ -650,6 +662,9 @@ export default function App() {
               })
             );
           } catch (e) {}
+
+          const backendCooldowns = state.cooldowns || {};
+          setCooldowns(backendCooldowns);
         }
 
         setBackendLoaded(true);
@@ -660,6 +675,7 @@ export default function App() {
           setCoins(raw ? Number(raw) : 0);
         } catch (e) {}
         setHeartsState(loadHeartsForUser(activeUser));
+        setCooldowns({});
 
         // ✅ allow later sync back to backend
         setBackendLoaded(true);
@@ -685,6 +701,52 @@ export default function App() {
       return safe;
     });
   };
+
+  const handleDailySpinClaim = useCallback(async () => {
+    if (!activeUser || !backendLoaded) {
+      return { success: false, reason: "not_ready" };
+    }
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return { success: false, reason: "offline" };
+    }
+
+    try {
+      const latestState = await getPlayerState(activeUser);
+      const latestCooldowns = latestState?.cooldowns || {};
+      setCooldowns(latestCooldowns);
+
+      const lastClaimedAt =
+        latestCooldowns?.dailySpin?.last_claimed_at || null;
+      const remainingMs = remainingDailySpinMs(lastClaimedAt);
+      if (remainingMs > 0) {
+        return { success: false, remainingMs, lastClaimedAt };
+      }
+
+      const nextIso = new Date().toISOString();
+      const mergedCooldowns = {
+        ...latestCooldowns,
+        dailySpin: {
+          ...(latestCooldowns.dailySpin || {}),
+          last_claimed_at: nextIso,
+        },
+      };
+
+      const updated = await updatePlayerState(activeUser, {
+        cooldowns: mergedCooldowns,
+      });
+      const savedCooldowns = updated?.cooldowns || mergedCooldowns;
+      setCooldowns(savedCooldowns);
+
+      const savedLast =
+        savedCooldowns?.dailySpin?.last_claimed_at || nextIso;
+
+      return { success: true, lastClaimedAt: savedLast };
+    } catch (error) {
+      console.error("Failed to update daily spin cooldown", error);
+      return { success: false, reason: "error" };
+    }
+  }, [activeUser, backendLoaded]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
@@ -961,6 +1023,10 @@ export default function App() {
           lang={lang}
           setHints={setHints}
           progress={progress}
+          dailySpinLastClaimedAt={
+            cooldowns?.dailySpin?.last_claimed_at || null
+          }
+          onDailySpinClaim={handleDailySpinClaim}
         />
       )}
 

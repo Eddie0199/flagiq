@@ -1,8 +1,7 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
 import React, { useEffect, useMemo, useState } from "react";
 
-const SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
-const SPIN_STORAGE_KEY = "flaggame_last_spin_at";
+const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 // match App.js constants
 const TOTAL_LEVELS = 30;
@@ -55,17 +54,44 @@ function formatMs(ms) {
     .padStart(2, "0")}`;
 }
 
-// =============== DAILY BOOSTER (3×3 pick) ===============
-function DailySpinButton({ t, lang, onReward }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [canSpin, setCanSpin] = useState(true);
-  const [remainingMs, setRemainingMs] = useState(0);
+function computeRemainingMs(lastClaimedAt) {
+  if (!lastClaimedAt) return 0;
+  const ts = Date.parse(lastClaimedAt);
+  if (!Number.isFinite(ts)) return 0;
+  const elapsed = Date.now() - ts;
+  if (elapsed < 0) return DAILY_SPIN_COOLDOWN_MS;
+  return Math.max(DAILY_SPIN_COOLDOWN_MS - elapsed, 0);
+}
 
+// =============== DAILY BOOSTER (3×3 pick) ===============
+function DailySpinButton({
+  t,
+  lang,
+  onReward,
+  lastClaimedAt: lastClaimedAtProp,
+  onDailySpinClaim,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [remainingMs, setRemainingMs] = useState(() =>
+    computeRemainingMs(lastClaimedAtProp)
+  );
+  const [canSpin, setCanSpin] = useState(
+    computeRemainingMs(lastClaimedAtProp) <= 0
+  );
+  const [lastClaimedAt, setLastClaimedAt] = useState(
+    lastClaimedAtProp || null
+  );
   const [hasPicked, setHasPicked] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [result, setResult] = useState(null);
   const [revealStage, setRevealStage] = useState("idle"); // idle | popping | shown
   const [showInfo, setShowInfo] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const offlineMessage = "Connect to the internet to claim your daily spin.";
 
   // rewards
   const baseRewards = useMemo(
@@ -102,6 +128,49 @@ function DailySpinButton({ t, lang, onReward }) {
     []
   );
 
+  useEffect(() => {
+    setLastClaimedAt(lastClaimedAtProp || null);
+  }, [lastClaimedAtProp]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(navigator.onLine);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOnline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const nextRemaining = computeRemainingMs(lastClaimedAt);
+    setRemainingMs(nextRemaining);
+    setCanSpin(isOnline && nextRemaining <= 0);
+  }, [isOnline, lastClaimedAt]);
+
+  useEffect(() => {
+    if (!isOnline || remainingMs <= 0) return;
+    const id = setInterval(() => {
+      setRemainingMs((prev) => {
+        const next = prev - 1000;
+        if (next <= 0) {
+          setCanSpin(isOnline);
+          return 0;
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isOnline, remainingMs]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      setStatusMessage(offlineMessage);
+    } else if (statusMessage === offlineMessage) {
+      setStatusMessage("");
+    }
+  }, [isOnline, offlineMessage, statusMessage]);
+
   function pickRandomReward() {
     const total = baseRewards.reduce((s, r) => s + r.weight, 0);
     const roll = Math.random() * total;
@@ -112,34 +181,6 @@ function DailySpinButton({ t, lang, onReward }) {
     }
     return baseRewards[baseRewards.length - 1];
   }
-
-  // cooldown init
-  useEffect(() => {
-    const last = localStorage.getItem(SPIN_STORAGE_KEY);
-    if (!last) return;
-    const diff = Date.now() - Number(last);
-    if (diff < SPIN_COOLDOWN_MS) {
-      setCanSpin(false);
-      setRemainingMs(SPIN_COOLDOWN_MS - diff);
-    }
-  }, []);
-
-  // countdown
-  useEffect(() => {
-    if (canSpin) return;
-    const id = setInterval(() => {
-      setRemainingMs((prev) => {
-        const next = prev - 1000;
-        if (next <= 0) {
-          clearInterval(id);
-          setCanSpin(true);
-          return 0;
-        }
-        return next;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [canSpin]);
 
   // translations / labels
   const label = t && lang ? t(lang, "dailySpin") : "Daily bonus";
@@ -153,6 +194,15 @@ function DailySpinButton({ t, lang, onReward }) {
     t && lang ? t(lang, "spinOncePerDay") : "Spin once every 24 hours";
   const comeBackTxt = t && lang ? t(lang, "comeBackIn") : "Come back in";
   const youWonTxt = t && lang ? t(lang, "youWon") : "You won";
+  const readyText =
+    t && lang ? t(lang, "readyToSpin") : "Ready – pick a box!";
+  const statusText =
+    statusMessage ||
+    (!isOnline
+      ? offlineMessage
+      : canSpin
+      ? readyText
+      : `${comeBackTxt} ${formatMs(remainingMs)}`);
 
   function handleOpen() {
     setIsOpen(true);
@@ -161,26 +211,79 @@ function DailySpinButton({ t, lang, onReward }) {
     setSelectedIndex(null);
     setResult(null);
     setRevealStage("idle");
+    setStatusMessage(isOnline ? "" : offlineMessage);
+    setIsSubmitting(false);
   }
 
-  function handlePick(idx) {
-    if (!canSpin || hasPicked) return;
+  async function handlePick(idx) {
+    if (hasPicked || isSubmitting) return;
 
-    const reward = pickRandomReward();
-    setHasPicked(true);
-    setSelectedIndex(idx);
-    setResult(reward);
-    setRevealStage("popping");
+    if (!isOnline) {
+      setStatusMessage(offlineMessage);
+      return;
+    }
 
-    // cooldown
-    setCanSpin(false);
-    setRemainingMs(SPIN_COOLDOWN_MS);
-    localStorage.setItem(SPIN_STORAGE_KEY, String(Date.now()));
+    const latestRemaining = computeRemainingMs(lastClaimedAt);
+    if (latestRemaining > 0) {
+      setRemainingMs(latestRemaining);
+      setCanSpin(false);
+      return;
+    }
 
-    // deliver reward → hints (parent owns persistence)
-    onReward && onReward(reward);
+    setIsSubmitting(true);
 
-    setTimeout(() => setRevealStage("shown"), 300);
+    try {
+      const claimResult = await (onDailySpinClaim && onDailySpinClaim());
+      if (!claimResult?.success) {
+        const rem =
+          typeof claimResult?.remainingMs === "number"
+            ? claimResult.remainingMs
+            : computeRemainingMs(
+                claimResult?.lastClaimedAt || lastClaimedAt
+              );
+        setRemainingMs(rem);
+        setCanSpin(isOnline && rem <= 0);
+        if (claimResult?.reason === "offline") {
+          setStatusMessage(offlineMessage);
+        } else if (rem > 0) {
+          setStatusMessage(`${comeBackTxt} ${formatMs(rem)}`);
+        } else {
+          setStatusMessage(
+            t && lang
+              ? t(lang, "spinNetworkError") || "Unable to claim now."
+              : "Unable to claim now."
+          );
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      const backendLast =
+        claimResult?.lastClaimedAt || new Date().toISOString();
+      setLastClaimedAt(backendLast);
+
+      const reward = pickRandomReward();
+      setHasPicked(true);
+      setSelectedIndex(idx);
+      setResult(reward);
+      setRevealStage("popping");
+
+      setCanSpin(false);
+      setRemainingMs(DAILY_SPIN_COOLDOWN_MS);
+
+      // deliver reward → hints (parent owns persistence)
+      onReward && onReward(reward);
+
+      setTimeout(() => setRevealStage("shown"), 300);
+    } catch (e) {
+      setStatusMessage(
+        t && lang
+          ? t(lang, "spinNetworkError") || "Unable to claim now."
+          : "Unable to claim now."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -220,11 +323,7 @@ function DailySpinButton({ t, lang, onReward }) {
             textShadow: "0 1px 3px rgba(0,0,0,.5)",
           }}
         >
-          {canSpin
-            ? t && lang
-              ? t(lang, "readyToSpin")
-              : "Ready – pick a box!"
-            : `${comeBackTxt} ${formatMs(remainingMs)}`}
+          {statusText}
         </span>
       </div>
 
@@ -358,7 +457,7 @@ function DailySpinButton({ t, lang, onReward }) {
                   <button
                     key={idx}
                     onClick={() => handlePick(idx)}
-                    disabled={!canSpin || hasPicked}
+                    disabled={!canSpin || hasPicked || isSubmitting || !isOnline}
                     style={{
                       width: TILE_SIZE,
                       height: TILE_SIZE,
@@ -430,6 +529,8 @@ export default function HomeScreen({
   lang,
   setHints, // pass from parent so spinner can add hints
   progress,
+  dailySpinLastClaimedAt,
+  onDailySpinClaim,
 }) {
   // no scroll
   useEffect(() => {
@@ -541,6 +642,8 @@ export default function HomeScreen({
           <DailySpinButton
             t={t}
             lang={lang}
+            lastClaimedAt={dailySpinLastClaimedAt}
+            onDailySpinClaim={onDailySpinClaim}
             onReward={(reward) => {
               if (!setHints) return;
 
