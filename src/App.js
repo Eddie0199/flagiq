@@ -507,8 +507,20 @@ export default function App() {
       ),
     };
 
+    const progress = {
+      classic: {
+        starsByLevel: starsByMode.classic,
+        unlockedUntil: computeUnlockedLevels(starsByMode.classic || {}),
+      },
+      timetrial: {
+        starsByLevel: starsByMode.timetrial,
+        unlockedUntil: computeUnlockedLevels(starsByMode.timetrial || {}),
+      },
+    };
+
     updatePlayerState(activeUser, {
       stars_by_mode: starsByMode,
+      progress,
     });
   }, [starsByLevel, activeUser, backendLoaded, mode]);
 
