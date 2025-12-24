@@ -41,7 +41,7 @@ export default function GameScreen({
   levelId,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
-  setStarsByLevel,
+  onRecordBestStars,
   onRunLost,
   soundCorrect,
   soundWrong,
@@ -449,11 +449,7 @@ export default function GameScreen({
             const alreadyCompletedBefore = bestStars > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              return { ...prev, [levelId]: nextBest };
-            });
+            onRecordBestStars && onRecordBestStars(levelId, stars);
 
             // persist per-username progress (CLASSIC)
             recordLevelResultByUser(usernameForProgress, "classic", levelId, {
@@ -513,13 +509,7 @@ export default function GameScreen({
             const alreadyCompletedBefore = bestStars > 0;
 
             let shouldGiveCoins = false; // kept local for clarity, but controlled by bestLevelStats
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              const nextMap = { ...prev, [levelId]: nextBest };
-              // we no longer base coins on prevBest here
-              return nextMap;
-            });
+            onRecordBestStars && onRecordBestStars(levelId, stars);
 
             // persist per-username progress (TIME TRIAL)
             recordLevelResultByUser(usernameForProgress, "timetrial", levelId, {

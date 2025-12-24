@@ -1,5 +1,5 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
 
@@ -131,15 +131,23 @@ function normalizeStarsByMode(raw) {
 }
 
 function normalizeModeKey(rawMode) {
-  const m = String(rawMode || "").toLowerCase();
-  if (m === "timetrial" || m === "time trial") return "timetrial";
-  return m || "classic";
+  const raw = String(rawMode || "").trim();
+  const lower = raw.toLowerCase();
+  if (lower === "classic") return "classic";
+  if (
+    lower === "timetrial" ||
+    lower === "time trial" ||
+    lower === "time_trial" ||
+    raw === "timeTrial"
+  )
+    return "timeTrial";
+  return null;
 }
 
 function normalizeProgress(raw) {
   const base = {
     classic: { starsByLevel: {}, unlockedUntil: 5 },
-    timetrial: { starsByLevel: {}, unlockedUntil: 5 },
+    timeTrial: { starsByLevel: {}, unlockedUntil: 5 },
   };
 
   if (!raw) return base;
@@ -158,6 +166,7 @@ function normalizeProgress(raw) {
 
   Object.entries(parsed).forEach(([modeKey, value]) => {
     const normalisedMode = normalizeModeKey(modeKey);
+    if (!normalisedMode) return;
     const target = base[normalisedMode];
     if (!target || !value || typeof value !== "object") return;
 
@@ -186,6 +195,82 @@ function mergeStarsMaps(a = {}, b = {}) {
     out[k] = best;
   });
   return out;
+}
+
+function readJsonFromStorage(key, fallback = {}) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+const PROGRESS_SNAPSHOT_KEY = (userId) =>
+  `flagiq:u:${userId}:progressSnapshot`;
+const PROGRESS_DIRTY_KEY = (userId) => `flagiq:u:${userId}:progressDirty`;
+
+function markProgressDirty(userId) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(PROGRESS_DIRTY_KEY(userId), "1");
+  } catch (e) {
+    // ignore
+  }
+}
+
+function clearProgressDirty(userId) {
+  if (!userId) return;
+  try {
+    localStorage.removeItem(PROGRESS_DIRTY_KEY(userId));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function isProgressDirty(userId) {
+  if (!userId) return false;
+  try {
+    return localStorage.getItem(PROGRESS_DIRTY_KEY(userId)) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function persistProgressSnapshot(userId, progressPayload) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(
+      PROGRESS_SNAPSHOT_KEY(userId),
+      JSON.stringify(progressPayload)
+    );
+  } catch (e) {
+    // ignore quota errors
+  }
+}
+
+function normalizeProgressForState(raw) {
+  const base = normalizeProgress(raw);
+  // ensure unlockedUntil respects minimum of 5
+  return {
+    classic: {
+      starsByLevel: base.classic.starsByLevel || {},
+      unlockedUntil: Math.max(5, Number(base.classic.unlockedUntil) || 5),
+    },
+    timeTrial: {
+      starsByLevel: base.timeTrial.starsByLevel || {},
+      unlockedUntil: Math.max(5, Number(base.timeTrial.unlockedUntil) || 5),
+    },
+  };
+}
+
+function buildStarsByModeFromProgress(progress) {
+  return {
+    classic: progress?.classic?.starsByLevel || {},
+    timeTrial: progress?.timeTrial?.starsByLevel || {},
+  };
 }
 
 export function starsNeededForLevelId(levelId, starsMap) {
@@ -494,25 +579,124 @@ export default function App() {
     `${mode}:starsBest`,
     {}
   );
+  const [progressState, setProgressState] = useUserStorage(
+    activeUser,
+    `progress`,
+    normalizeProgressForState(null)
+  );
+
+  const currentModeKey = normalizeModeKey(mode) || "classic";
+
+  useEffect(() => {
+    const modeProgress = progressState?.[currentModeKey];
+    if (modeProgress && modeProgress.starsByLevel) {
+      setStarsByLevel(modeProgress.starsByLevel);
+    }
+  }, [currentModeKey, progressState, setStarsByLevel]);
+
+  const updateProgressForCompletedLevel = useCallback(
+    (levelNumber, starsEarned) => {
+      const levelKey = String(levelNumber);
+      const earned = Math.max(0, Number(starsEarned) || 0);
+
+      setProgressState((prevRaw) => {
+        const prev = normalizeProgressForState(prevRaw);
+        const modeProgress = prev[currentModeKey] || {
+          starsByLevel: {},
+          unlockedUntil: 5,
+        };
+
+        const oldBest = Number(modeProgress.starsByLevel?.[levelKey] || 0);
+        const newBest = Math.max(oldBest, earned);
+
+        const nextStars = {
+          ...(modeProgress.starsByLevel || {}),
+          [levelKey]: newBest,
+        };
+
+        const unlockedFromStars = Math.max(
+          5,
+          computeUnlockedLevels(nextStars)
+        );
+
+        return {
+          ...prev,
+          [currentModeKey]: {
+            starsByLevel: nextStars,
+            unlockedUntil: unlockedFromStars,
+          },
+        };
+      });
+
+      setStarsByLevel((prev) => {
+        const oldBest = Number(prev?.[levelKey] || 0);
+        const newBest = Math.max(oldBest, earned);
+        return { ...prev, [levelKey]: newBest };
+      });
+    },
+    [currentModeKey, setProgressState, setStarsByLevel]
+  );
+
+  const pushProgressToBackend = useCallback(
+    async (progressPayload) => {
+      if (!activeUser || !backendLoaded) return;
+
+      persistProgressSnapshot(activeUser, progressPayload);
+
+      const offline =
+        typeof navigator !== "undefined" && navigator.onLine === false;
+      if (offline) {
+        markProgressDirty(activeUser);
+        return;
+      }
+
+      const starsByMode = buildStarsByModeFromProgress(progressPayload);
+
+      try {
+        await updatePlayerState(activeUser, {
+          progress: progressPayload,
+          stars_by_mode: {
+            classic: starsByMode.classic,
+            timeTrial: starsByMode.timeTrial,
+          },
+        });
+        clearProgressDirty(activeUser);
+      } catch (e) {
+        markProgressDirty(activeUser);
+      }
+    },
+    [activeUser, backendLoaded]
+  );
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
+    const payload = normalizeProgressForState(progressState);
+    pushProgressToBackend(payload);
+  }, [progressState, activeUser, backendLoaded, pushProgressToBackend]);
 
-    const starsByMode = {
-      classic: JSON.parse(
-        localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-      ),
-      timetrial: JSON.parse(
-        localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-      ),
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+    if (isProgressDirty(activeUser)) {
+      const payload = normalizeProgressForState(
+        readJsonFromStorage(PROGRESS_SNAPSHOT_KEY(activeUser), progressState)
+      );
+      pushProgressToBackend(payload);
+    }
+  }, [activeUser, backendLoaded, progressState, pushProgressToBackend]);
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+    const onOnline = () => {
+      if (isProgressDirty(activeUser)) {
+        const payload = normalizeProgressForState(
+          readJsonFromStorage(PROGRESS_SNAPSHOT_KEY(activeUser), progressState)
+        );
+        pushProgressToBackend(payload);
+      }
     };
-
-    updatePlayerState(activeUser, {
-      stars_by_mode: starsByMode,
-    });
-  }, [starsByLevel, activeUser, backendLoaded, mode]);
-
-
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [activeUser, backendLoaded, progressState, pushProgressToBackend]);
 
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
   const [hints, setHints] = usePerUserHints(activeUser);
@@ -565,43 +749,45 @@ export default function App() {
             }));
           }
 
-          const persistStarsForMode = (modeKey, starsMap, mergeWithExisting) => {
-            const normalisedMode = normalizeModeKey(modeKey);
-            const existing = mergeWithExisting
-              ? (() => {
-                  try {
-                    const raw = localStorage.getItem(
-                      `flagiq:u:${activeUser}:${normalisedMode}:starsBest`
-                    );
-                    return raw ? JSON.parse(raw) : {};
-                  } catch (e) {
-                    return {};
-                  }
-                })()
-              : {};
-
-            const merged = mergeStarsMaps(existing, starsMap || {});
-
-            localStorage.setItem(
-              `flagiq:u:${activeUser}:${normalisedMode}:starsBest`,
-              JSON.stringify(merged)
-            );
-
-            // immediately hydrate the current mode so progress shows up from backend
-            if (normalisedMode === mode) {
-              setStarsByLevel(merged);
-            }
-          };
-
-          const progress = normalizeProgress(state.progress);
-          Object.entries(progress).forEach(([modeKey, modeProgress]) => {
-            persistStarsForMode(modeKey, modeProgress?.starsByLevel, false);
-          });
-
+          const progressFromBackend = normalizeProgressForState(state.progress);
           const starsByMode = normalizeStarsByMode(state.stars_by_mode);
-          Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
-            // merge stars_by_mode on top of progress so we keep the best values
-            persistStarsForMode(modeKey, starsMap, true);
+
+          const mergedProgress = (() => {
+            const next = { ...progressFromBackend };
+            Object.entries(starsByMode || {}).forEach(([modeKey, starsMap]) => {
+              const key = normalizeModeKey(modeKey);
+              if (!key) return;
+              const existing = next[key] || { starsByLevel: {}, unlockedUntil: 5 };
+              const mergedStars = mergeStarsMaps(
+                existing.starsByLevel,
+                starsMap || {}
+              );
+              next[key] = {
+                starsByLevel: mergedStars,
+                unlockedUntil: Math.max(
+                  5,
+                  computeUnlockedLevels(mergedStars)
+                ),
+              };
+            });
+            return next;
+          })();
+
+          setProgressState(mergedProgress);
+          persistProgressSnapshot(activeUser, mergedProgress);
+
+          Object.entries(mergedProgress).forEach(([modeKey, modeProgress]) => {
+            const storageKeyMode =
+              modeKey === "classic" ? "classic" : modeKey === "timeTrial" ? "timetrial" : null;
+            if (!storageKeyMode) return;
+            try {
+              localStorage.setItem(
+                `flagiq:u:${activeUser}:${storageKeyMode}:starsBest`,
+                JSON.stringify(modeProgress.starsByLevel || {})
+              );
+            } catch (e) {
+              // ignore
+            }
           });
 
           const backendLang =
@@ -622,6 +808,8 @@ export default function App() {
               lastTick: Number(backendHearts.lastTick),
             });
           }
+
+          clearProgressDirty(activeUser);
         }
 
         setBackendLoaded(true);
@@ -633,6 +821,7 @@ export default function App() {
         } catch (e) {}
 
         // ✅ allow later sync back to backend
+        markProgressDirty(activeUser);
         setBackendLoaded(true);
       }
     })();
@@ -934,7 +1123,7 @@ export default function App() {
             levelId={levelId}
             levels={levels}
             currentStars={Number(starsByLevel[levelId]) || 0}
-            setStarsByLevel={setStarsByLevel}
+            onRecordBestStars={updateProgressForCompletedLevel}
             onRunLost={onRunLost}
             soundCorrect={soundCorrect}
             soundWrong={soundWrong}
@@ -1069,4 +1258,3 @@ export default function App() {
     </div>
   );
 }
-
