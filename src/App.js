@@ -1,5 +1,5 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
 
@@ -186,6 +186,115 @@ function mergeStarsMaps(a = {}, b = {}) {
     out[k] = best;
   });
   return out;
+}
+
+function readJsonFromStorage(key, fallback = {}) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+const PROGRESS_SNAPSHOT_KEY = (userId) =>
+  `flagiq:u:${userId}:progressSnapshot`;
+const PROGRESS_DIRTY_KEY = (userId) => `flagiq:u:${userId}:progressDirty`;
+
+function readStarsForModeFromLocal(userId, modeKey) {
+  if (!userId) return {};
+  return readJsonFromStorage(`flagiq:u:${userId}:${modeKey}:starsBest`, {});
+}
+
+function buildStarsByModeForUser(userId, activeMode, currentModeStars) {
+  const stored = {
+    classic: readStarsForModeFromLocal(userId, "classic"),
+    timetrial: readStarsForModeFromLocal(userId, "timetrial"),
+  };
+
+  const normalisedMode = normalizeModeKey(activeMode);
+  const key = normalisedMode === "classic" ? "classic" : "timetrial";
+
+  return {
+    ...stored,
+    [key]: mergeStarsMaps(stored[key], currentModeStars),
+  };
+}
+
+function toBackendStarsByMode(starsByMode) {
+  return {
+    classic: starsByMode?.classic || {},
+    timeTrial: starsByMode?.timetrial || starsByMode?.timeTrial || {},
+  };
+}
+
+function toBackendProgress(progress) {
+  const classic = progress?.classic || { starsByLevel: {}, unlockedUntil: 5 };
+  const timeTrial =
+    progress?.timetrial ||
+    progress?.timeTrial || { starsByLevel: {}, unlockedUntil: 5 };
+
+  return {
+    classic,
+    timeTrial,
+  };
+}
+
+function buildProgressPayloadFromStars(starsByMode) {
+  const classicStars = starsByMode?.classic || {};
+  const timeTrialStars = starsByMode?.timetrial || starsByMode?.timeTrial || {};
+
+  return toBackendProgress({
+    classic: {
+      starsByLevel: classicStars,
+      unlockedUntil: computeUnlockedLevels(classicStars),
+    },
+    timetrial: {
+      starsByLevel: timeTrialStars,
+      unlockedUntil: computeUnlockedLevels(timeTrialStars),
+    },
+  });
+}
+
+function persistProgressSnapshot(userId, progressPayload) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(
+      PROGRESS_SNAPSHOT_KEY(userId),
+      JSON.stringify(progressPayload)
+    );
+  } catch (e) {
+    // ignore quota errors
+  }
+}
+
+function markProgressDirty(userId) {
+  if (!userId) return;
+  try {
+    localStorage.setItem(PROGRESS_DIRTY_KEY(userId), "1");
+  } catch (e) {
+    // ignore
+  }
+}
+
+function clearProgressDirty(userId) {
+  if (!userId) return;
+  try {
+    localStorage.removeItem(PROGRESS_DIRTY_KEY(userId));
+  } catch (e) {
+    // ignore
+  }
+}
+
+function isProgressDirty(userId) {
+  if (!userId) return false;
+  try {
+    return localStorage.getItem(PROGRESS_DIRTY_KEY(userId)) === "1";
+  } catch (e) {
+    return false;
+  }
 }
 
 export function starsNeededForLevelId(levelId, starsMap) {
@@ -495,34 +604,59 @@ export default function App() {
     {}
   );
 
+  const syncProgressToBackend = useCallback(
+    async ({ skipIfOffline = false } = {}) => {
+      if (!activeUser || !backendLoaded) return;
+
+      const starsByMode = buildStarsByModeForUser(
+        activeUser,
+        mode,
+        starsByLevel
+      );
+      const progressPayload = buildProgressPayloadFromStars(starsByMode);
+
+      persistProgressSnapshot(activeUser, progressPayload);
+
+      const offline =
+        skipIfOffline &&
+        typeof navigator !== "undefined" &&
+        navigator.onLine === false;
+
+      if (offline) {
+        markProgressDirty(activeUser);
+        return;
+      }
+
+      try {
+        await updatePlayerState(activeUser, {
+          stars_by_mode: toBackendStarsByMode(starsByMode),
+          progress: progressPayload,
+        });
+        clearProgressDirty(activeUser);
+      } catch (e) {
+        markProgressDirty(activeUser);
+      }
+    },
+    [activeUser, backendLoaded, mode, starsByLevel]
+  );
+
+  useEffect(() => {
+    syncProgressToBackend({ skipIfOffline: true });
+  }, [syncProgressToBackend]);
+
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
+    if (isProgressDirty(activeUser)) {
+      syncProgressToBackend();
+    }
+  }, [activeUser, backendLoaded, syncProgressToBackend]);
 
-    const starsByMode = {
-      classic: JSON.parse(
-        localStorage.getItem(`flagiq:u:${activeUser}:classic:starsBest`) || "{}"
-      ),
-      timetrial: JSON.parse(
-        localStorage.getItem(`flagiq:u:${activeUser}:timetrial:starsBest`) || "{}"
-      ),
-    };
-
-    const progress = {
-      classic: {
-        starsByLevel: starsByMode.classic,
-        unlockedUntil: computeUnlockedLevels(starsByMode.classic || {}),
-      },
-      timetrial: {
-        starsByLevel: starsByMode.timetrial,
-        unlockedUntil: computeUnlockedLevels(starsByMode.timetrial || {}),
-      },
-    };
-
-    updatePlayerState(activeUser, {
-      stars_by_mode: starsByMode,
-      progress,
-    });
-  }, [starsByLevel, activeUser, backendLoaded, mode]);
+  useEffect(() => {
+    if (!activeUser || !backendLoaded) return;
+    const onOnline = () => syncProgressToBackend();
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [activeUser, backendLoaded, syncProgressToBackend]);
 
 
 
@@ -610,6 +744,11 @@ export default function App() {
             persistStarsForMode(modeKey, modeProgress?.starsByLevel, false);
           });
 
+          persistProgressSnapshot(
+            activeUser,
+            toBackendProgress(progress)
+          );
+
           const starsByMode = normalizeStarsByMode(state.stars_by_mode);
           Object.entries(starsByMode).forEach(([modeKey, starsMap]) => {
             // merge stars_by_mode on top of progress so we keep the best values
@@ -634,6 +773,8 @@ export default function App() {
               lastTick: Number(backendHearts.lastTick),
             });
           }
+
+          clearProgressDirty(activeUser);
         }
 
         setBackendLoaded(true);
@@ -1081,4 +1222,3 @@ export default function App() {
     </div>
   );
 }
-
