@@ -934,46 +934,85 @@ export default function App() {
   const heartsMax = heartsState?.max ?? MAX_HEARTS;
   const lastRegenAt = heartsState?.lastRegenAt ?? null;
 
-  // regen loop
+  const refreshHeartsFromBackend = useCallback(async () => {
+    if (!activeUser) return null;
+
+    try {
+      const latestState = await getPlayerState(activeUser);
+      if (!latestState) return null;
+
+      const backendHearts = normalizeHeartsState({
+        hearts_current: latestState.hearts_current,
+        hearts_max: latestState.hearts_max,
+        hearts_last_regen_at: latestState.hearts_last_regen_at,
+      });
+      setHeartsState(backendHearts);
+      return backendHearts;
+    } catch (error) {
+      console.error("Failed to refresh hearts from backend", error);
+      return null;
+    }
+  }, [activeUser]);
+
+  // regen loop — schedule a single timeout for the next regen moment
   useEffect(() => {
-    if (!loggedIn) return;
+    if (!loggedIn || !backendLoaded) return;
 
-    const tick = () => {
-      setHeartsState((prev) => {
-        const currentState = normalizeHeartsState(prev);
-        if (currentState.current >= currentState.max) return currentState;
+    let timeoutId = null;
+    let cancelled = false;
 
-        const now = Date.now();
-        const baseline = currentState.lastRegenAt ?? now;
-        const elapsed = now - baseline;
-        const regenCount = Math.floor(elapsed / REGEN_MS);
+    const scheduleNextCheck = (state) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      const normalized = normalizeHeartsState(state);
 
-        if (regenCount <= 0) {
-          if (currentState.lastRegenAt === null) {
-            return { ...currentState, lastRegenAt: now };
-          }
-          return currentState;
+      if (normalized.current >= normalized.max) return;
+
+      const baseline = normalized.lastRegenAt ?? Date.now();
+      const nextAt = baseline + REGEN_MS;
+      const delayMs = Math.max(0, nextAt - Date.now());
+      const safeDelay = Math.max(1000, delayMs); // throttle to avoid tight loops
+
+      timeoutId = setTimeout(async () => {
+        if (cancelled) return;
+        const latest = await refreshHeartsFromBackend();
+        if (cancelled) return;
+
+        const nextState = normalizeHeartsState(latest || normalized);
+        const nowTs = Date.now();
+        const stillDue =
+          nextState.current < nextState.max &&
+          (nextState.lastRegenAt ?? nowTs) + REGEN_MS <= nowTs;
+
+        if (stillDue) {
+          // Regen should have been applied server-side; try again soon
+          scheduleNextCheck(nextState);
+          return;
         }
 
-        const increment = Math.min(
-          regenCount,
-          currentState.max - currentState.current
-        );
-        const nextCurrent = currentState.current + increment;
-        const nextLast = baseline + regenCount * REGEN_MS;
-
-        return {
-          ...currentState,
-          current: nextCurrent,
-          lastRegenAt: nextLast,
-        };
-      });
+        scheduleNextCheck(nextState);
+      }, safeDelay);
     };
 
-    tick();
-    const id = setInterval(tick, 30000);
-    return () => clearInterval(id);
-  }, [loggedIn, setHeartsState]);
+    const normalizedCurrent = normalizeHeartsState(heartsState);
+    const nowTs = Date.now();
+    const dueImmediately =
+      normalizedCurrent.current < normalizedCurrent.max &&
+      (normalizedCurrent.lastRegenAt ?? nowTs) + REGEN_MS <= nowTs;
+
+    if (dueImmediately) {
+      refreshHeartsFromBackend().then((latest) => {
+        if (cancelled) return;
+        scheduleNextCheck(latest || normalizedCurrent);
+      });
+    } else {
+      scheduleNextCheck(normalizedCurrent);
+    }
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [loggedIn, backendLoaded, heartsState, refreshHeartsFromBackend]);
 
   // home guard
   useEffect(() => {
