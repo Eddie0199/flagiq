@@ -934,46 +934,77 @@ export default function App() {
   const heartsMax = heartsState?.max ?? MAX_HEARTS;
   const lastRegenAt = heartsState?.lastRegenAt ?? null;
 
-  // regen loop
+  const refreshHeartsFromBackend = useCallback(async () => {
+    if (!activeUser) return null;
+
+    try {
+      const latestState = await getPlayerState(activeUser);
+      if (!latestState) return null;
+
+      const backendHearts = normalizeHeartsState({
+        hearts_current: latestState.hearts_current,
+        hearts_max: latestState.hearts_max,
+        hearts_last_regen_at: latestState.hearts_last_regen_at,
+      });
+      setHeartsState(backendHearts);
+      return backendHearts;
+    } catch (error) {
+      console.error("Failed to refresh hearts from backend", error);
+      return null;
+    }
+  }, [activeUser]);
+
+  // regen loop — schedule a single timeout for the next regen moment
   useEffect(() => {
-    if (!loggedIn) return;
+    if (!loggedIn || !backendLoaded) return;
 
-    const tick = () => {
-      setHeartsState((prev) => {
-        const currentState = normalizeHeartsState(prev);
-        if (currentState.current >= currentState.max) return currentState;
+    let timeoutId = null;
+    let cancelled = false;
 
-        const now = Date.now();
-        const baseline = currentState.lastRegenAt ?? now;
-        const elapsed = now - baseline;
-        const regenCount = Math.floor(elapsed / REGEN_MS);
+    const scheduleNextCheck = (state) => {
+      if (timeoutId) clearTimeout(timeoutId);
+      const normalized = normalizeHeartsState(state);
 
-        if (regenCount <= 0) {
-          if (currentState.lastRegenAt === null) {
-            return { ...currentState, lastRegenAt: now };
-          }
-          return currentState;
-        }
+      if (normalized.current >= normalized.max) return;
 
+      const now = Date.now();
+      const baseline = normalized.lastRegenAt ?? now;
+      const elapsed = now - baseline;
+      const regenCount = Math.floor(elapsed / REGEN_MS);
+
+      if (regenCount > 0 && normalized.current < normalized.max) {
         const increment = Math.min(
           regenCount,
-          currentState.max - currentState.current
+          normalized.max - normalized.current
         );
-        const nextCurrent = currentState.current + increment;
-        const nextLast = baseline + regenCount * REGEN_MS;
-
-        return {
-          ...currentState,
-          current: nextCurrent,
-          lastRegenAt: nextLast,
+        const nextState = {
+          ...normalized,
+          current: normalized.current + increment,
+          lastRegenAt: baseline + regenCount * REGEN_MS,
         };
-      });
+        setHeartsState(nextState);
+        return; // effect will rerun with updated state and reschedule
+      }
+
+      const delayMs = Math.max(1000, baseline + REGEN_MS - now);
+      timeoutId = setTimeout(async () => {
+        if (cancelled) return;
+        const latest = await refreshHeartsFromBackend();
+        if (cancelled) return;
+        scheduleNextCheck(latest || normalized);
+      }, delayMs);
     };
 
-    tick();
-    const id = setInterval(tick, 30000);
-    return () => clearInterval(id);
-  }, [loggedIn, setHeartsState]);
+    refreshHeartsFromBackend().then((latest) => {
+      if (cancelled) return;
+      scheduleNextCheck(latest || heartsState);
+    });
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [loggedIn, backendLoaded, heartsState, refreshHeartsFromBackend]);
 
   // home guard
   useEffect(() => {
