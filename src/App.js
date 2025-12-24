@@ -133,10 +133,15 @@ function normalizeStarsByMode(raw) {
 function normalizeModeKey(rawMode) {
   const raw = String(rawMode || "").trim();
   const lower = raw.toLowerCase();
-  if (lower === "timetrial" || lower === "time trial") return "timeTrial";
   if (lower === "classic") return "classic";
-  if (raw === "timeTrial") return "timeTrial";
-  return "classic";
+  if (
+    lower === "timetrial" ||
+    lower === "time trial" ||
+    lower === "time_trial" ||
+    raw === "timeTrial"
+  )
+    return "timeTrial";
+  return null;
 }
 
 function normalizeProgress(raw) {
@@ -161,6 +166,7 @@ function normalizeProgress(raw) {
 
   Object.entries(parsed).forEach(([modeKey, value]) => {
     const normalisedMode = normalizeModeKey(modeKey);
+    if (!normalisedMode) return;
     const target = base[normalisedMode];
     if (!target || !value || typeof value !== "object") return;
 
@@ -579,7 +585,7 @@ export default function App() {
     normalizeProgressForState(null)
   );
 
-  const currentModeKey = normalizeModeKey(mode);
+  const currentModeKey = normalizeModeKey(mode) || "classic";
 
   useEffect(() => {
     const modeProgress = progressState?.[currentModeKey];
@@ -750,6 +756,7 @@ export default function App() {
             const next = { ...progressFromBackend };
             Object.entries(starsByMode || {}).forEach(([modeKey, starsMap]) => {
               const key = normalizeModeKey(modeKey);
+              if (!key) return;
               const existing = next[key] || { starsByLevel: {}, unlockedUntil: 5 };
               const mergedStars = mergeStarsMaps(
                 existing.starsByLevel,
@@ -771,7 +778,8 @@ export default function App() {
 
           Object.entries(mergedProgress).forEach(([modeKey, modeProgress]) => {
             const storageKeyMode =
-              modeKey === "classic" ? "classic" : "timetrial";
+              modeKey === "classic" ? "classic" : modeKey === "timeTrial" ? "timetrial" : null;
+            if (!storageKeyMode) return;
             try {
               localStorage.setItem(
                 `flagiq:u:${activeUser}:${storageKeyMode}:starsBest`,
