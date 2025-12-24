@@ -1,11 +1,6 @@
 // src/components/GameScreen.js
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
-import {
-  recordLevelResultByUser,
-  getLevelStatsByUser,
-  addCoinsByUser,
-} from "./ProgressByUser";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -18,6 +13,18 @@ const TT_STAR2 = 6000;
 
 // helper to store hint-popup per user per device
 const getHintSeenKey = (playerId) => `hasSeenHintInfo_${playerId || "default"}`;
+
+// schedule work on the next frame (falls back to micro-delay)
+const nextFrame = (fn) => {
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(fn);
+  } else {
+    setTimeout(fn, 0);
+  }
+};
+
+const WRONG_ANSWER_RESET_MS = 120;
+const PAUSE_HINT_MS = 1500;
 
 // small stars row
 function StarsInline({ count }) {
@@ -41,7 +48,8 @@ export default function GameScreen({
   levelId,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
-  setStarsByLevel,
+  progress,
+  onProgressUpdate,
   onRunLost,
   soundCorrect,
   soundWrong,
@@ -54,8 +62,6 @@ export default function GameScreen({
   // coins
   activeUser,
   onCoinsChange,
-  // per-account persistence id
-  username,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -73,12 +79,6 @@ export default function GameScreen({
   });
   const hintKey = getHintSeenKey(playerId);
   const [showHintInfo, setShowHintInfo] = useState(false);
-
-  // username used for progress persistence (per-account scope)
-  const usernameForProgress =
-    (username && String(username)) ||
-    (activeUser && String(activeUser)) ||
-    "guest";
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
@@ -333,14 +333,11 @@ export default function GameScreen({
       : "Classic";
 
   // ---------- best-ever stars for badge (from persistent store) ----------
-  const bestLevelStats = useMemo(
-    () => getLevelStatsByUser(usernameForProgress, mode, levelId),
-    [usernameForProgress, mode, levelId]
-  );
-  const bestStars = Math.max(
-    Number(bestLevelStats?.stars || 0),
-    Number(currentStars || 0)
-  );
+  const bestStars = useMemo(() => {
+    const byMode = progress?.[mode];
+    const stored = Number(byMode?.starsByLevel?.[levelId] || 0);
+    return Math.max(stored, Number(currentStars || 0));
+  }, [progress, mode, levelId, currentStars]);
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
@@ -399,15 +396,12 @@ export default function GameScreen({
     }));
     setTimeout(() => {
       setTtPaused(false);
-    }, 3000);
+    }, PAUSE_HINT_MS);
   }
 
   // ---------- COIN AWARD (per-username store) ----------
   function awardCoinsOnce() {
     const reward = 100;
-
-    // Keep lifetime / profile stats in ProgressByUser
-    addCoinsByUser(usernameForProgress, reward);
 
     // Tell App to add `reward` to the current wallet balance
     if (onCoinsChange) {
@@ -435,7 +429,7 @@ export default function GameScreen({
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
 
-        setTimeout(() => {
+        nextFrame(() => {
           if (lastQ) {
             const livesLeft = clamp(3 - skulls, 0, 3);
             const stars = starsFromLives
@@ -449,16 +443,9 @@ export default function GameScreen({
             const alreadyCompletedBefore = bestStars > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              return { ...prev, [levelId]: nextBest };
-            });
-
-            // persist per-username progress (CLASSIC)
-            recordLevelResultByUser(usernameForProgress, "classic", levelId, {
-              stars,
-            });
+            if (onProgressUpdate) {
+              onProgressUpdate(mode, levelId, stars);
+            }
 
             // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {
@@ -472,7 +459,7 @@ export default function GameScreen({
             setSelectedAnswer(null);
             setWrongAnswers([]);
           }
-        }, 350);
+        });
       } else {
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -484,7 +471,7 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), 300);
+        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
       }
       return;
     }
@@ -497,7 +484,7 @@ export default function GameScreen({
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
 
-        setTimeout(() => {
+        nextFrame(() => {
           if (lastQ) {
             // stars based on score AND mistakes
             const maxByMistakes = clamp(3 - skulls, 0, 3);
@@ -512,19 +499,9 @@ export default function GameScreen({
             // check if this level had *any* stars before (per mode)
             const alreadyCompletedBefore = bestStars > 0;
 
-            let shouldGiveCoins = false; // kept local for clarity, but controlled by bestLevelStats
-            setStarsByLevel((prev) => {
-              const prevBest = Number(prev[levelId]) || 0;
-              const nextBest = Math.max(prevBest, stars);
-              const nextMap = { ...prev, [levelId]: nextBest };
-              // we no longer base coins on prevBest here
-              return nextMap;
-            });
-
-            // persist per-username progress (TIME TRIAL)
-            recordLevelResultByUser(usernameForProgress, "timetrial", levelId, {
-              stars,
-            });
+            if (onProgressUpdate) {
+              onProgressUpdate(mode, levelId, stars);
+            }
 
             // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {
@@ -541,7 +518,7 @@ export default function GameScreen({
             setSelectedAnswer(null);
             setWrongAnswers([]);
           }
-        }, 250);
+        });
       } else {
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -553,7 +530,7 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), 250);
+        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
       }
     }
   }

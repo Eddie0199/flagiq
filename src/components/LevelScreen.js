@@ -9,7 +9,6 @@ import {
   UNLOCK_THRESHOLD,
   starsNeededForLevelId, // use App's exact rule for the popup
 } from "../App";
-import { getLevelStatsByUser } from "./ProgressByUser";
 
 function StarsBadge({ total }) {
   return (
@@ -46,57 +45,20 @@ function computeUnlockedFromStars(starsMap) {
   return unlocked;
 }
 
-// Merge per-level storage with legacy starsBest map (used by backend hydration)
-function getStarsMapFromStore(username, mode) {
-  const map = {};
-  if (!username) return map;
-
-  let legacy = {};
-  try {
-    const rawLegacy = localStorage.getItem(
-      `flagiq:u:${username}:${mode}:starsBest`
-    );
-    if (rawLegacy) {
-      const parsed = JSON.parse(rawLegacy);
-      if (parsed && typeof parsed === "object") legacy = parsed;
-    }
-  } catch {
-    // ignore
-  }
-
-  for (let id = 1; id <= TOTAL_LEVELS; id++) {
-    let best = 0;
-
-    try {
-      const stats = getLevelStatsByUser(username, mode, id);
-      best = Number(stats?.stars || 0);
-    } catch {
-      // ignore
-    }
-
-    const legacyVal = Number(legacy[id] || 0);
-    map[id] = Math.max(best, legacyVal);
-  }
-
-  return map;
-}
-
 export default function LevelScreen({
   t,
   lang,
   // NOTE: we now derive unlocks from storage; this prop is ignored if present.
   onLevelClick,
   onLockedAttempt, // ← OPTIONAL: when a locked tile is tapped, we’ll call this with details
-  username, // must match GameScreen username
   mode = "classic", // or "timetrial"
+  progress,
 }) {
-  const userKey = (username && String(username)) || "guest";
-
-  // read best-ever stars per level from persistent store
-  const starsByLevelFromStore = useMemo(
-    () => getStarsMapFromStore(userKey, mode),
-    [userKey, mode]
-  );
+  // read best-ever stars per level from in-memory progress state
+  const starsByLevelFromStore = useMemo(() => {
+    const byMode = progress?.[mode];
+    return byMode?.starsByLevel || {};
+  }, [progress, mode]);
 
   const totalStars = useMemo(
     () =>
@@ -108,10 +70,13 @@ export default function LevelScreen({
   );
 
   // 🔓 derive unlocked block count from persisted stars (not from in-memory props)
-  const unlockedLevels = useMemo(
-    () => computeUnlockedFromStars(starsByLevelFromStore),
-    [starsByLevelFromStore]
-  );
+  const unlockedLevels = useMemo(() => {
+    const storedUnlocked = progress?.[mode]?.unlockedUntil;
+    const computed = computeUnlockedFromStars(starsByLevelFromStore);
+    return Number.isFinite(Number(storedUnlocked))
+      ? Math.max(Number(storedUnlocked), computed)
+      : computed;
+  }, [progress, mode, starsByLevelFromStore]);
 
   return (
     <div style={{ padding: "6px 12px", maxWidth: 960, margin: "0 auto" }}>
