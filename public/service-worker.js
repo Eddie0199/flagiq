@@ -1,6 +1,6 @@
 // same basic caching code
 const CACHE_NAME = "flagiq-cache-v1";
-const urlsToCache = ["/", "/index.html"];
+const urlsToCache = ["./", "./index.html"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -27,9 +27,7 @@ self.addEventListener("fetch", (event) => {
     caches.match(event.request).then(
       (resp) =>
         resp ||
-        fetch(event.request).catch(() =>
-          caches.match("/index.html")
-        )
+        fetch(event.request).catch(() => caches.match("./index.html"))
     )
   );
 });
