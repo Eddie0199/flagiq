@@ -4,15 +4,20 @@
   "description": "",
   "keywords": [],
   "main": "src/index.tsx",
+  "homepage": ".",
   "dependencies": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-scripts": "5.0.1",
+    "@capacitor/core": "^6.0.0",
+    "@supabase/supabase-js": "^2.48.0",
     "ajv": "^6.12.6",
     "ajv-keywords": "3.5.2",
-    "@supabase/supabase-js": "^2.48.0"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-scripts": "5.0.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
     "@types/react": "18.0.28",
     "@types/react-dom": "18.0.11",
     "loader-utils": "3.2.1",
@@ -21,6 +26,9 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "ESLINT_NO_DEV_ERRORS=true react-scripts build",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
@@ -31,4 +39,3 @@
     "not op_mini all"
   ]
 }
-

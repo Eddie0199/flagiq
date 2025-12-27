@@ -14,8 +14,11 @@ root.render(
 // Register the service worker from /public
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
+    const swPath = process.env.PUBLIC_URL
+      ? `${process.env.PUBLIC_URL}/service-worker.js`
+      : "/service-worker.js";
     navigator.serviceWorker
-      .register("/service-worker.js")
+      .register(swPath)
       .then((reg) => {
         console.log("Service worker registered:", reg.scope);
       })
