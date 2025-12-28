@@ -749,7 +749,7 @@ export default function HomeScreen({
           fontWeight: 600,
         }}
       >
-        Powered by <span style={{ fontStyle: "italic" }}>Wild Moustache</span>
+        Powered by <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span>
       </div>
     </div>
   );
