@@ -12,6 +12,7 @@ import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
+import { registerPurchaseRewardHandler } from "./purchases";
 
 // 🔹 NEW: Supabase client import
 import { supabase } from "./supabaseClient";
@@ -836,22 +837,24 @@ export default function App() {
 
 
   // helper to update coins AND persist to localStorage
-  const applyCoinsUpdate = (valueOrUpdater) => {
-    setCoins((prev) => {
-      const next =
-        typeof valueOrUpdater === "function"
-          ? valueOrUpdater(prev)
-          : valueOrUpdater;
-      const safe = Number.isFinite(Number(next)) ? Number(next) : 0;
-      if (activeUser) {
-        try {
-          localStorage.setItem(`flagiq:u:${activeUser}:coins`, String(safe));
-        } catch (e) {}
-
-      }
-      return safe;
-    });
-  };
+  const applyCoinsUpdate = useCallback(
+    (valueOrUpdater) => {
+      setCoins((prev) => {
+        const next =
+          typeof valueOrUpdater === "function"
+            ? valueOrUpdater(prev)
+            : valueOrUpdater;
+        const safe = Number.isFinite(Number(next)) ? Number(next) : 0;
+        if (activeUser) {
+          try {
+            localStorage.setItem(`flagiq:u:${activeUser}:coins`, String(safe));
+          } catch (e) {}
+        }
+        return safe;
+      });
+    },
+    [activeUser]
+  );
 
   const flushHeartsUpdate = useCallback(async () => {
     if (
@@ -903,6 +906,38 @@ export default function App() {
     },
     [activeUser, backendLoaded, flushHeartsUpdate]
   );
+
+  useEffect(() => {
+    registerPurchaseRewardHandler(async (product) => {
+      const reward = product?.reward || {};
+      let coinsGranted = 0;
+      let heartsRefilled = false;
+
+      if (Number.isFinite(Number(reward.coins))) {
+        coinsGranted = Number(reward.coins);
+        if (coinsGranted > 0) {
+          applyCoinsUpdate((prev) => Math.max(0, prev + coinsGranted));
+        }
+      }
+
+      if (reward.heartsRefill) {
+        heartsRefilled = true;
+        setHeartsState((prev) => {
+          const normalized = normalizeHeartsState(prev);
+          const nextState = {
+            ...normalized,
+            current: normalized.max,
+            max: normalized.max,
+            lastRegenAt: null,
+          };
+          queueHeartsUpdate(nextState);
+          return nextState;
+        });
+      }
+
+      return { success: true, coinsGranted, heartsRefilled };
+    });
+  }, [applyCoinsUpdate, queueHeartsUpdate]);
 
   const handleDailySpinClaim = useCallback(async () => {
     if (!activeUser || !backendLoaded) {
@@ -1265,18 +1300,6 @@ export default function App() {
     });
   };
 
-  // Refill hearts to max via paid option (no coin impact in prototype)
-  const handleRefillHeartsWithMoney = () => {
-    if (heartsCurrent >= heartsMax) return;
-    const nextState = {
-      current: heartsMax,
-      max: heartsMax,
-      lastRegenAt: null,
-    };
-    setHeartsState(nextState);
-    queueHeartsUpdate(nextState);
-  };
-
   const modeProgress = progress[mode] || {
     starsByLevel: {},
     unlockedUntil: BATCH,
@@ -1455,7 +1478,6 @@ export default function App() {
             hearts={heartsCurrent}
             maxHearts={heartsMax}
             onBuyHeartWithCoins={handleBuyHeartWithCoins}
-            onRefillHeartsWithMoney={handleRefillHeartsWithMoney}
           />
         </>
       )}

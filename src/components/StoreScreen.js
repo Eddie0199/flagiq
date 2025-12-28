@@ -2,6 +2,8 @@
 // Booster shop: spend coins on hints & (dev) get more coins.
 
 import React, { useState } from "react";
+import { purchaseProduct } from "../purchases";
+import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 
 const BOOSTER_ITEMS = [
   {
@@ -42,11 +44,7 @@ const BOOSTER_ITEMS = [
   },
 ];
 
-const COIN_PACKS = [
-  { id: "coins_250", coins: 250, priceLabel: "€0.99" },
-  { id: "coins_600", coins: 600, priceLabel: "€1.99" },
-  { id: "coins_1500", coins: 1500, priceLabel: "€3.99" },
-];
+const COIN_PACKS = SHOP_PRODUCTS.filter((p) => p.type === "coins");
 
 // 💖 cost for +1 heart (coins)
 const HEART_COIN_COST = 50;
@@ -62,7 +60,6 @@ export default function StoreScreen({
   hearts,
   maxHearts,
   onBuyHeartWithCoins,
-  onRefillHeartsWithMoney,
 }) {
   const [message, setMessage] = useState("");
 
@@ -110,23 +107,27 @@ export default function StoreScreen({
     setMessage(wonStr);
   }
 
-  function buyCoins(pack) {
-    if (!onUpdateCoins) return;
-
-    // NOTE: prototype → adds directly
-    onUpdateCoins(coins + pack.coins);
-
-    setMessage(
-      text(
-        "storeCoinsAdded",
-        `Dev mode: added ${pack.coins} coins to your balance.`
-      )
-    );
+  async function buyCoins(pack) {
+    try {
+      const result = await purchaseProduct(pack.id);
+      if (result?.success) {
+        setMessage(text("storeCoinsAdded", "Purchase successful! Coins added."));
+      } else {
+        setMessage(
+          result?.error || text("storePurchaseFailed", "Purchase failed")
+        );
+      }
+    } catch (e) {
+      setMessage(text("storePurchaseFailed", "Purchase failed"));
+    }
   }
 
   const heartsFull = typeof hearts === "number" && hearts >= maxHearts;
   const canBuyHeartWithCoins =
     !heartsFull && typeof coins === "number" && coins >= HEART_COIN_COST;
+  const heartsProduct = SHOP_PRODUCTS.find(
+    (p) => p.id === PRODUCT_IDS.HEARTS_REFILL
+  );
 
   return (
     <div style={{ padding: "10px 16px 24px", maxWidth: 900, margin: "0 auto" }}>
@@ -361,16 +362,21 @@ export default function StoreScreen({
           >
             {text(
               "storeCoinPacksDesc",
-              "Prototype mode: tapping a pack simply adds coins."
+              "Choose a pack to add coins (web prototype)."
             )}
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {COIN_PACKS.map((pack) => (
-              <div
-                key={pack.id}
-                style={{
-                  display: "flex",
+            {COIN_PACKS.map((pack) => {
+              const coinsAmount =
+                pack.reward?.coins ??
+                pack.coins ??
+                (pack.label ? parseInt(pack.label, 10) : 0);
+              return (
+                <div
+                  key={pack.id}
+                  style={{
+                    display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
                   padding: "8px 10px",
@@ -405,7 +411,7 @@ export default function StoreScreen({
                         color: "#0f172a",
                       }}
                     >
-                      {pack.coins} {text("storeCoinsLabel", "coins")}
+                      {coinsAmount} {text("storeCoinsLabel", "coins")}
                     </div>
                   </div>
                 </div>
@@ -428,7 +434,8 @@ export default function StoreScreen({
                   {pack.priceLabel}
                 </button>
               </div>
-            ))}
+              );
+            })}
 
             {/* Refill hearts (money) */}
             <div
@@ -474,7 +481,22 @@ export default function StoreScreen({
               </div>
 
               <button
-                onClick={onRefillHeartsWithMoney}
+                onClick={async () => {
+                  try {
+                    const res = await purchaseProduct(PRODUCT_IDS.HEARTS_REFILL);
+                    setMessage(
+                      res?.success
+                        ? text(
+                            "storePurchaseSuccess",
+                            "Purchase successful! Hearts refilled."
+                          )
+                        : res?.error ||
+                            text("storePurchaseFailed", "Purchase failed")
+                    );
+                  } catch (e) {
+                    setMessage(text("storePurchaseFailed", "Purchase failed"));
+                  }
+                }}
                 disabled={heartsFull}
                 style={{
                   border: "none",
@@ -489,7 +511,9 @@ export default function StoreScreen({
                   textAlign: "center",
                 }}
               >
-                {heartsFull ? text("storeHeartsFull", "Full") : "€0.99"}
+                {heartsFull
+                  ? text("storeHeartsFull", "Full")
+                  : heartsProduct?.priceLabel || "€0.99"}
               </button>
             </div>
           </div>
