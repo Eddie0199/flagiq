@@ -29,7 +29,7 @@ export default function SettingsModal({
   onResetProgress, // dev-only callback from App (optional)
 }) {
   const loggedIn = !!activeUser;
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
 
   useEffect(() => {
     let isMounted = true;
@@ -37,6 +37,10 @@ export default function SettingsModal({
       if (!loggedIn) {
         if (isMounted) setDisplayName("");
         return;
+      }
+
+      if (isMounted && activeUserLabel) {
+        setDisplayName(activeUserLabel);
       }
 
       try {
@@ -51,12 +55,12 @@ export default function SettingsModal({
           user?.id;
 
         if (isMounted) {
-          setDisplayName(label || activeUserLabel || activeUser || "");
+          setDisplayName(label || activeUserLabel || "");
         }
       } catch (err) {
         console.error("Failed to load user for display name", err);
         if (isMounted) {
-          setDisplayName(activeUserLabel || activeUser || "");
+          setDisplayName(activeUserLabel || "");
         }
       }
     }
@@ -169,7 +173,7 @@ export default function SettingsModal({
                   display: "inline-block",
                 }}
               >
-                @{displayName || activeUser}
+                @{displayName || activeUserLabel}
               </div>
             </div>
             <hr
