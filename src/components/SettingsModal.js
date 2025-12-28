@@ -1,6 +1,7 @@
 // src/components/SettingsModal.js
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
+import { supabase } from "../supabaseClient";
 
 const LANG_DISPLAY = {
   en: "English",
@@ -21,12 +22,54 @@ export default function SettingsModal({
   setLang,
   activeUser,
   setActiveUser,
+  activeUserLabel,
   setActiveUserLabel,
   LANGS = [],
   t,
   onResetProgress, // dev-only callback from App (optional)
 }) {
   const loggedIn = !!activeUser;
+  const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDisplayName() {
+      if (!loggedIn) {
+        if (isMounted) setDisplayName("");
+        return;
+      }
+
+      if (isMounted && activeUserLabel) {
+        setDisplayName(activeUserLabel);
+      }
+
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+
+        const user = data?.user;
+        const label =
+          user?.user_metadata?.display_name ||
+          user?.user_metadata?.username ||
+          user?.email ||
+          user?.id;
+
+        if (isMounted) {
+          setDisplayName(label || activeUserLabel || "");
+        }
+      } catch (err) {
+        console.error("Failed to load user for display name", err);
+        if (isMounted) {
+          setDisplayName(activeUserLabel || "");
+        }
+      }
+    }
+
+    loadDisplayName();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeUser, activeUserLabel, loggedIn]);
 
   const langList = Array.isArray(LANGS)
     ? LANGS
@@ -130,7 +173,7 @@ export default function SettingsModal({
                   display: "inline-block",
                 }}
               >
-                @{activeUser}
+                @{displayName || activeUserLabel}
               </div>
             </div>
             <hr
