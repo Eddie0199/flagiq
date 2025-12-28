@@ -1,6 +1,7 @@
 // src/components/GameScreen.js
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
+import { submitTimeTrialResult } from "../timeTrialResultsApi";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -91,6 +92,7 @@ export default function GameScreen({
   const runStartedRef = useRef(false);
   const runEndedRef = useRef(false);
   const lifeLostRef = useRef(false);
+  const submittedTimeTrialResultRef = useRef(false);
 
   // show hint popup once per user per device
   useEffect(() => {
@@ -556,6 +558,27 @@ export default function GameScreen({
     
   }, []);
 
+  // submit Time Trial results once when the run is completed
+  useEffect(() => {
+    if (mode !== "timetrial") {
+      submittedTimeTrialResultRef.current = false;
+      return;
+    }
+
+    if (!done) {
+      submittedTimeTrialResultRef.current = false;
+      return;
+    }
+
+    if (submittedTimeTrialResultRef.current) return;
+
+    submittedTimeTrialResultRef.current = true;
+
+    submitTimeTrialResult(levelId, ttScore).catch((err) => {
+      console.error("Failed to submit Time Trial result", err);
+    });
+  }, [mode, done, levelId, ttScore]);
+
   // skulls render
   const skullsRow = (
     <div style={{ fontSize: 14, marginTop: 0 }}>
@@ -586,6 +609,7 @@ export default function GameScreen({
     runStartedRef.current = false;
     runEndedRef.current = false;
     lifeLostRef.current = false;
+    submittedTimeTrialResultRef.current = false;
   };
 
   return (
