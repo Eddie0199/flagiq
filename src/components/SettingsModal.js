@@ -275,37 +275,21 @@ export default function SettingsModal({
           </div>
         )}
 
-        <div
-          style={{
-            marginTop: 10,
-            marginBottom: 6,
-          }}
-        >
-          <div
-            style={{
-              display: "block",
-              fontSize: 13,
-              fontWeight: 500,
-              marginBottom: 6,
-              color: "#0f172a",
-            }}
-          >
-            Legal
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ marginTop: 12, marginBottom: 6 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <button
               onClick={() =>
                 openExternalLink("https://wildmoustachegames.com/privacy.html")
               }
               style={{
-                width: "100%",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: 14,
-                padding: "10px 12px",
-                fontWeight: 600,
-                textAlign: "left",
+                background: "none",
+                border: "none",
+                padding: 0,
+                color: "#0f172a",
+                textDecoration: "underline",
+                fontSize: 13,
                 cursor: "pointer",
+                textAlign: "left",
               }}
             >
               Privacy Policy
@@ -315,14 +299,14 @@ export default function SettingsModal({
                 openExternalLink("https://wildmoustachegames.com/terms.html")
               }
               style={{
-                width: "100%",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: 14,
-                padding: "10px 12px",
-                fontWeight: 600,
-                textAlign: "left",
+                background: "none",
+                border: "none",
+                padding: 0,
+                color: "#0f172a",
+                textDecoration: "underline",
+                fontSize: 13,
                 cursor: "pointer",
+                textAlign: "left",
               }}
             >
               Terms & Conditions
