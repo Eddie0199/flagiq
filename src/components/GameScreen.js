@@ -554,9 +554,20 @@ export default function GameScreen({
       ) {
         loseLifeOnce();
       }
+\
+      if (
+        mode === "timetrial" &&
+        runStartedRef.current &&
+        !submittedTimeTrialResultRef.current
+      ) {
+        submittedTimeTrialResultRef.current = true;
+        submitTimeTrialResult(levelId, 0).catch((err) => {
+          console.error("Failed to submit Time Trial result on exit", err);
+        });
+      }
     };
     
-  }, []);
+  }, [mode, levelId]);
 
   // submit Time Trial results once when the run is completed
   useEffect(() => {
@@ -565,7 +576,7 @@ export default function GameScreen({
       return;
     }
 
-    if (!done) {
+    if (!done && !fail) {
       submittedTimeTrialResultRef.current = false;
       return;
     }
@@ -574,10 +585,12 @@ export default function GameScreen({
 
     submittedTimeTrialResultRef.current = true;
 
-    submitTimeTrialResult(levelId, ttScore).catch((err) => {
+    const finalScore = done ? ttScore : 0;
+
+    submitTimeTrialResult(levelId, finalScore).catch((err) => {
       console.error("Failed to submit Time Trial result", err);
     });
-  }, [mode, done, levelId, ttScore]);
+  }, [mode, done, fail, levelId, ttScore]);
 
   // skulls render
   const skullsRow = (
