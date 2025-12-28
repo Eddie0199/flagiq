@@ -1,5 +1,7 @@
 // src/components/SettingsModal.js
 import React from "react";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 
 const LANG_DISPLAY = {
   en: "English",
@@ -33,6 +35,22 @@ export default function SettingsModal({
         code,
         name: LANG_DISPLAY[code] || LANGS[code]?.name || code,
       }));
+
+  const openExternalLink = async (url) => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await Browser.open({ url });
+        return;
+      } catch (error) {
+        console.error("Failed to open link with Capacitor Browser", error);
+      }
+    }
+
+    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (newWindow) {
+      newWindow.opener = null;
+    }
+  };
 
   return (
     <div
@@ -253,6 +271,61 @@ export default function SettingsModal({
             </div>
           </div>
         )}
+
+        <div
+          style={{
+            marginTop: 10,
+            marginBottom: 6,
+          }}
+        >
+          <div
+            style={{
+              display: "block",
+              fontSize: 13,
+              fontWeight: 500,
+              marginBottom: 6,
+              color: "#0f172a",
+            }}
+          >
+            Legal
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <button
+              onClick={() =>
+                openExternalLink("https://wildmoustachegames.com/privacy.html")
+              }
+              style={{
+                width: "100%",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 14,
+                padding: "10px 12px",
+                fontWeight: 600,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              Privacy Policy
+            </button>
+            <button
+              onClick={() =>
+                openExternalLink("https://wildmoustachegames.com/terms.html")
+              }
+              style={{
+                width: "100%",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 14,
+                padding: "10px 12px",
+                fontWeight: 600,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              Terms & Conditions
+            </button>
+          </div>
+        </div>
 
         {loggedIn && (
           <button
