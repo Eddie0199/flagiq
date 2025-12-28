@@ -554,7 +554,7 @@ export default function GameScreen({
       ) {
         loseLifeOnce();
       }
-\
+
       if (
         mode === "timetrial" &&
         runStartedRef.current &&
@@ -1320,4 +1320,3 @@ export default function GameScreen({
     </div>
   );
 }
-
