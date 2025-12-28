@@ -1,6 +1,5 @@
 // src/components/SettingsModal.js
 import React from "react";
-import { Browser } from "@capacitor/browser";
 import { Capacitor } from "@capacitor/core";
 
 const LANG_DISPLAY = {
@@ -37,9 +36,13 @@ export default function SettingsModal({
       }));
 
   const openExternalLink = async (url) => {
-    if (Capacitor.isNativePlatform()) {
+    if (
+      Capacitor.isNativePlatform() &&
+      typeof Capacitor.isPluginAvailable === "function" &&
+      Capacitor.isPluginAvailable("Browser")
+    ) {
       try {
-        await Browser.open({ url });
+        await Capacitor.Plugins?.Browser?.open?.({ url });
         return;
       } catch (error) {
         console.error("Failed to open link with Capacitor Browser", error);
