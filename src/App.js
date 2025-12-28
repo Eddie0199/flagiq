@@ -1478,6 +1478,7 @@ export default function App() {
               setScreen("home");
             }
           }}
+          activeUserLabel={activeUserLabel}
           setActiveUserLabel={setActiveUserLabel}
           setScreen={setScreen}
           LANGS={LANGS}
