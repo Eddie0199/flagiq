@@ -1,7 +1,22 @@
 // src/components/ResetPasswordPage.js
 import React, { useMemo, useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import { t as translate } from "../i18n";
+import { LANGS, t as translate } from "../i18n";
+
+const SUPPORTED_LANG_CODES = new Set(LANGS.map((l) => l.code));
+const normalizeLang = (raw) => {
+  const normalized = String(raw || "").toLowerCase();
+  return SUPPORTED_LANG_CODES.has(normalized) ? normalized : "en";
+};
+
+function readLangFromQuery() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("lang");
+  } catch (e) {
+    return null;
+  }
+}
 
 function validatePassword(pwd, tr) {
   if (!pwd || pwd.length < 6) {
@@ -20,7 +35,11 @@ function validatePassword(pwd, tr) {
 }
 
 export default function ResetPasswordPage() {
-  const initialLang = window.localStorage.getItem("flagLang") || "en";
+  const initialLang = useMemo(() => {
+    const queryLang = readLangFromQuery();
+    if (queryLang) return normalizeLang(queryLang);
+    return normalizeLang(window.localStorage.getItem("flagLang") || "en");
+  }, []);
   const [lang, setLang] = useState(initialLang);
 
   // ✅ Fix missing translations: if translate() returns the key itself, use fallback
@@ -40,10 +59,14 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   function handleLangChange(e) {
-    const next = e.target.value;
+    const next = normalizeLang(e.target.value);
     setLang(next);
     window.localStorage.setItem("flagLang", next);
   }
+
+  useEffect(() => {
+    window.localStorage.setItem("flagLang", lang);
+  }, [lang]);
 
   // ✅ After success, optionally redirect home
   useEffect(() => {
@@ -265,5 +288,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-
 

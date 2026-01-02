@@ -2,6 +2,13 @@
 import React, { useState } from "react";
 import { emailRx } from "../App";
 import { supabase } from "../supabaseClient";
+import { LANGS } from "../i18n";
+
+const SUPPORTED_LANG_CODES = new Set(LANGS.map((l) => l.code));
+const normalizeLang = (raw) => {
+  const normalized = String(raw || "").toLowerCase();
+  return SUPPORTED_LANG_CODES.has(normalized) ? normalized : "en";
+};
 
 export default function AuthModal({
   lang,
@@ -199,7 +206,8 @@ export default function AuthModal({
     }
 
     // Ensure the email always redirects to your app reset page
-    const redirectTo = `${window.location.origin}/reset-password`;
+    const resetLang = normalizeLang(lang);
+    const redirectTo = `https://wildmoustachegames.com/reset-password?lang=${resetLang}`;
 
     try {
       setResetLoading(true);
