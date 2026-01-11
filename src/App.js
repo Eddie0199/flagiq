@@ -1,5 +1,6 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
 
@@ -335,6 +336,149 @@ function getHeartsStorageKey(username) {
   return username ? `flagiq:u:${username}:hearts` : null;
 }
 
+const REVIEW_PROMPT_DEFAULT = {
+  lastReviewMilestonePrompted: 0,
+  lastReviewPromptAt: 0,
+  sessionsSinceLastPrompt: 0,
+  totalReviewPromptAttempts: 0,
+};
+
+function normalizeReviewPromptState(raw) {
+  if (!raw) return { ...REVIEW_PROMPT_DEFAULT };
+  let parsed = raw;
+  if (typeof raw === "string") {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      return { ...REVIEW_PROMPT_DEFAULT };
+    }
+  }
+  if (!parsed || typeof parsed !== "object") {
+    return { ...REVIEW_PROMPT_DEFAULT };
+  }
+  return {
+    lastReviewMilestonePrompted: Number(parsed.lastReviewMilestonePrompted) || 0,
+    lastReviewPromptAt: Number(parsed.lastReviewPromptAt) || 0,
+    sessionsSinceLastPrompt: Number(parsed.sessionsSinceLastPrompt) || 0,
+    totalReviewPromptAttempts: Number(parsed.totalReviewPromptAttempts) || 0,
+  };
+}
+
+function mergeReviewPromptState(base, next) {
+  return {
+    lastReviewMilestonePrompted: Math.max(
+      base.lastReviewMilestonePrompted || 0,
+      next.lastReviewMilestonePrompted || 0
+    ),
+    lastReviewPromptAt: Math.max(
+      base.lastReviewPromptAt || 0,
+      next.lastReviewPromptAt || 0
+    ),
+    sessionsSinceLastPrompt: Math.max(
+      base.sessionsSinceLastPrompt || 0,
+      next.sessionsSinceLastPrompt || 0
+    ),
+    totalReviewPromptAttempts: Math.max(
+      base.totalReviewPromptAttempts || 0,
+      next.totalReviewPromptAttempts || 0
+    ),
+  };
+}
+
+function getReviewPromptStorageKey(username) {
+  return username ? `flagiq:u:${username}:reviewPrompt` : null;
+}
+
+async function readCapacitorStorage(key) {
+  if (!key || !Capacitor?.Plugins) return null;
+  const plugin = Capacitor.Plugins.Preferences || Capacitor.Plugins.Storage;
+  if (!plugin?.get) return null;
+  try {
+    const result = await plugin.get({ key });
+    if (!result?.value) return null;
+    return normalizeReviewPromptState(result.value);
+  } catch (e) {
+    return null;
+  }
+}
+
+async function writeCapacitorStorage(key, value) {
+  if (!key || !Capacitor?.Plugins) return;
+  const plugin = Capacitor.Plugins.Preferences || Capacitor.Plugins.Storage;
+  if (!plugin?.set) return;
+  try {
+    await plugin.set({ key, value: JSON.stringify(value) });
+  } catch (e) {}
+}
+
+function useReviewPromptState(username) {
+  const key = getReviewPromptStorageKey(username);
+  const [state, setState] = useState(() => {
+    if (!key) return { ...REVIEW_PROMPT_DEFAULT };
+    try {
+      const raw = localStorage.getItem(key);
+      return normalizeReviewPromptState(raw);
+    } catch (e) {
+      return { ...REVIEW_PROMPT_DEFAULT };
+    }
+  });
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!key) {
+      setLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const fromCapacitor = await readCapacitorStorage(key);
+      if (!cancelled && fromCapacitor) {
+        setState((prev) => mergeReviewPromptState(prev, fromCapacitor));
+      }
+      if (!cancelled) setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [key]);
+
+  useEffect(() => {
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (e) {}
+    writeCapacitorStorage(key, state);
+  }, [key, state]);
+
+  return { state, setState, loaded };
+}
+
+function countUniqueCompletedLevels(progress) {
+  const base = normalizeProgress(progress);
+  const completed = new Set();
+  Object.values(base).forEach((modeProgress) => {
+    const starsByLevel = modeProgress?.starsByLevel || {};
+    Object.entries(starsByLevel).forEach(([levelKey, stars]) => {
+      if (Number(stars) > 0) {
+        completed.add(Number(levelKey));
+      }
+    });
+  });
+  return completed.size;
+}
+
+async function requestInAppReview() {
+  if (!Capacitor?.Plugins) return false;
+  const plugin = Capacitor.Plugins.InAppReview || Capacitor.Plugins.AppReview;
+  if (!plugin?.requestReview) return false;
+  try {
+    await plugin.requestReview();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export function applyHeartsRegen(state, now = Date.now()) {
   const base = normalizeHeartsState(state);
   const ts = Number.isFinite(Number(now)) ? Number(now) : Date.now();
@@ -626,6 +770,12 @@ export default function App() {
   const progressStorageKey = activeUser
     ? `flagiq:progress:${activeUser}`
     : null;
+  const {
+    state: reviewPromptState,
+    setState: setReviewPromptState,
+    loaded: reviewPromptLoaded,
+  } = useReviewPromptState(activeUser);
+  const reviewSessionIncrementedRef = useRef(false);
 
   useEffect(() => {
     if (!activeUser) {
@@ -646,6 +796,52 @@ export default function App() {
       localStorage.setItem(progressStorageKey, JSON.stringify(progress));
     } catch (e) {}
   }, [progress, progressStorageKey]);
+
+  useEffect(() => {
+    reviewSessionIncrementedRef.current = false;
+  }, [activeUser]);
+
+  useEffect(() => {
+    if (!activeUser || !reviewPromptLoaded) return;
+    if (reviewSessionIncrementedRef.current) return;
+    setReviewPromptState((prev) => ({
+      ...prev,
+      sessionsSinceLastPrompt: (prev.sessionsSinceLastPrompt || 0) + 1,
+    }));
+    reviewSessionIncrementedRef.current = true;
+  }, [activeUser, reviewPromptLoaded, setReviewPromptState]);
+
+  const maybePromptForReview = useCallback(
+    (nextProgress) => {
+      if (!activeUser || !reviewPromptLoaded) return;
+      const uniqueCompleted = countUniqueCompletedLevels(nextProgress);
+      const milestone = Math.floor(uniqueCompleted / 5) * 5;
+      const eligible =
+        milestone >= 5 &&
+        milestone > (reviewPromptState.lastReviewMilestonePrompted || 0);
+      if (!eligible) return;
+      if ((reviewPromptState.totalReviewPromptAttempts || 0) >= 3) return;
+      const lastPromptAt = reviewPromptState.lastReviewPromptAt || 0;
+      const daysSincePrompt =
+        lastPromptAt > 0
+          ? (Date.now() - lastPromptAt) / (1000 * 60 * 60 * 24)
+          : Infinity;
+      if (daysSincePrompt < 7) return;
+      if ((reviewPromptState.sessionsSinceLastPrompt || 0) < 3) return;
+
+      (async () => {
+        await requestInAppReview();
+        setReviewPromptState((prev) => ({
+          ...prev,
+          lastReviewMilestonePrompted: milestone,
+          lastReviewPromptAt: Date.now(),
+          sessionsSinceLastPrompt: 0,
+          totalReviewPromptAttempts: (prev.totalReviewPromptAttempts || 0) + 1,
+        }));
+      })();
+    },
+    [activeUser, reviewPromptLoaded, reviewPromptState, setReviewPromptState]
+  );
 
   const persistProgress = useCallback(
     (nextProgress) => {
@@ -681,10 +877,11 @@ export default function App() {
         if (activeUser) {
           updatePlayerState(activeUser, { progress: next });
         }
+        maybePromptForReview(next);
         return next;
       });
     },
-    [activeUser, persistProgress]
+    [activeUser, maybePromptForReview, persistProgress]
   );
 
 
