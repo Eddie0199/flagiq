@@ -1258,6 +1258,12 @@ export default function GameScreen({
                 alt={current.correct.name}
                 onError={(event) => {
                   const fallback = current?.correct?.fallbackImg;
+                  if (process.env.NODE_ENV !== "production") {
+                    console.warn(
+                      "Missing local flag image; using fallback.",
+                      current?.correct?.code
+                    );
+                  }
                   if (fallback && event.currentTarget.src !== fallback) {
                     event.currentTarget.src = fallback;
                   }

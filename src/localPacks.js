@@ -13,7 +13,9 @@ const svgDataUrl = (label, color = "#ef4444") => {
 const buildFlag = (code, name, label, color) => ({
   code,
   name,
-  img: `https://flagcdn.com/w320/${String(code).replace(/_/g, "-")}.png`,
+  // Local flag images are provided as inline SVG placeholders for now.
+  // Replace with real asset URLs when we add official subdivision flags.
+  img: svgDataUrl(label, color),
   fallbackImg: svgDataUrl(label, color),
 });
 
@@ -299,7 +301,8 @@ export function buildLocalPackLevels(pack) {
 
 export function getLocalPackProgress(pack, progress) {
   const levels = buildLocalPackLevels(pack);
-  const levelsMap = progress?.local?.[pack?.packId]?.starsByLevel || {};
+  const levelsMap =
+    progress?.localFlags?.packs?.[pack?.packId]?.starsByLevel || {};
   const totalLevels = levels.length;
   const completedLevels = levels.reduce((sum, level) => {
     const stars = Number(levelsMap[level.id] || 0);
@@ -318,7 +321,7 @@ export function isLocalPackUnlocked(pack) {
 }
 
 export function getLocalLevelStars(progress, packId, levelId) {
-  const levelsMap = progress?.local?.[packId]?.starsByLevel || {};
+  const levelsMap = progress?.localFlags?.packs?.[packId]?.starsByLevel || {};
   return Number(levelsMap[levelId] || 0);
 }
 

@@ -174,7 +174,8 @@ export function computeUnlockedLevels(starsMap) {
 function normalizeModeKey(rawMode) {
   const m = String(rawMode || "").toLowerCase();
   if (m === "timetrial" || m === "time trial") return "timetrial";
-  if (m === "localflags" || m === "local flags" || m === "local") return "local";
+  if (m === "localflags" || m === "local flags" || m === "local")
+    return "local";
   return m || "classic";
 }
 
@@ -182,7 +183,7 @@ function normalizeProgress(raw) {
   const base = {
     classic: { starsByLevel: {}, unlockedUntil: 5 },
     timetrial: { starsByLevel: {}, unlockedUntil: 5 },
-    local: {},
+    localFlags: { packs: {} },
   };
 
   if (!raw) return base;
@@ -200,29 +201,34 @@ function normalizeProgress(raw) {
   if (!parsed || typeof parsed !== "object") return base;
 
   if (parsed.localFlags?.packs && typeof parsed.localFlags.packs === "object") {
-    const migrated = {};
-    Object.entries(parsed.localFlags.packs).forEach(([packId, packValue]) => {
-      const levels = packValue?.levels || {};
-      const starsByLevel = {};
-      Object.entries(levels).forEach(([levelId, info]) => {
-        starsByLevel[levelId] = Number(info?.stars || 0);
-      });
-      migrated[packId] = { starsByLevel };
+    base.localFlags.packs = { ...parsed.localFlags.packs };
+  }
+
+  if (parsed.local && typeof parsed.local === "object") {
+    const migratedPacks = {};
+    Object.entries(parsed.local).forEach(([packId, packValue]) => {
+      migratedPacks[packId] = {
+        ...packValue,
+        starsByLevel: { ...(packValue?.starsByLevel || {}) },
+      };
     });
-    base.local = migrated;
+    base.localFlags.packs = {
+      ...base.localFlags.packs,
+      ...migratedPacks,
+    };
   }
 
   Object.entries(parsed).forEach(([modeKey, value]) => {
     const normalisedMode = normalizeModeKey(modeKey);
-    const target = base[normalisedMode];
-    if (!target || !value || typeof value !== "object") return;
-
     if (normalisedMode === "local") {
-      if (value && typeof value === "object") {
-        base.local = { ...value };
+      if (value?.packs && typeof value.packs === "object") {
+        base.localFlags.packs = { ...value.packs };
       }
       return;
     }
+
+    const target = base[normalisedMode];
+    if (!target || !value || typeof value !== "object") return;
 
     if (value.starsByLevel && typeof value.starsByLevel === "object") {
       target.starsByLevel = { ...value.starsByLevel };
@@ -801,7 +807,7 @@ export default function App() {
   const [levelId, setLevelId] = useUserStorage(activeUser, `${mode}:level`, 1);
   const [activeLocalPackId, setActiveLocalPackId] = useUserStorage(
     activeUser,
-    "local:pack",
+    "localFlags:pack",
     defaultLocalPackId
   );
   const [progress, setProgress] = useState(() => normalizeProgress());
@@ -901,22 +907,25 @@ export default function App() {
         if (normalizedMode === "local") {
           const packId = activeLocalPackId || LOCAL_PACKS[0]?.packId;
           if (!packId) return base;
-          const currentLocal = base.local || {};
+          const currentLocal = base.localFlags?.packs || {};
           const pack = currentLocal[packId] || { starsByLevel: {} };
           const prevStars = Number(pack.starsByLevel?.[level] || 0);
           const best = Math.max(prevStars, Number(stars || 0));
           next = {
             ...base,
-            local: {
-              ...currentLocal,
-              [packId]: {
-                ...pack,
-                starsByLevel: {
-                  ...(pack.starsByLevel || {}),
-                  [level]: best,
+            localFlags: {
+              ...base.localFlags,
+              packs: {
+                ...currentLocal,
+                [packId]: {
+                  ...pack,
+                  starsByLevel: {
+                    ...(pack.starsByLevel || {}),
+                    [level]: best,
+                  },
+                  currentLevel: level,
+                  updatedAt: new Date().toISOString(),
                 },
-                currentLevel: level,
-                updatedAt: new Date().toISOString(),
               },
             },
           };
