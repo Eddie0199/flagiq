@@ -1,5 +1,9 @@
 import React, { useMemo, useState } from "react";
-import { buildLocalPackLevels, getLocalPackProgress } from "../localPacks";
+import {
+  buildLocalPackLevels,
+  getLocalPackProgress,
+  isLocalPackUnlocked,
+} from "../localPacks";
 
 export default function LocalPacksGrid({
   packs,
