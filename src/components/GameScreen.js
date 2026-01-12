@@ -52,7 +52,7 @@ export default function GameScreen({
   t,
   lang,
   FLAGS,
-  mode = "classic", // "classic" | "timetrial" | "localFlags"
+  mode = "classic", // "classic" | "timetrial" | "local"
   levelId,
   levelLabel,
   levels,
@@ -343,7 +343,7 @@ export default function GameScreen({
       ? t && lang
         ? t(lang, "timeTrial")
         : "Time Trial"
-      : mode === "localFlags"
+      : mode === "local"
       ? localFlagsLabel
       : t && lang
       ? t(lang, "classic")
@@ -1256,6 +1256,12 @@ export default function GameScreen({
               <img
                 src={flagSrc(current.correct, 320)}
                 alt={current.correct.name}
+                onError={(event) => {
+                  const fallback = current?.correct?.fallbackImg;
+                  if (fallback && event.currentTarget.src !== fallback) {
+                    event.currentTarget.src = fallback;
+                  }
+                }}
                 style={{
                   maxWidth: 256,
                   maxHeight: 160,

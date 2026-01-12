@@ -752,8 +752,8 @@ export default function HomeScreen({
           icon="🧭"
           title={text("localFlags", "Local Flags")}
           stats={{ level: 0, stars: 0 }}
-          onClick={() => onStart && onStart("localFlags")}
-          mode="localFlags"
+          onClick={() => onStart && onStart("local")}
+          mode="local"
         />
       </div>
 

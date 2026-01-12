@@ -37,7 +37,7 @@ export default function LocalPackLevelsScreen({
     [levelsProp, pack]
   );
   const levelsMap = useMemo(
-    () => progress?.localFlags?.packs?.[pack?.packId]?.levels || {},
+    () => progress?.local?.[pack?.packId]?.starsByLevel || {},
     [progress, pack]
   );
   const packStats = useMemo(

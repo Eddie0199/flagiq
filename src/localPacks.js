@@ -1,4 +1,5 @@
 const LEVEL_SIZE = 10;
+const RECENT_WINDOW_SIZE = 30;
 
 const svgDataUrl = (label, color = "#ef4444") => {
   const safeLabel = String(label || "").slice(0, 10);
@@ -12,7 +13,8 @@ const svgDataUrl = (label, color = "#ef4444") => {
 const buildFlag = (code, name, label, color) => ({
   code,
   name,
-  img: svgDataUrl(label, color),
+  img: `https://flagcdn.com/w320/${String(code).replace(/_/g, "-")}.png`,
+  fallbackImg: svgDataUrl(label, color),
 });
 
 const buildPackFlags = (items, color) =>
@@ -157,13 +159,19 @@ const GB_FLAGS = buildPackFlags(
     ["gb_sct", "Scotland", "SCT"],
     ["gb_wls", "Wales", "WLS"],
     ["gb_nir", "Northern Ireland", "NIR"],
+    ["gb_iom", "Isle of Man", "IOM"],
+    ["gb_jsy", "Jersey", "JSY"],
+    ["gb_ggy", "Guernsey", "GGY"],
+    ["gb_gib", "Gibraltar", "GIB"],
+    ["gb_bmu", "Bermuda", "BMU"],
+    ["gb_cym", "Cayman Islands", "CYM"],
   ],
   "#6366f1"
 );
 
 export const LOCAL_PACKS = [
   {
-    packId: "all",
+    packId: "ALL",
     countryCode: null,
     title: "All Local Flags",
     type: "all",
@@ -221,33 +229,84 @@ export const LOCAL_PACKS = [
 
 export const LOCAL_LEVEL_SIZE = LEVEL_SIZE;
 
+const pickLeastUsed = (candidates, usageCounts) => {
+  let minCount = Infinity;
+  for (const flag of candidates) {
+    const count = usageCounts.get(flag.code) || 0;
+    minCount = Math.min(minCount, count);
+  }
+  return [...candidates]
+    .filter((flag) => (usageCounts.get(flag.code) || 0) === minCount)
+    .sort((a, b) => a.code.localeCompare(b.code))[0];
+};
+
+export function getLocalPackLevels(flags, perLevel = LEVEL_SIZE) {
+  if (!flags || flags.length === 0) return [];
+  const baseBlocks = Math.ceil(flags.length / perLevel);
+  const levelsCount = Math.max(10, baseBlocks * 6);
+
+  const usageCounts = new Map(flags.map((flag) => [flag.code, 0]));
+  const recentQueue = [];
+  const levels = [];
+
+  for (let levelNumber = 1; levelNumber <= levelsCount; levelNumber += 1) {
+    const levelUsed = new Set();
+    const questionIds = [];
+
+    while (questionIds.length < perLevel) {
+      const recentSet = new Set(recentQueue);
+      const candidates = flags.filter((flag) => !levelUsed.has(flag.code));
+      const freshCandidates = candidates.filter(
+        (flag) => !recentSet.has(flag.code)
+      );
+      const pool = freshCandidates.length ? freshCandidates : candidates;
+
+      if (!pool.length) {
+        break;
+      }
+
+      const chosen = pickLeastUsed(pool, usageCounts);
+      if (!chosen) break;
+
+      questionIds.push(chosen.code);
+      levelUsed.add(chosen.code);
+      usageCounts.set(chosen.code, (usageCounts.get(chosen.code) || 0) + 1);
+      recentQueue.push(chosen.code);
+      if (recentQueue.length > RECENT_WINDOW_SIZE) {
+        recentQueue.shift();
+      }
+    }
+
+    levels.push({ levelNumber, questionIds });
+  }
+
+  return levels;
+}
+
 export function buildLocalPackLevels(pack) {
   const flags = pack?.flags || [];
-  if (!flags.length) return [];
-  // Level rule: each level is a slice of 10 flags. Remainders form a final level.
-  const levelCount = Math.max(1, Math.ceil(flags.length / LEVEL_SIZE));
-  return Array.from({ length: levelCount }, (_, index) => {
-    const start = index * LEVEL_SIZE;
-    const pool = flags.slice(start, start + LEVEL_SIZE);
-    return {
-      id: index + 1,
-      label: String(index + 1),
-      pool,
-      questionCount: LEVEL_SIZE,
-    };
-  });
+  const levelDefs = getLocalPackLevels(flags, LEVEL_SIZE);
+  const byCode = new Map(flags.map((flag) => [flag.code, flag]));
+
+  return levelDefs.map((level) => ({
+    id: level.levelNumber,
+    label: String(level.levelNumber),
+    questionIds: level.questionIds,
+    pool: level.questionIds.map((code) => byCode.get(code)).filter(Boolean),
+    questionCount: LEVEL_SIZE,
+  }));
 }
 
 export function getLocalPackProgress(pack, progress) {
   const levels = buildLocalPackLevels(pack);
-  const levelsMap = progress?.localFlags?.packs?.[pack?.packId]?.levels || {};
+  const levelsMap = progress?.local?.[pack?.packId]?.starsByLevel || {};
   const totalLevels = levels.length;
   const completedLevels = levels.reduce((sum, level) => {
-    const stars = Number(levelsMap[level.id]?.stars || 0);
+    const stars = Number(levelsMap[level.id] || 0);
     return sum + (stars > 0 ? 1 : 0);
   }, 0);
   const starsEarned = levels.reduce(
-    (sum, level) => sum + Number(levelsMap[level.id]?.stars || 0),
+    (sum, level) => sum + Number(levelsMap[level.id] || 0),
     0
   );
   const maxStars = totalLevels * 3;
@@ -259,8 +318,8 @@ export function isLocalPackUnlocked(pack) {
 }
 
 export function getLocalLevelStars(progress, packId, levelId) {
-  const levelsMap = progress?.localFlags?.packs?.[packId]?.levels || {};
-  return Number(levelsMap[levelId]?.stars || 0);
+  const levelsMap = progress?.local?.[packId]?.starsByLevel || {};
+  return Number(levelsMap[levelId] || 0);
 }
 
 export function buildPackIcon(pack, fallbackFlagSrc) {
