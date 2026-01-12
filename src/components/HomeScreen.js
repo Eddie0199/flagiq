@@ -1,7 +1,5 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
 import React, { useEffect, useMemo, useState } from "react";
-import LocalPacksGrid from "./LocalPacksGrid";
-import { LOCAL_PACKS } from "../localPacks";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -611,7 +609,12 @@ export default function HomeScreen({
           <div style={{ fontSize: 16, fontWeight: 600 }}>
             {mode === "classic"
               ? text("classicDesc", "Learn flags at your pace")
-              : text("timeTrialDesc", "Beat the timer!")}
+              : mode === "timetrial"
+              ? text("timeTrialDesc", "Beat the timer!")
+              : text(
+                  "localFlagsDesc",
+                  "Country packs focused on regional flags."
+                )}
           </div>
         )}
       </button>
@@ -744,70 +747,14 @@ export default function HomeScreen({
           onClick={() => onStart && onStart("timetrial")}
           mode="timetrial"
         />
-        <div
-          style={{
-            width: "85%",
-            maxWidth: 820,
-            margin: "18px auto 0",
-            padding: "16px 18px 18px",
-            borderRadius: 20,
-            background: "rgba(15,23,42,0.75)",
-            color: "white",
-            boxShadow: "0 10px 20px rgba(0,0,0,.18)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 4,
-              gap: 12,
-            }}
-          >
-            <div style={{ fontSize: 20, fontWeight: 800 }}>
-              {text("localFlags", "Local Flags")}
-            </div>
-            <button
-              onClick={() => onStart && onStart("local")}
-              style={{
-                background: "rgba(255,255,255,0.15)",
-                border: "1px solid rgba(255,255,255,0.4)",
-                color: "white",
-                borderRadius: 999,
-                padding: "4px 10px",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {text("browsePacks", "Browse packs")}
-            </button>
-          </div>
-          <div
-            style={{
-              fontSize: 13,
-              color: "rgba(255,255,255,0.8)",
-              marginBottom: 12,
-            }}
-          >
-            {text(
-              "localFlagsDesc",
-              "Country packs focused on regional flags."
-            )}
-          </div>
-          <LocalPacksGrid
-            packs={LOCAL_PACKS}
-            progress={progress}
-            t={t}
-            lang={lang}
-            onPackClick={(pack) => {
-              if (onStart) {
-                onStart("local", pack);
-              }
-            }}
-          />
-        </div>
+        <Card
+          color="#ef4444"
+          icon="🧭"
+          title={text("localFlags", "Local Flags")}
+          stats={{ level: 0, stars: 0 }}
+          onClick={() => onStart && onStart("localFlags")}
+          mode="localFlags"
+        />
       </div>
 
       {/* footer */}

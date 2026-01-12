@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { getLocalPackProgress } from "../localPacks";
+import { buildLocalPackLevels, getLocalPackProgress } from "../localPacks";
 
 function StarsBadge({ total }) {
   return (
@@ -23,6 +23,7 @@ export default function LocalPackLevelsScreen({
   pack,
   progress,
   onLevelClick,
+  levels: levelsProp,
   t,
   lang,
 }) {
@@ -31,9 +32,13 @@ export default function LocalPackLevelsScreen({
     const value = t(lang, key);
     return value === key ? fallback : value;
   };
-  const starsByLevel = useMemo(
-    () => progress?.local?.starsByLevel || {},
-    [progress]
+  const levels = useMemo(
+    () => levelsProp || (pack ? buildLocalPackLevels(pack) : []),
+    [levelsProp, pack]
+  );
+  const levelsMap = useMemo(
+    () => progress?.localFlags?.packs?.[pack?.packId]?.levels || {},
+    [progress, pack]
   );
   const packStats = useMemo(
     () => (pack ? getLocalPackProgress(pack, progress) : null),
@@ -72,12 +77,12 @@ export default function LocalPackLevelsScreen({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+          gridTemplateColumns: "repeat(5, 1fr)",
           gap: 14,
         }}
       >
-        {pack.levels.map((level) => {
-          const stars = Number(starsByLevel[level.levelId] || 0);
+        {levels.map((level) => {
+          const stars = Number(levelsMap[level.id]?.stars || 0);
           const completed = stars > 0;
           let border = "1px solid #e2e8f0";
           let shadow = "none";
@@ -88,37 +93,25 @@ export default function LocalPackLevelsScreen({
 
           return (
             <button
-              key={level.levelId}
+              key={level.id}
               onClick={() => onLevelClick && onLevelClick(level)}
               style={{
+                aspectRatio: "1 / 1",
                 borderRadius: 16,
                 border,
                 boxShadow: shadow,
                 background: "#fff",
-                padding: "12px",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                gap: 8,
+                justifyContent: "center",
+                position: "relative",
                 cursor: "pointer",
+                transition: "box-shadow .15s ease, border-color .15s ease",
               }}
             >
-              <img
-                src={level.flagSrc}
-                alt={level.displayName}
-                style={{
-                  width: 60,
-                  height: 40,
-                  borderRadius: 8,
-                  objectFit: "cover",
-                  border: "1px solid #e2e8f0",
-                  background: "#f8fafc",
-                }}
-              />
-              <div style={{ fontWeight: 700, textAlign: "center" }}>
-                {level.displayName}
-              </div>
-              <div style={{ fontSize: 12 }}>
+              <div style={{ fontSize: 18, fontWeight: 800 }}>{level.id}</div>
+              <div style={{ marginTop: 4, fontSize: 12 }}>
                 <span style={{ color: "#f59e0b" }}>{"★".repeat(stars)}</span>
                 <span style={{ color: "#cbd5e1" }}>
                   {"★".repeat(3 - stars)}

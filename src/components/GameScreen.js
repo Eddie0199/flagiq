@@ -52,12 +52,12 @@ export default function GameScreen({
   t,
   lang,
   FLAGS,
-  mode = "classic", // "classic" | "timetrial"
+  mode = "classic", // "classic" | "timetrial" | "localFlags"
   levelId,
   levelLabel,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
-  progress,
+  storedStars = 0,
   onProgressUpdate,
   onRunLost,
   soundCorrect,
@@ -164,9 +164,7 @@ export default function GameScreen({
     const qs = [];
 
     for (let i = 0; i < qc; i++) {
-      const correct = ld.fixedFlagCode
-        ? pool.find((flag) => flag.code === ld.fixedFlagCode) || pool[0]
-        : shuffledPool[i % shuffledPool.length];
+      const correct = shuffledPool[i % shuffledPool.length];
       const correctName = correct.name;
       const others = shuffledPool.filter((f) => f.code !== correct.code);
 
@@ -325,8 +323,9 @@ export default function GameScreen({
   const current = questions[qIndex];
 
   // ---------- PROGRESS ----------
+  const isClassicMode = mode !== "timetrial";
   const classicProgress =
-    mode === "classic" && questionCount > 0
+    isClassicMode && questionCount > 0
       ? done
         ? 100
         : (qIndex / questionCount) * 100
@@ -344,7 +343,7 @@ export default function GameScreen({
       ? t && lang
         ? t(lang, "timeTrial")
         : "Time Trial"
-      : mode === "local"
+      : mode === "localFlags"
       ? localFlagsLabel
       : t && lang
       ? t(lang, "classic")
@@ -352,10 +351,8 @@ export default function GameScreen({
 
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
-    const byMode = progress?.[mode];
-    const stored = Number(byMode?.starsByLevel?.[levelId] || 0);
-    return Math.max(stored, Number(currentStars || 0));
-  }, [progress, mode, levelId, currentStars]);
+    return Math.max(Number(storedStars || 0), Number(currentStars || 0));
+  }, [storedStars, currentStars]);
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
@@ -442,7 +439,7 @@ export default function GameScreen({
     setSelectedAnswer(answer);
 
     // ----- CLASSIC -----
-    if (mode === "classic") {
+    if (isClassicMode) {
       if (isCorrect) {
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
@@ -458,7 +455,7 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore = bestStars > 0;
+            const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
             if (onProgressUpdate) {
@@ -515,7 +512,7 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore = bestStars > 0;
+            const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
             if (onProgressUpdate) {
               onProgressUpdate(mode, levelId, stars);
@@ -831,7 +828,7 @@ export default function GameScreen({
 
         {/* progress bar */}
         <div>
-          {mode === "classic" ? (
+          {isClassicMode ? (
             <div
               style={{
                 height: 10,

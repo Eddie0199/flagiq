@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { flagSrc } from "../App";
 import {
+  buildLocalPackLevels,
+  buildPackIcon,
   getLocalPackProgress,
   isLocalPackUnlocked,
 } from "../localPacks";
@@ -21,13 +23,17 @@ export default function LocalPacksGrid({
 
   const sortedPacks = useMemo(() => {
     const enriched = (packs || []).map((pack) => {
+      const levels = buildLocalPackLevels(pack);
       const stats = getLocalPackProgress(pack, progress);
       const unlocked = isLocalPackUnlocked(pack);
       const hasProgress = stats.starsEarned > 0 || stats.completedLevels > 0;
-      return { pack, stats, unlocked, hasProgress };
+      return { pack, levels, stats, unlocked, hasProgress };
     });
 
     return enriched.sort((a, b) => {
+      if (a.pack.type !== b.pack.type) {
+        return a.pack.type === "all" ? -1 : 1;
+      }
       if (a.hasProgress !== b.hasProgress) {
         return a.hasProgress ? -1 : 1;
       }
@@ -62,8 +68,12 @@ export default function LocalPacksGrid({
           gap: 14,
         }}
       >
-        {sortedPacks.map(({ pack, stats, unlocked }) => {
+        {sortedPacks.map(({ pack, levels, stats, unlocked }) => {
           const locked = !unlocked;
+          const typeLabel =
+            pack.type === "all"
+              ? text("allPack", "All Pack")
+              : text("countryPack", "Country Pack");
           return (
             <button
               key={pack.packId}
@@ -96,7 +106,7 @@ export default function LocalPacksGrid({
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <img
-                  src={flagSrc(pack.countryCode, 64)}
+                  src={buildPackIcon(pack, flagSrc)}
                   alt={pack.title}
                   style={{
                     width: 40,
@@ -111,7 +121,7 @@ export default function LocalPacksGrid({
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "#334155" }}>
-                {text("countryPack", "Country Pack")}
+                {typeLabel}
               </div>
               <div
                 style={{
@@ -123,10 +133,10 @@ export default function LocalPacksGrid({
                 }}
               >
                 <span>
-                  {stats.completedLevels}/{stats.totalLevels}
+                  {stats.completedLevels}/{levels.length} levels
                 </span>
                 <span>
-                  {stats.starsEarned}/{stats.maxStars} ★
+                  Stars: {stats.starsEarned}/{stats.maxStars}
                 </span>
               </div>
               {locked ? (

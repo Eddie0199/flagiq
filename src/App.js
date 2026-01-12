@@ -16,7 +16,11 @@ import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import { registerPurchaseRewardHandler } from "./purchases";
-import { LOCAL_PACKS, buildLocalPackLevels } from "./localPacks";
+import {
+  LOCAL_PACKS,
+  buildLocalPackLevels,
+  getLocalLevelStars,
+} from "./localPacks";
 
 // 🔹 NEW: Supabase client import
 import { supabase } from "./supabaseClient";
@@ -170,6 +174,9 @@ export function computeUnlockedLevels(starsMap) {
 function normalizeModeKey(rawMode) {
   const m = String(rawMode || "").toLowerCase();
   if (m === "timetrial" || m === "time trial") return "timetrial";
+  if (m === "localflags" || m === "local flags" || m === "local") {
+    return "localFlags";
+  }
   return m || "classic";
 }
 
@@ -177,7 +184,7 @@ function normalizeProgress(raw) {
   const base = {
     classic: { starsByLevel: {}, unlockedUntil: 5 },
     timetrial: { starsByLevel: {}, unlockedUntil: 5 },
-    local: { starsByLevel: {}, unlockedUntil: 0 },
+    localFlags: { packs: {} },
   };
 
   if (!raw) return base;
@@ -198,6 +205,13 @@ function normalizeProgress(raw) {
     const normalisedMode = normalizeModeKey(modeKey);
     const target = base[normalisedMode];
     if (!target || !value || typeof value !== "object") return;
+
+    if (normalisedMode === "localFlags") {
+      if (value.packs && typeof value.packs === "object") {
+        target.packs = { ...value.packs };
+      }
+      return;
+    }
 
     if (value.starsByLevel && typeof value.starsByLevel === "object") {
       target.starsByLevel = { ...value.starsByLevel };
@@ -776,7 +790,7 @@ export default function App() {
   const [levelId, setLevelId] = useUserStorage(activeUser, `${mode}:level`, 1);
   const [activeLocalPackId, setActiveLocalPackId] = useUserStorage(
     activeUser,
-    "local:pack",
+    "localFlags:pack",
     defaultLocalPackId
   );
   const [progress, setProgress] = useState(() => normalizeProgress());
@@ -871,26 +885,54 @@ export default function App() {
       setProgress((prev) => {
         const base = normalizeProgress(prev);
         const normalizedMode = normalizeModeKey(modeKey);
-        const modeProgress = base[normalizedMode] || {
-          starsByLevel: {},
-          unlockedUntil: BATCH,
-        };
-        const prevStars = Number(modeProgress.starsByLevel?.[level] || 0);
-        const best = Math.max(prevStars, Number(stars || 0));
-        const updatedStars = { ...modeProgress.starsByLevel, [level]: best };
-        const unlocked =
-          normalizedMode === "classic" || normalizedMode === "timetrial"
-            ? computeUnlockedLevels(updatedStars)
-            : Number.isFinite(Number(modeProgress.unlockedUntil))
-            ? Number(modeProgress.unlockedUntil)
-            : 0;
-        const next = {
-          ...base,
-          [normalizedMode]: {
-            starsByLevel: updatedStars,
-            unlockedUntil: unlocked,
-          },
-        };
+        let next = base;
+
+        if (normalizedMode === "localFlags") {
+          const packId = activeLocalPackId || LOCAL_PACKS[0]?.packId;
+          if (!packId) return base;
+          const packs = { ...(base.localFlags?.packs || {}) };
+          const pack = packs[packId] || { levels: {} };
+          const prevStars = Number(pack.levels?.[level]?.stars || 0);
+          const best = Math.max(prevStars, Number(stars || 0));
+          packs[packId] = {
+            ...pack,
+            levels: {
+              ...(pack.levels || {}),
+              [level]: {
+                stars: best,
+                completedAt: best > 0 ? new Date().toISOString() : null,
+              },
+            },
+          };
+          next = {
+            ...base,
+            localFlags: {
+              ...base.localFlags,
+              packs,
+            },
+          };
+        } else {
+          const modeProgress = base[normalizedMode] || {
+            starsByLevel: {},
+            unlockedUntil: BATCH,
+          };
+          const prevStars = Number(modeProgress.starsByLevel?.[level] || 0);
+          const best = Math.max(prevStars, Number(stars || 0));
+          const updatedStars = { ...modeProgress.starsByLevel, [level]: best };
+          const unlocked =
+            normalizedMode === "classic" || normalizedMode === "timetrial"
+              ? computeUnlockedLevels(updatedStars)
+              : Number.isFinite(Number(modeProgress.unlockedUntil))
+              ? Number(modeProgress.unlockedUntil)
+              : 0;
+          next = {
+            ...base,
+            [normalizedMode]: {
+              starsByLevel: updatedStars,
+              unlockedUntil: unlocked,
+            },
+          };
+        }
         persistProgress(next);
         if (activeUser) {
           updatePlayerState(activeUser, { progress: next });
@@ -899,7 +941,7 @@ export default function App() {
         return next;
       });
     },
-    [activeUser, maybePromptForReview, persistProgress]
+    [activeLocalPackId, activeUser, maybePromptForReview, persistProgress]
   );
 
 
@@ -1295,7 +1337,7 @@ export default function App() {
     [activeLocalPack]
   );
   const localLevelLabel = useMemo(() => {
-    if (mode !== "local") return null;
+    if (mode !== "localFlags") return null;
     return localPackLevels.find((level) => level.id === levelId)?.label || null;
   }, [mode, localPackLevels, levelId]);
   const heartsCurrent = heartsState?.current ?? MAX_HEARTS;
@@ -1494,11 +1536,11 @@ export default function App() {
       openAuth();
       return;
     }
-    if (nextMode === "local") {
+    if (nextMode === "localFlags") {
       if (pack?.packId) {
         setActiveLocalPackId(pack.packId);
       }
-      setMode("local");
+      setMode("localFlags");
       setScreen(pack ? "local-pack-levels" : "local-packs");
       return;
     }
@@ -1515,7 +1557,7 @@ export default function App() {
       if (pack?.packId) {
         setActiveLocalPackId(pack.packId);
       }
-      setMode("local");
+      setMode("localFlags");
       setScreen("local-pack-levels");
     },
     [loggedIn, openAuth, setActiveLocalPackId, setMode, setScreen]
@@ -1553,13 +1595,15 @@ export default function App() {
     });
   };
 
-  const modeProgress = progress[mode] || {
-    starsByLevel: {},
-    unlockedUntil: mode === "local" ? 0 : BATCH,
-  };
+  const modeProgress = mode === "localFlags"
+    ? { starsByLevel: {}, unlockedUntil: 0 }
+    : progress[mode] || {
+        starsByLevel: {},
+        unlockedUntil: BATCH,
+      };
   const starsByLevel = modeProgress.starsByLevel || {};
   const unlockedFromProgress =
-    mode === "local"
+    mode === "localFlags"
       ? 0
       : Number.isFinite(Number(modeProgress.unlockedUntil))
       ? Number(modeProgress.unlockedUntil)
@@ -1567,10 +1611,14 @@ export default function App() {
   const localFlagsLabelRaw = t && lang ? t(lang, "localFlags") : "Local Flags";
   const localFlagsLabel =
     localFlagsLabelRaw === "localFlags" ? "Local Flags" : localFlagsLabelRaw;
-  const activeLevels = mode === "local" ? localPackLevels : levels;
+  const activeLevels = mode === "localFlags" ? localPackLevels : levels;
+  const storedStars =
+    mode === "localFlags"
+      ? getLocalLevelStars(progress, activeLocalPackId, levelId)
+      : Number(starsByLevel[levelId]) || 0;
 
   const handleGameBack = () => {
-    if (mode === "local") {
+    if (mode === "localFlags") {
       setScreen("local-pack-levels");
       return;
     }
@@ -1578,7 +1626,7 @@ export default function App() {
   };
 
   const handleNextLevel = () => {
-    if (mode === "local") {
+    if (mode === "localFlags") {
       const idx = localPackLevels.findIndex((lvl) => lvl.id === levelId);
       const next = idx >= 0 ? localPackLevels[idx + 1] : null;
       if (next) {
@@ -1708,10 +1756,11 @@ export default function App() {
             t={t}
             lang={lang}
             pack={activeLocalPack}
+            levels={localPackLevels}
             progress={progress}
             onLevelClick={(level) => {
-              setMode("local");
-              setLevelId(level.levelId);
+              setMode("localFlags");
+              setLevelId(level.id);
               setScreen("game");
             }}
           />
@@ -1755,7 +1804,7 @@ export default function App() {
         <>
           <Header
             showBack
-            onBack={goLevels}
+            onBack={handleGameBack}
             hearts={{
               current: heartsCurrent,
               max: heartsMax,
@@ -1778,8 +1827,8 @@ export default function App() {
             levelId={levelId}
             levelLabel={localLevelLabel}
             levels={activeLevels}
-            currentStars={Number(starsByLevel[levelId]) || 0}
-            progress={progress}
+            currentStars={storedStars}
+            storedStars={storedStars}
             onProgressUpdate={updateProgressAfterLevel}
             onRunLost={onRunLost}
             soundCorrect={soundCorrect}

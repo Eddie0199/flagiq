@@ -1,194 +1,272 @@
+const LEVEL_SIZE = 10;
+
+const svgDataUrl = (label, color = "#ef4444") => {
+  const safeLabel = String(label || "").slice(0, 10);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
+    <rect width="96" height="64" rx="8" fill="${color}" />
+    <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" fill="#fff">${safeLabel}</text>
+  </svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const buildFlag = (code, name, label, color) => ({
+  code,
+  name,
+  img: svgDataUrl(label, color),
+});
+
+const buildPackFlags = (items, color) =>
+  items.map(([code, name, label]) => buildFlag(code, name, label, color));
+
+const CH_FLAGS = buildPackFlags(
+  [
+    ["ch_ag", "Aargau", "AG"],
+    ["ch_ai", "Appenzell Innerrhoden", "AI"],
+    ["ch_ar", "Appenzell Ausserrhoden", "AR"],
+    ["ch_be", "Bern", "BE"],
+    ["ch_bl", "Basel-Landschaft", "BL"],
+    ["ch_bs", "Basel-Stadt", "BS"],
+    ["ch_fr", "Fribourg", "FR"],
+    ["ch_ge", "Geneva", "GE"],
+    ["ch_gl", "Glarus", "GL"],
+    ["ch_gr", "Graubünden", "GR"],
+    ["ch_ju", "Jura", "JU"],
+    ["ch_lu", "Lucerne", "LU"],
+    ["ch_ne", "Neuchâtel", "NE"],
+    ["ch_nw", "Nidwalden", "NW"],
+    ["ch_ow", "Obwalden", "OW"],
+    ["ch_sg", "St. Gallen", "SG"],
+    ["ch_sh", "Schaffhausen", "SH"],
+    ["ch_so", "Solothurn", "SO"],
+    ["ch_sz", "Schwyz", "SZ"],
+    ["ch_tg", "Thurgau", "TG"],
+    ["ch_ti", "Ticino", "TI"],
+    ["ch_ur", "Uri", "UR"],
+    ["ch_vd", "Vaud", "VD"],
+    ["ch_vs", "Valais", "VS"],
+    ["ch_zg", "Zug", "ZG"],
+    ["ch_zh", "Zürich", "ZH"],
+  ],
+  "#dc2626"
+);
+
+const ES_FLAGS = buildPackFlags(
+  [
+    ["es_an", "Andalusia", "AN"],
+    ["es_ar", "Aragon", "AR"],
+    ["es_as", "Asturias", "AS"],
+    ["es_ib", "Balearic Islands", "IB"],
+    ["es_pv", "Basque Country", "PV"],
+    ["es_cn", "Canary Islands", "CN"],
+    ["es_cb", "Cantabria", "CB"],
+    ["es_cl", "Castile and León", "CL"],
+    ["es_cm", "Castile-La Mancha", "CM"],
+    ["es_ct", "Catalonia", "CT"],
+    ["es_ex", "Extremadura", "EX"],
+    ["es_ga", "Galicia", "GA"],
+    ["es_ri", "La Rioja", "RI"],
+    ["es_md", "Madrid", "MD"],
+    ["es_mc", "Murcia", "MC"],
+    ["es_nc", "Navarre", "NC"],
+    ["es_vc", "Valencia", "VC"],
+  ],
+  "#f97316"
+);
+
+const DE_FLAGS = buildPackFlags(
+  [
+    ["de_bw", "Baden-Württemberg", "BW"],
+    ["de_by", "Bavaria", "BY"],
+    ["de_be", "Berlin", "BE"],
+    ["de_bb", "Brandenburg", "BB"],
+    ["de_hb", "Bremen", "HB"],
+    ["de_hh", "Hamburg", "HH"],
+    ["de_he", "Hesse", "HE"],
+    ["de_ni", "Lower Saxony", "NI"],
+    ["de_mv", "Mecklenburg-Vorpommern", "MV"],
+    ["de_nw", "North Rhine-Westphalia", "NW"],
+    ["de_rp", "Rhineland-Palatinate", "RP"],
+    ["de_sl", "Saarland", "SL"],
+    ["de_sn", "Saxony", "SN"],
+    ["de_st", "Saxony-Anhalt", "ST"],
+    ["de_sh", "Schleswig-Holstein", "SH"],
+    ["de_th", "Thuringia", "TH"],
+  ],
+  "#f59e0b"
+);
+
+const US_FLAGS = buildPackFlags(
+  [
+    ["us_al", "Alabama", "AL"],
+    ["us_ak", "Alaska", "AK"],
+    ["us_az", "Arizona", "AZ"],
+    ["us_ar", "Arkansas", "AR"],
+    ["us_ca", "California", "CA"],
+    ["us_co", "Colorado", "CO"],
+    ["us_ct", "Connecticut", "CT"],
+    ["us_de", "Delaware", "DE"],
+    ["us_fl", "Florida", "FL"],
+    ["us_ga", "Georgia", "GA"],
+    ["us_hi", "Hawaii", "HI"],
+    ["us_id", "Idaho", "ID"],
+    ["us_il", "Illinois", "IL"],
+    ["us_in", "Indiana", "IN"],
+    ["us_ia", "Iowa", "IA"],
+    ["us_ks", "Kansas", "KS"],
+    ["us_ky", "Kentucky", "KY"],
+    ["us_la", "Louisiana", "LA"],
+    ["us_me", "Maine", "ME"],
+    ["us_md", "Maryland", "MD"],
+    ["us_ma", "Massachusetts", "MA"],
+    ["us_mi", "Michigan", "MI"],
+    ["us_mn", "Minnesota", "MN"],
+    ["us_ms", "Mississippi", "MS"],
+    ["us_mo", "Missouri", "MO"],
+    ["us_mt", "Montana", "MT"],
+    ["us_ne", "Nebraska", "NE"],
+    ["us_nv", "Nevada", "NV"],
+    ["us_nh", "New Hampshire", "NH"],
+    ["us_nj", "New Jersey", "NJ"],
+    ["us_nm", "New Mexico", "NM"],
+    ["us_ny", "New York", "NY"],
+    ["us_nc", "North Carolina", "NC"],
+    ["us_nd", "North Dakota", "ND"],
+    ["us_oh", "Ohio", "OH"],
+    ["us_ok", "Oklahoma", "OK"],
+    ["us_or", "Oregon", "OR"],
+    ["us_pa", "Pennsylvania", "PA"],
+    ["us_ri", "Rhode Island", "RI"],
+    ["us_sc", "South Carolina", "SC"],
+    ["us_sd", "South Dakota", "SD"],
+    ["us_tn", "Tennessee", "TN"],
+    ["us_tx", "Texas", "TX"],
+    ["us_ut", "Utah", "UT"],
+    ["us_vt", "Vermont", "VT"],
+    ["us_va", "Virginia", "VA"],
+    ["us_wa", "Washington", "WA"],
+    ["us_wv", "West Virginia", "WV"],
+    ["us_wi", "Wisconsin", "WI"],
+    ["us_wy", "Wyoming", "WY"],
+  ],
+  "#3b82f6"
+);
+
+const GB_FLAGS = buildPackFlags(
+  [
+    ["gb_eng", "England", "ENG"],
+    ["gb_sct", "Scotland", "SCT"],
+    ["gb_wls", "Wales", "WLS"],
+    ["gb_nir", "Northern Ireland", "NIR"],
+  ],
+  "#6366f1"
+);
+
 export const LOCAL_PACKS = [
+  {
+    packId: "all",
+    countryCode: null,
+    title: "All Local Flags",
+    type: "all",
+    unlockTier: 1,
+    iconSrc: svgDataUrl("ALL", "#b91c1c"),
+    flags: [
+      ...CH_FLAGS,
+      ...ES_FLAGS,
+      ...DE_FLAGS,
+      ...US_FLAGS,
+      ...GB_FLAGS,
+    ],
+  },
   {
     packId: "ch",
     countryCode: "CH",
     title: "Switzerland",
+    type: "country",
     unlockTier: 1,
-    levels: [
-      { levelId: "ch_ag", displayName: "Aargau", flagSrc: "https://placehold.co/96x64?text=AG" },
-      { levelId: "ch_ai", displayName: "Appenzell Innerrhoden", flagSrc: "https://placehold.co/96x64?text=AI" },
-      { levelId: "ch_ar", displayName: "Appenzell Ausserrhoden", flagSrc: "https://placehold.co/96x64?text=AR" },
-      { levelId: "ch_be", displayName: "Bern", flagSrc: "https://placehold.co/96x64?text=BE" },
-      { levelId: "ch_bl", displayName: "Basel-Landschaft", flagSrc: "https://placehold.co/96x64?text=BL" },
-      { levelId: "ch_bs", displayName: "Basel-Stadt", flagSrc: "https://placehold.co/96x64?text=BS" },
-      { levelId: "ch_fr", displayName: "Fribourg", flagSrc: "https://placehold.co/96x64?text=FR" },
-      { levelId: "ch_ge", displayName: "Geneva", flagSrc: "https://placehold.co/96x64?text=GE" },
-      { levelId: "ch_gl", displayName: "Glarus", flagSrc: "https://placehold.co/96x64?text=GL" },
-      { levelId: "ch_gr", displayName: "Graubünden", flagSrc: "https://placehold.co/96x64?text=GR" },
-      { levelId: "ch_ju", displayName: "Jura", flagSrc: "https://placehold.co/96x64?text=JU" },
-      { levelId: "ch_lu", displayName: "Lucerne", flagSrc: "https://placehold.co/96x64?text=LU" },
-      { levelId: "ch_ne", displayName: "Neuchâtel", flagSrc: "https://placehold.co/96x64?text=NE" },
-      { levelId: "ch_nw", displayName: "Nidwalden", flagSrc: "https://placehold.co/96x64?text=NW" },
-      { levelId: "ch_ow", displayName: "Obwalden", flagSrc: "https://placehold.co/96x64?text=OW" },
-      { levelId: "ch_sg", displayName: "St. Gallen", flagSrc: "https://placehold.co/96x64?text=SG" },
-      { levelId: "ch_sh", displayName: "Schaffhausen", flagSrc: "https://placehold.co/96x64?text=SH" },
-      { levelId: "ch_so", displayName: "Solothurn", flagSrc: "https://placehold.co/96x64?text=SO" },
-      { levelId: "ch_sz", displayName: "Schwyz", flagSrc: "https://placehold.co/96x64?text=SZ" },
-      { levelId: "ch_tg", displayName: "Thurgau", flagSrc: "https://placehold.co/96x64?text=TG" },
-      { levelId: "ch_ti", displayName: "Ticino", flagSrc: "https://placehold.co/96x64?text=TI" },
-      { levelId: "ch_ur", displayName: "Uri", flagSrc: "https://placehold.co/96x64?text=UR" },
-      { levelId: "ch_vd", displayName: "Vaud", flagSrc: "https://placehold.co/96x64?text=VD" },
-      { levelId: "ch_vs", displayName: "Valais", flagSrc: "https://placehold.co/96x64?text=VS" },
-      { levelId: "ch_zg", displayName: "Zug", flagSrc: "https://placehold.co/96x64?text=ZG" },
-      { levelId: "ch_zh", displayName: "Zürich", flagSrc: "https://placehold.co/96x64?text=ZH" },
-    ],
+    flags: CH_FLAGS,
   },
   {
     packId: "es",
     countryCode: "ES",
     title: "Spain",
+    type: "country",
     unlockTier: 1,
-    levels: [
-      { levelId: "es_an", displayName: "Andalusia", flagSrc: "https://placehold.co/96x64?text=AN" },
-      { levelId: "es_ar", displayName: "Aragon", flagSrc: "https://placehold.co/96x64?text=AR" },
-      { levelId: "es_as", displayName: "Asturias", flagSrc: "https://placehold.co/96x64?text=AS" },
-      { levelId: "es_ib", displayName: "Balearic Islands", flagSrc: "https://placehold.co/96x64?text=IB" },
-      { levelId: "es_pv", displayName: "Basque Country", flagSrc: "https://placehold.co/96x64?text=PV" },
-      { levelId: "es_cn", displayName: "Canary Islands", flagSrc: "https://placehold.co/96x64?text=CN" },
-      { levelId: "es_cb", displayName: "Cantabria", flagSrc: "https://placehold.co/96x64?text=CB" },
-      { levelId: "es_cl", displayName: "Castile and León", flagSrc: "https://placehold.co/96x64?text=CL" },
-      { levelId: "es_cm", displayName: "Castile-La Mancha", flagSrc: "https://placehold.co/96x64?text=CM" },
-      { levelId: "es_ct", displayName: "Catalonia", flagSrc: "https://placehold.co/96x64?text=CT" },
-      { levelId: "es_ex", displayName: "Extremadura", flagSrc: "https://placehold.co/96x64?text=EX" },
-      { levelId: "es_ga", displayName: "Galicia", flagSrc: "https://placehold.co/96x64?text=GA" },
-      { levelId: "es_ri", displayName: "La Rioja", flagSrc: "https://placehold.co/96x64?text=RI" },
-      { levelId: "es_md", displayName: "Madrid", flagSrc: "https://placehold.co/96x64?text=MD" },
-      { levelId: "es_mc", displayName: "Murcia", flagSrc: "https://placehold.co/96x64?text=MC" },
-      { levelId: "es_nc", displayName: "Navarre", flagSrc: "https://placehold.co/96x64?text=NC" },
-      { levelId: "es_vc", displayName: "Valencia", flagSrc: "https://placehold.co/96x64?text=VC" },
-    ],
+    flags: ES_FLAGS,
   },
   {
     packId: "de",
     countryCode: "DE",
     title: "Germany",
+    type: "country",
     unlockTier: 1,
-    levels: [
-      { levelId: "de_bw", displayName: "Baden-Württemberg", flagSrc: "https://placehold.co/96x64?text=BW" },
-      { levelId: "de_by", displayName: "Bavaria", flagSrc: "https://placehold.co/96x64?text=BY" },
-      { levelId: "de_be", displayName: "Berlin", flagSrc: "https://placehold.co/96x64?text=BE" },
-      { levelId: "de_bb", displayName: "Brandenburg", flagSrc: "https://placehold.co/96x64?text=BB" },
-      { levelId: "de_hb", displayName: "Bremen", flagSrc: "https://placehold.co/96x64?text=HB" },
-      { levelId: "de_hh", displayName: "Hamburg", flagSrc: "https://placehold.co/96x64?text=HH" },
-      { levelId: "de_he", displayName: "Hesse", flagSrc: "https://placehold.co/96x64?text=HE" },
-      { levelId: "de_ni", displayName: "Lower Saxony", flagSrc: "https://placehold.co/96x64?text=NI" },
-      { levelId: "de_mv", displayName: "Mecklenburg-Vorpommern", flagSrc: "https://placehold.co/96x64?text=MV" },
-      { levelId: "de_nw", displayName: "North Rhine-Westphalia", flagSrc: "https://placehold.co/96x64?text=NW" },
-      { levelId: "de_rp", displayName: "Rhineland-Palatinate", flagSrc: "https://placehold.co/96x64?text=RP" },
-      { levelId: "de_sl", displayName: "Saarland", flagSrc: "https://placehold.co/96x64?text=SL" },
-      { levelId: "de_sn", displayName: "Saxony", flagSrc: "https://placehold.co/96x64?text=SN" },
-      { levelId: "de_st", displayName: "Saxony-Anhalt", flagSrc: "https://placehold.co/96x64?text=ST" },
-      { levelId: "de_sh", displayName: "Schleswig-Holstein", flagSrc: "https://placehold.co/96x64?text=SH" },
-      { levelId: "de_th", displayName: "Thuringia", flagSrc: "https://placehold.co/96x64?text=TH" },
-    ],
+    flags: DE_FLAGS,
   },
   {
     packId: "us",
     countryCode: "US",
     title: "United States",
+    type: "country",
     unlockTier: 1,
-    levels: [
-      { levelId: "us_al", displayName: "Alabama", flagSrc: "https://placehold.co/96x64?text=AL" },
-      { levelId: "us_ak", displayName: "Alaska", flagSrc: "https://placehold.co/96x64?text=AK" },
-      { levelId: "us_az", displayName: "Arizona", flagSrc: "https://placehold.co/96x64?text=AZ" },
-      { levelId: "us_ar", displayName: "Arkansas", flagSrc: "https://placehold.co/96x64?text=AR" },
-      { levelId: "us_ca", displayName: "California", flagSrc: "https://placehold.co/96x64?text=CA" },
-      { levelId: "us_co", displayName: "Colorado", flagSrc: "https://placehold.co/96x64?text=CO" },
-      { levelId: "us_ct", displayName: "Connecticut", flagSrc: "https://placehold.co/96x64?text=CT" },
-      { levelId: "us_de", displayName: "Delaware", flagSrc: "https://placehold.co/96x64?text=DE" },
-      { levelId: "us_fl", displayName: "Florida", flagSrc: "https://placehold.co/96x64?text=FL" },
-      { levelId: "us_ga", displayName: "Georgia", flagSrc: "https://placehold.co/96x64?text=GA" },
-      { levelId: "us_hi", displayName: "Hawaii", flagSrc: "https://placehold.co/96x64?text=HI" },
-      { levelId: "us_id", displayName: "Idaho", flagSrc: "https://placehold.co/96x64?text=ID" },
-      { levelId: "us_il", displayName: "Illinois", flagSrc: "https://placehold.co/96x64?text=IL" },
-      { levelId: "us_in", displayName: "Indiana", flagSrc: "https://placehold.co/96x64?text=IN" },
-      { levelId: "us_ia", displayName: "Iowa", flagSrc: "https://placehold.co/96x64?text=IA" },
-      { levelId: "us_ks", displayName: "Kansas", flagSrc: "https://placehold.co/96x64?text=KS" },
-      { levelId: "us_ky", displayName: "Kentucky", flagSrc: "https://placehold.co/96x64?text=KY" },
-      { levelId: "us_la", displayName: "Louisiana", flagSrc: "https://placehold.co/96x64?text=LA" },
-      { levelId: "us_me", displayName: "Maine", flagSrc: "https://placehold.co/96x64?text=ME" },
-      { levelId: "us_md", displayName: "Maryland", flagSrc: "https://placehold.co/96x64?text=MD" },
-      { levelId: "us_ma", displayName: "Massachusetts", flagSrc: "https://placehold.co/96x64?text=MA" },
-      { levelId: "us_mi", displayName: "Michigan", flagSrc: "https://placehold.co/96x64?text=MI" },
-      { levelId: "us_mn", displayName: "Minnesota", flagSrc: "https://placehold.co/96x64?text=MN" },
-      { levelId: "us_ms", displayName: "Mississippi", flagSrc: "https://placehold.co/96x64?text=MS" },
-      { levelId: "us_mo", displayName: "Missouri", flagSrc: "https://placehold.co/96x64?text=MO" },
-      { levelId: "us_mt", displayName: "Montana", flagSrc: "https://placehold.co/96x64?text=MT" },
-      { levelId: "us_ne", displayName: "Nebraska", flagSrc: "https://placehold.co/96x64?text=NE" },
-      { levelId: "us_nv", displayName: "Nevada", flagSrc: "https://placehold.co/96x64?text=NV" },
-      { levelId: "us_nh", displayName: "New Hampshire", flagSrc: "https://placehold.co/96x64?text=NH" },
-      { levelId: "us_nj", displayName: "New Jersey", flagSrc: "https://placehold.co/96x64?text=NJ" },
-      { levelId: "us_nm", displayName: "New Mexico", flagSrc: "https://placehold.co/96x64?text=NM" },
-      { levelId: "us_ny", displayName: "New York", flagSrc: "https://placehold.co/96x64?text=NY" },
-      { levelId: "us_nc", displayName: "North Carolina", flagSrc: "https://placehold.co/96x64?text=NC" },
-      { levelId: "us_nd", displayName: "North Dakota", flagSrc: "https://placehold.co/96x64?text=ND" },
-      { levelId: "us_oh", displayName: "Ohio", flagSrc: "https://placehold.co/96x64?text=OH" },
-      { levelId: "us_ok", displayName: "Oklahoma", flagSrc: "https://placehold.co/96x64?text=OK" },
-      { levelId: "us_or", displayName: "Oregon", flagSrc: "https://placehold.co/96x64?text=OR" },
-      { levelId: "us_pa", displayName: "Pennsylvania", flagSrc: "https://placehold.co/96x64?text=PA" },
-      { levelId: "us_ri", displayName: "Rhode Island", flagSrc: "https://placehold.co/96x64?text=RI" },
-      { levelId: "us_sc", displayName: "South Carolina", flagSrc: "https://placehold.co/96x64?text=SC" },
-      { levelId: "us_sd", displayName: "South Dakota", flagSrc: "https://placehold.co/96x64?text=SD" },
-      { levelId: "us_tn", displayName: "Tennessee", flagSrc: "https://placehold.co/96x64?text=TN" },
-      { levelId: "us_tx", displayName: "Texas", flagSrc: "https://placehold.co/96x64?text=TX" },
-      { levelId: "us_ut", displayName: "Utah", flagSrc: "https://placehold.co/96x64?text=UT" },
-      { levelId: "us_vt", displayName: "Vermont", flagSrc: "https://placehold.co/96x64?text=VT" },
-      { levelId: "us_va", displayName: "Virginia", flagSrc: "https://placehold.co/96x64?text=VA" },
-      { levelId: "us_wa", displayName: "Washington", flagSrc: "https://placehold.co/96x64?text=WA" },
-      { levelId: "us_wv", displayName: "West Virginia", flagSrc: "https://placehold.co/96x64?text=WV" },
-      { levelId: "us_wi", displayName: "Wisconsin", flagSrc: "https://placehold.co/96x64?text=WI" },
-      { levelId: "us_wy", displayName: "Wyoming", flagSrc: "https://placehold.co/96x64?text=WY" },
-    ],
+    flags: US_FLAGS,
   },
   {
     packId: "gb",
     countryCode: "GB",
     title: "United Kingdom",
-    unlockTier: 2,
-    levels: [
-      { levelId: "gb_eng", displayName: "England", flagSrc: "https://placehold.co/96x64?text=ENG" },
-      { levelId: "gb_sct", displayName: "Scotland", flagSrc: "https://placehold.co/96x64?text=SCT" },
-      { levelId: "gb_wls", displayName: "Wales", flagSrc: "https://placehold.co/96x64?text=WLS" },
-      { levelId: "gb_nir", displayName: "Northern Ireland", flagSrc: "https://placehold.co/96x64?text=NIR" },
-    ],
+    type: "country",
+    unlockTier: 1,
+    flags: GB_FLAGS,
   },
 ];
 
-export function buildLocalPackPool(pack) {
-  if (!pack) return [];
-  return pack.levels.map((level) => ({
-    code: level.levelId,
-    name: level.displayName,
-    img: level.flagSrc,
-    difficulty: level.difficulty,
-  }));
-}
+export const LOCAL_LEVEL_SIZE = LEVEL_SIZE;
 
 export function buildLocalPackLevels(pack) {
-  const pool = buildLocalPackPool(pack);
-  return pack.levels.map((level) => ({
-    id: level.levelId,
-    label: level.displayName,
-    pool,
-    questionCount: level.questionCount ?? 1,
-    fixedFlagCode: level.levelId,
-  }));
+  const flags = pack?.flags || [];
+  if (!flags.length) return [];
+  // Level rule: each level is a slice of 10 flags. Remainders form a final level.
+  const levelCount = Math.max(1, Math.ceil(flags.length / LEVEL_SIZE));
+  return Array.from({ length: levelCount }, (_, index) => {
+    const start = index * LEVEL_SIZE;
+    const pool = flags.slice(start, start + LEVEL_SIZE);
+    return {
+      id: index + 1,
+      label: String(index + 1),
+      pool,
+      questionCount: LEVEL_SIZE,
+    };
+  });
 }
 
 export function getLocalPackProgress(pack, progress) {
-  const starsByLevel = progress?.local?.starsByLevel || {};
-  const totalLevels = pack?.levels?.length || 0;
-  const completedLevels = (pack?.levels || []).reduce((sum, level) => {
-    const stars = Number(starsByLevel[level.levelId] || 0);
+  const levels = buildLocalPackLevels(pack);
+  const levelsMap = progress?.localFlags?.packs?.[pack?.packId]?.levels || {};
+  const totalLevels = levels.length;
+  const completedLevels = levels.reduce((sum, level) => {
+    const stars = Number(levelsMap[level.id]?.stars || 0);
     return sum + (stars > 0 ? 1 : 0);
   }, 0);
-  const starsEarned = (pack?.levels || []).reduce((sum, level) => {
-    return sum + Number(starsByLevel[level.levelId] || 0);
-  }, 0);
+  const starsEarned = levels.reduce(
+    (sum, level) => sum + Number(levelsMap[level.id]?.stars || 0),
+    0
+  );
   const maxStars = totalLevels * 3;
   return { completedLevels, totalLevels, starsEarned, maxStars };
 }
 
 export function isLocalPackUnlocked(pack) {
   return Number(pack?.unlockTier || 1) <= 1;
+}
+
+export function getLocalLevelStars(progress, packId, levelId) {
+  const levelsMap = progress?.localFlags?.packs?.[packId]?.levels || {};
+  return Number(levelsMap[levelId]?.stars || 0);
+}
+
+export function buildPackIcon(pack, fallbackFlagSrc) {
+  if (pack?.iconSrc) return pack.iconSrc;
+  if (pack?.countryCode && typeof fallbackFlagSrc === "function") {
+    return fallbackFlagSrc(pack.countryCode, 64);
+  }
+  return svgDataUrl("FLAG", "#334155");
 }
