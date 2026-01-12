@@ -606,7 +606,16 @@ export default function HomeScreen({
             </span>
           </div>
         ) : (
-          <div style={{ fontSize: 16, fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              maxWidth: 220,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {mode === "classic"
               ? text("classicDesc", "Learn flags at your pace")
               : mode === "timetrial"
