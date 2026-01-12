@@ -1,11 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { flagSrc } from "../App";
-import {
-  buildLocalPackLevels,
-  buildPackIcon,
-  getLocalPackProgress,
-  isLocalPackUnlocked,
-} from "../localPacks";
+import { buildLocalPackLevels, getLocalPackProgress } from "../localPacks";
 
 export default function LocalPacksGrid({
   packs,
@@ -15,10 +9,20 @@ export default function LocalPacksGrid({
   lang,
 }) {
   const [lockMessage, setLockMessage] = useState("");
+  const [failedIcons, setFailedIcons] = useState({});
   const text = (key, fallback) => {
     if (!t || !lang) return fallback;
     const value = t(lang, key);
     return value === key ? fallback : value;
+  };
+
+  const packIconColors = {
+    all: "#b91c1c",
+    ch: "#dc2626",
+    es: "#f97316",
+    de: "#f59e0b",
+    us: "#3b82f6",
+    gb: "#6366f1",
   };
 
   const sortedPacks = useMemo(() => {
@@ -70,10 +74,16 @@ export default function LocalPacksGrid({
       >
         {sortedPacks.map(({ pack, levels, stats, unlocked }) => {
           const locked = !unlocked;
+          const packId = String(pack.packId || "").toLowerCase();
+          const packName = text(
+            `localFlags.packs.${packId}.name`,
+            pack.title
+          );
           const typeLabel =
             pack.type === "all"
-              ? text("allPack", "All Pack")
-              : text("countryPack", "Country Pack");
+              ? text("localFlags.packType.all", "All Pack")
+              : text("localFlags.packType.country", "Country Pack");
+          const iconSrc = `/local-flags/packs/${packId}.svg`;
           return (
             <button
               key={pack.packId}
@@ -105,19 +115,43 @@ export default function LocalPacksGrid({
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <img
-                  src={buildPackIcon(pack, flagSrc)}
-                  alt={pack.title}
-                  style={{
-                    width: 40,
-                    height: 28,
-                    objectFit: "cover",
-                    borderRadius: 6,
-                    border: "1px solid rgba(15,23,42,0.1)",
-                  }}
-                />
+                {failedIcons[packId] ? (
+                  <div
+                    aria-label={packName}
+                    style={{
+                      width: 40,
+                      height: 28,
+                      borderRadius: 6,
+                      background: packIconColors[packId] || "#64748b",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      border: "1px solid rgba(15,23,42,0.1)",
+                    }}
+                  >
+                    {packId.toUpperCase()}
+                  </div>
+                ) : (
+                  <img
+                    src={iconSrc}
+                    alt={packName}
+                    onError={() =>
+                      setFailedIcons((prev) => ({ ...prev, [packId]: true }))
+                    }
+                    style={{
+                      width: 40,
+                      height: 28,
+                      objectFit: "cover",
+                      borderRadius: 6,
+                      border: "1px solid rgba(15,23,42,0.1)",
+                    }}
+                  />
+                )}
                 <div style={{ fontWeight: 800, fontSize: 16 }}>
-                  {pack.title}
+                  {packName}
                 </div>
               </div>
               <div style={{ fontSize: 12, color: "#334155" }}>
