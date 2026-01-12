@@ -54,6 +54,7 @@ export default function GameScreen({
   FLAGS,
   mode = "classic", // "classic" | "timetrial"
   levelId,
+  levelLabel,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
   progress,
@@ -163,7 +164,9 @@ export default function GameScreen({
     const qs = [];
 
     for (let i = 0; i < qc; i++) {
-      const correct = shuffledPool[i % shuffledPool.length];
+      const correct = ld.fixedFlagCode
+        ? pool.find((flag) => flag.code === ld.fixedFlagCode) || pool[0]
+        : shuffledPool[i % shuffledPool.length];
       const correctName = correct.name;
       const others = shuffledPool.filter((f) => f.code !== correct.code);
 
@@ -332,11 +335,17 @@ export default function GameScreen({
   const ttProgress =
     mode === "timetrial" ? clamp(1 - ttRemaining / TT_MS_PER_Q, 0, 1) * 100 : 0;
 
+  const localFlagsLabelRaw =
+    t && lang ? t(lang, "localFlags") : "Local Flags";
+  const localFlagsLabel =
+    localFlagsLabelRaw === "localFlags" ? "Local Flags" : localFlagsLabelRaw;
   const modeLabel =
     mode === "timetrial"
       ? t && lang
         ? t(lang, "timeTrial")
         : "Time Trial"
+      : mode === "local"
+      ? localFlagsLabel
       : t && lang
       ? t(lang, "classic")
       : "Classic";
@@ -754,7 +763,9 @@ export default function GameScreen({
               color: "#0f172a",
             }}
           >
-            {(t && lang ? t(lang, "levelWord") : "Level") + " " + levelId}
+            {(t && lang ? t(lang, "levelWord") : "Level") +
+              " " +
+              (levelLabel || levelId)}
           </div>
 
           {/* stars badge (BEST EVER) */}
