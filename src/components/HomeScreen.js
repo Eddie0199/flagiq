@@ -3,38 +3,49 @@ import React, { useEffect, useMemo, useState } from "react";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// match App.js constants
-const TOTAL_LEVELS = 30;
-
 // simple helpers (copied from App-style logic)
 const sumStars = (m) =>
   Object.values(m || {}).reduce((a, v) => a + (Number(v) || 0), 0);
 
-function lastCompletedLevel(starsMap) {
-  let last = 0;
-  for (let i = 1; i <= TOTAL_LEVELS; i++) {
-    if ((starsMap[i] || 0) > 0) last = i;
-  }
-  return last || 1;
-}
+const countCompletedLevels = (starsMap) =>
+  Object.values(starsMap || {}).reduce(
+    (sum, stars) => sum + (Number(stars) > 0 ? 1 : 0),
+    0
+  );
 
 // per-mode stats for the homepage cards
 function getPerModeStats(progress, mode) {
-  if (!progress) return { level: 0, stars: 0 };
+  if (!progress) return { completedLevels: 0, stars: 0 };
 
   try {
     const starsMap = progress?.[mode]?.starsByLevel || {};
     const totalStars = sumStars(starsMap);
+    const completedLevels = countCompletedLevels(starsMap);
 
     if (totalStars === 0) {
-      return { level: 0, stars: 0 }; // not started
+      return { completedLevels: 0, stars: 0 }; // not started
     }
 
-    const last = lastCompletedLevel(starsMap); // highest level id with >0 stars
-    return { level: last, stars: totalStars };
+    return { completedLevels, stars: totalStars };
   } catch {
-    return { level: 0, stars: 0 };
+    return { completedLevels: 0, stars: 0 };
   }
+}
+
+function getLocalStats(progress) {
+  const packs = progress?.localFlags?.packs || {};
+  return Object.values(packs).reduce(
+    (acc, pack) => {
+      const starsMap = pack?.starsByLevel || {};
+      Object.values(starsMap).forEach((stars) => {
+        const starValue = Number(stars) || 0;
+        acc.stars += starValue;
+        if (starValue > 0) acc.completedLevels += 1;
+      });
+      return acc;
+    },
+    { completedLevels: 0, stars: 0 }
+  );
 }
 
 // grid layout
@@ -552,11 +563,12 @@ export default function HomeScreen({
   // compute on every render so newly loaded progress shows immediately
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
+  const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
 
   const Card = ({ color, icon, title, stats, onClick, mode }) => {
-    const level = Number(stats?.level ?? 0);
+    const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
-    const hasProgress = level > 0 || stars > 0;
+    const hasProgress = completedLevels > 0 || stars > 0;
 
     return (
       <button
@@ -591,7 +603,7 @@ export default function HomeScreen({
             }}
           >
             <span>
-              {text("levelWord", "Level")} {level}
+              {text("levelsCompleted", "Levels Completed")} {completedLevels}
             </span>
             <span>•</span>
             <span
@@ -760,7 +772,7 @@ export default function HomeScreen({
           color="#ef4444"
           icon="💀"
           title={text("localFlags", "Local Flags")}
-          stats={{ level: 0, stars: 0 }}
+          stats={localFromStore}
           onClick={() => onStart && onStart("local")}
           mode="local"
         />
