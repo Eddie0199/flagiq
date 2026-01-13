@@ -19,7 +19,7 @@ const STRINGS = {
     timeTrial: "Time Trial",
     timeTrialDesc: "Beat the timer!",
     localFlags: "Local Flags",
-    localFlagsDesc: "Country packs focused on regional flags.",
+    localFlagsDesc: "Expert players only",
     "localFlags.packType.all": "All Pack",
     "localFlags.packType.country": "Country Pack",
     "localFlags.packs.all.name": "All Local Flags",

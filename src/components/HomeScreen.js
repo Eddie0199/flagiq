@@ -758,7 +758,7 @@ export default function HomeScreen({
         />
         <Card
           color="#ef4444"
-          icon="🧭"
+          icon="💀"
           title={text("localFlags", "Local Flags")}
           stats={{ level: 0, stars: 0 }}
           onClick={() => onStart && onStart("local")}
