@@ -13,9 +13,7 @@ const svgDataUrl = (label, color = "#ef4444") => {
 const buildFlag = (code, name, label, color) => ({
   code,
   name,
-  // Local flag images are provided as inline SVG placeholders for now.
-  // Replace with real asset URLs when we add official subdivision flags.
-  img: svgDataUrl(label, color),
+  nameKey: `localFlags.subdivisions.${code}.name`,
   fallbackImg: svgDataUrl(label, color),
 });
 

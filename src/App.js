@@ -131,7 +131,7 @@ export const flagSrc = (flagOrCode, w = 256) => {
   if (flagOrCode && typeof flagOrCode === "object") {
     if (flagOrCode.img) return flagOrCode.img;
 
-    let code = (flagOrCode.code || "").toLowerCase();
+    let code = (flagOrCode.code || "").toLowerCase().replace(/_/g, "-");
     const name = (flagOrCode.name || "").toLowerCase();
 
     if (CODE_FALLBACK[code]) {
@@ -143,7 +143,7 @@ export const flagSrc = (flagOrCode, w = 256) => {
     return `https://flagcdn.com/w${w}/${code}.png`;
   }
 
-  const raw = String(flagOrCode || "").toLowerCase();
+  const raw = String(flagOrCode || "").toLowerCase().replace(/_/g, "-");
   const mapped = FALLBACK_MAP[raw] || raw;
   return `https://flagcdn.com/w${w}/${mapped}.png`;
 };

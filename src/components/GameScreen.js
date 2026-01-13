@@ -321,6 +321,15 @@ export default function GameScreen({
   }, [mode, done, fail, ttPaused]);
 
   const current = questions[qIndex];
+  const optionNameKeys = useMemo(() => {
+    const map = new Map();
+    (levelDef?.pool || []).forEach((flag) => {
+      if (flag?.name && flag?.nameKey) {
+        map.set(flag.name, flag.nameKey);
+      }
+    });
+    return map;
+  }, [levelDef]);
 
   // ---------- PROGRESS ----------
   const isClassicMode = mode !== "timetrial";
@@ -1307,6 +1316,20 @@ export default function GameScreen({
                     bg = "#f8fafc";
                   }
 
+                  const optionNameKey = optionNameKeys.get(opt);
+                  const optionTranslated =
+                    optionNameKey && t && lang
+                      ? t(lang, optionNameKey)
+                      : null;
+                  const countryTranslated =
+                    t && lang ? t(lang, "flag." + opt) : opt;
+                  const label =
+                    optionTranslated && optionTranslated !== optionNameKey
+                      ? optionTranslated
+                      : countryTranslated !== "flag." + opt
+                      ? countryTranslated
+                      : opt;
+
                   return (
                     <button
                       key={opt}
@@ -1327,7 +1350,7 @@ export default function GameScreen({
                         transition: "background 0.15s ease, border 0.15s ease",
                       }}
                     >
-                      {t && lang ? t(lang, "flag." + opt) : opt}
+                      {label}
                     </button>
                   );
                 })
