@@ -8,7 +8,7 @@ import {
 } from "../App";
 import { buildLocalPackLevels, getLocalPackProgress } from "../localPacks";
 
-function StarsBadge({ total }) {
+function StarsBadge({ total, label }) {
   return (
     <div
       style={{
@@ -19,9 +19,13 @@ function StarsBadge({ total }) {
         fontWeight: 800,
         fontSize: 13,
         color: "#0f172a",
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
       }}
     >
-      {total} ★
+      <span style={{ color: "#475569", fontSize: 12 }}>{label}</span>
+      <span>{total} ★</span>
     </div>
   );
 }
@@ -96,7 +100,10 @@ export default function LocalPackLevelsScreen({
           {pack.title}
         </div>
         <div style={{ justifySelf: "end" }}>
-          <StarsBadge total={packStats?.starsEarned || 0} />
+          <StarsBadge
+            total={packStats?.starsEarned || 0}
+            label={text("totalStars", "Total")}
+          />
         </div>
       </div>
       <div style={{ marginBottom: 6, color: "#475569", fontSize: 13 }}>
