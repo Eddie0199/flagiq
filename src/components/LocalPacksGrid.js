@@ -83,10 +83,6 @@ export default function LocalPacksGrid({
             `localFlags.packs.${packId}.name`,
             pack.title
           );
-          const typeLabel =
-            pack.type === "all"
-              ? text("localFlags.packType.all", "All Pack")
-              : text("localFlags.packType.country", "Country Pack");
           const iconSrc = `/local-flags/packs/${packId}.svg`;
           return (
             <button
@@ -113,6 +109,7 @@ export default function LocalPacksGrid({
                 display: "flex",
                 flexDirection: "column",
                 gap: 8,
+                minHeight: 120,
                 position: "relative",
                 opacity: locked ? 0.6 : 1,
                 cursor: "pointer",
@@ -154,13 +151,19 @@ export default function LocalPacksGrid({
                     }}
                   />
                 )}
-                <div style={{ fontWeight: 800, fontSize: 16 }}>
+                <div
+                  style={{
+                    fontWeight: 800,
+                    fontSize: 16,
+                    minHeight: 40,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
                   {packName}
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: "#334155" }}>
-                {typeLabel}
-              </div>
+              <div style={{ flex: 1 }} />
               <div
                 style={{
                   display: "flex",
