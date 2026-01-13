@@ -542,7 +542,11 @@ export default function HomeScreen({
     };
   }, []);
 
-  const text = (key, fallback) => (t && lang ? t(lang, key) : fallback);
+  const text = (key, fallback) => {
+    if (!t || !lang) return fallback;
+    const value = t(lang, key);
+    return value === key ? fallback : value;
+  };
 
   // per-mode stats derived from the same store logic as App.js
   // compute on every render so newly loaded progress shows immediately
@@ -602,10 +606,24 @@ export default function HomeScreen({
             </span>
           </div>
         ) : (
-          <div style={{ fontSize: 16, fontWeight: 600 }}>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              maxWidth: 220,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {mode === "classic"
               ? text("classicDesc", "Learn flags at your pace")
-              : text("timeTrialDesc", "Beat the timer!")}
+              : mode === "timetrial"
+              ? text("timeTrialDesc", "Beat the timer!")
+              : text(
+                  "localFlagsDesc",
+                  "Country packs focused on regional flags."
+                )}
           </div>
         )}
       </button>
@@ -624,6 +642,8 @@ export default function HomeScreen({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
+        overflowY: "auto",
+        paddingBottom: 120,
       }}
     >
       {/* top bar */}
@@ -735,6 +755,14 @@ export default function HomeScreen({
           stats={timetrialFromStore}
           onClick={() => onStart && onStart("timetrial")}
           mode="timetrial"
+        />
+        <Card
+          color="#ef4444"
+          icon="🧭"
+          title={text("localFlags", "Local Flags")}
+          stats={{ level: 0, stars: 0 }}
+          onClick={() => onStart && onStart("local")}
+          mode="local"
         />
       </div>
 
