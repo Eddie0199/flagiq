@@ -569,7 +569,7 @@ export default function HomeScreen({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "18px 16px",
+          padding: "18px 14px",
           borderRadius: 22,
           border: "none",
           background: color,
@@ -608,7 +608,7 @@ export default function HomeScreen({
         ) : (
           <div
             style={{
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 600,
               maxWidth: 220,
               whiteSpace: "nowrap",
