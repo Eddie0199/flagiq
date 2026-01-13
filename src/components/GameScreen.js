@@ -89,7 +89,6 @@ export default function GameScreen({
   const hintKey = getHintSeenKey(playerId);
   const [showHintInfo, setShowHintInfo] = useState(false);
   const [localFlagImages, setLocalFlagImages] = useState({});
-  const [localFlagLoaded, setLocalFlagLoaded] = useState(false);
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
@@ -414,10 +413,11 @@ export default function GameScreen({
       : current?.correct
       ? flagSrc(current.correct, 320)
       : null;
-  const currentFlagKey = current?.correct?.code || current?.correct?.name || "";
-  useEffect(() => {
-    setLocalFlagLoaded(false);
-  }, [currentFlagSrc, currentFlagKey]);
+  const isLocalCurrent = current?.correct && isLocalFlag(current.correct);
+  const localFallbackSrc = current?.correct?.fallbackImg || "";
+  const displayFlagSrc = isLocalCurrent
+    ? localFlagImages[current.correct.code] || localFallbackSrc || currentFlagSrc
+    : currentFlagSrc;
 
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
@@ -1322,28 +1322,15 @@ export default function GameScreen({
               marginBottom: 16,
               position: "relative",
             }}
-            role="img"
-            aria-label={current?.correct?.name}
           >
             {current ? (
-              <>
-                {!localFlagLoaded ? (
-                  <div
-                    style={{
-                      width: 140,
-                      height: 90,
-                      borderRadius: 12,
-                      background: "#cbd5f5",
-                    }}
-                  />
-                ) : null}
-                <img
-                  src={currentFlagSrc || flagSrc(current.correct, 320)}
-                  alt=""
-                  onError={async (event) => {
-                    const fallback = current?.correct?.fallbackImg;
-                    if (current?.correct && isLocalFlag(current.correct)) {
-                      const resolved = await loadLocalFlagImage(current.correct);
+              <img
+                src={displayFlagSrc || flagSrc(current.correct, 320)}
+                alt={current.correct.name}
+                onError={async (event) => {
+                  const fallback = current?.correct?.fallbackImg;
+                  if (current?.correct && isLocalFlag(current.correct)) {
+                    const resolved = await loadLocalFlagImage(current.correct);
                     if (resolved && event.currentTarget.src !== resolved) {
                       event.currentTarget.src = resolved;
                       return;
@@ -1358,9 +1345,7 @@ export default function GameScreen({
                   if (fallback && event.currentTarget.src !== fallback) {
                     event.currentTarget.src = fallback;
                   }
-                  setLocalFlagLoaded(true);
                 }}
-                onLoad={() => setLocalFlagLoaded(true)}
                 style={{
                   maxWidth: 256,
                   maxHeight: 160,
@@ -1369,11 +1354,8 @@ export default function GameScreen({
                   objectFit: "contain",
                   borderRadius: 12,
                   display: "block",
-                  opacity: localFlagLoaded ? 1 : 0,
-                  transition: "opacity 120ms ease-out",
                 }}
               />
-              </>
             ) : (
               <div>{t && lang ? t(lang, "loading") : "Loading…"}</div>
             )}
