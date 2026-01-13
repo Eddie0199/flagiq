@@ -13,7 +13,7 @@ const svgDataUrl = (label, color = "#ef4444") => {
 const buildFlag = (code, name, label, color) => {
   const normalizedCode = String(code || "").toLowerCase();
   const [countryCode, subdivisionCode] = normalizedCode.split("_");
-  const imagePath = `/local-flags/${countryCode}/${subdivisionCode}.svg`;
+  const imagePath = `https://flagcdn.com/w320/${countryCode}-${subdivisionCode}.png`;
   return {
     code: normalizedCode,
     name,

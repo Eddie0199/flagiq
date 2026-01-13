@@ -15,6 +15,7 @@ const expected = flags.map((flag) => ({
 
 const missing = expected.filter(({ image }) => {
   if (!image) return true;
+  if (!image.startsWith("/local-flags/")) return false;
   const diskPath = path.join(repoRoot, "public", image);
   return !fs.existsSync(diskPath);
 });
