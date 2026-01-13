@@ -88,6 +88,7 @@ export default function GameScreen({
   });
   const hintKey = getHintSeenKey(playerId);
   const [showHintInfo, setShowHintInfo] = useState(false);
+  const [localFlagImages, setLocalFlagImages] = useState({});
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
@@ -321,6 +322,52 @@ export default function GameScreen({
   }, [mode, done, fail, ttPaused]);
 
   const current = questions[qIndex];
+  const isLocalFlag = (flag) =>
+    Boolean(flag?.code && String(flag.code).includes("_"));
+  const loadLocalFlagImage = async (flag) => {
+    if (!flag?.code || !flag?.name) return null;
+    const code = String(flag.code);
+    if (localFlagImages[code]) return localFlagImages[code];
+    const searchUrl = new URL("https://en.wikipedia.org/w/api.php");
+    searchUrl.search = new URLSearchParams({
+      action: "query",
+      list: "search",
+      srsearch: `Flag of ${flag.name}`,
+      format: "json",
+      srlimit: "1",
+      origin: "*",
+    }).toString();
+    const searchResponse = await fetch(searchUrl.toString());
+    if (!searchResponse.ok) return null;
+    const searchData = await searchResponse.json();
+    const title = searchData?.query?.search?.[0]?.title;
+    if (!title) return null;
+    const imageUrl = new URL("https://en.wikipedia.org/w/api.php");
+    imageUrl.search = new URLSearchParams({
+      action: "query",
+      titles: title,
+      prop: "pageimages",
+      format: "json",
+      pithumbsize: "640",
+      origin: "*",
+    }).toString();
+    const imageResponse = await fetch(imageUrl.toString());
+    if (!imageResponse.ok) return null;
+    const imageData = await imageResponse.json();
+    const page = imageData?.query?.pages
+      ? Object.values(imageData.query.pages)[0]
+      : null;
+    const src = page?.thumbnail?.source;
+    if (!src) return null;
+    setLocalFlagImages((prev) => ({ ...prev, [code]: src }));
+    return src;
+  };
+  useEffect(() => {
+    if (!current?.correct || !isLocalFlag(current.correct)) return;
+    const code = current.correct.code;
+    if (code && localFlagImages[code]) return;
+    void loadLocalFlagImage(current.correct);
+  }, [current?.correct, localFlagImages]);
   const optionNameKeys = useMemo(() => {
     const map = new Map();
     (levelDef?.pool || []).forEach((flag) => {
@@ -357,6 +404,15 @@ export default function GameScreen({
       : t && lang
       ? t(lang, "classic")
       : "Classic";
+  const currentFlagSrc =
+    current?.correct && isLocalFlag(current.correct)
+      ? localFlagImages[current.correct.code] ||
+        current.correct.image ||
+        current.correct.img ||
+        flagSrc(current.correct, 320)
+      : current?.correct
+      ? flagSrc(current.correct, 320)
+      : null;
 
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
@@ -1263,10 +1319,17 @@ export default function GameScreen({
           >
             {current ? (
               <img
-                src={flagSrc(current.correct, 320)}
+                src={currentFlagSrc || flagSrc(current.correct, 320)}
                 alt={current.correct.name}
-                onError={(event) => {
+                onError={async (event) => {
                   const fallback = current?.correct?.fallbackImg;
+                  if (current?.correct && isLocalFlag(current.correct)) {
+                    const resolved = await loadLocalFlagImage(current.correct);
+                    if (resolved && event.currentTarget.src !== resolved) {
+                      event.currentTarget.src = resolved;
+                      return;
+                    }
+                  }
                   if (process.env.NODE_ENV !== "production") {
                     console.warn(
                       "Missing local flag image; using fallback.",
