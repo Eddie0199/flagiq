@@ -1,8 +1,10 @@
 import React, { useMemo } from "react";
 import {
   BATCH,
+  BLOCK_REQUIRE,
   STARS_PER_LEVEL_MAX,
   UNLOCK_THRESHOLD,
+  starsNeededForLevelId,
 } from "../App";
 import { buildLocalPackLevels, getLocalPackProgress } from "../localPacks";
 
@@ -28,6 +30,7 @@ export default function LocalPackLevelsScreen({
   pack,
   progress,
   onLevelClick,
+  onLockedAttempt,
   levels: levelsProp,
   t,
   lang,
@@ -111,21 +114,31 @@ export default function LocalPackLevelsScreen({
           const stars = Number(levelsMap[level.id] || 0);
           const locked = level.id > unlockedLevels;
           const completed = stars > 0;
+          const blockEnd = Math.min(level.id + (BATCH - 1), levels.length);
+          const showBadge =
+            (level.id - 1) % BATCH === 0 && level.id > 1
+              ? BLOCK_REQUIRE[blockEnd]
+              : null;
           let border = "1px solid #e2e8f0";
           let shadow = "none";
-          if (completed) {
+          if (completed && !locked) {
             border = "3px solid #f59e0b";
             shadow = "0 2px 10px rgba(245, 158, 11, 0.25)";
           }
 
+          const handleClick = () => {
+            if (!locked) {
+              if (onLevelClick) onLevelClick(level);
+              return;
+            }
+            const info = starsNeededForLevelId(level.id, levelsMap);
+            if (onLockedAttempt) onLockedAttempt(info);
+          };
+
           return (
             <button
               key={level.id}
-              onClick={() => {
-                if (!locked && onLevelClick) {
-                  onLevelClick(level);
-                }
-              }}
+              onClick={handleClick}
               style={{
                 aspectRatio: "1 / 1",
                 borderRadius: 16,
@@ -138,7 +151,7 @@ export default function LocalPackLevelsScreen({
                 justifyContent: "center",
                 position: "relative",
                 opacity: locked ? 0.6 : 1,
-                cursor: locked ? "not-allowed" : "pointer",
+                cursor: "pointer",
                 transition: "box-shadow .15s ease, border-color .15s ease",
               }}
             >
@@ -161,6 +174,24 @@ export default function LocalPackLevelsScreen({
                 >
                   🔒
                 </span>
+              ) : null}
+              {locked && showBadge ? (
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: 6,
+                    right: 6,
+                    background: "#facc15",
+                    color: "#1e293b",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "2px 6px",
+                    borderRadius: 8,
+                    boxShadow: "0 1px 3px rgba(0,0,0,.2)",
+                  }}
+                >
+                  {showBadge}★
+                </div>
               ) : null}
             </button>
           );
