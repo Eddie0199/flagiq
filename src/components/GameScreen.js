@@ -52,11 +52,12 @@ export default function GameScreen({
   t,
   lang,
   FLAGS,
-  mode = "classic", // "classic" | "timetrial"
+  mode = "classic", // "classic" | "timetrial" | "local"
   levelId,
+  levelLabel,
   levels,
   currentStars, // no longer used for badge; kept for backward-compat
-  progress,
+  storedStars = 0,
   onProgressUpdate,
   onRunLost,
   soundCorrect,
@@ -320,10 +321,20 @@ export default function GameScreen({
   }, [mode, done, fail, ttPaused]);
 
   const current = questions[qIndex];
+  const optionNameKeys = useMemo(() => {
+    const map = new Map();
+    (levelDef?.pool || []).forEach((flag) => {
+      if (flag?.name && flag?.nameKey) {
+        map.set(flag.name, flag.nameKey);
+      }
+    });
+    return map;
+  }, [levelDef]);
 
   // ---------- PROGRESS ----------
+  const isClassicMode = mode !== "timetrial";
   const classicProgress =
-    mode === "classic" && questionCount > 0
+    isClassicMode && questionCount > 0
       ? done
         ? 100
         : (qIndex / questionCount) * 100
@@ -332,21 +343,25 @@ export default function GameScreen({
   const ttProgress =
     mode === "timetrial" ? clamp(1 - ttRemaining / TT_MS_PER_Q, 0, 1) * 100 : 0;
 
+  const localFlagsLabelRaw =
+    t && lang ? t(lang, "localFlags") : "Local Flags";
+  const localFlagsLabel =
+    localFlagsLabelRaw === "localFlags" ? "Local Flags" : localFlagsLabelRaw;
   const modeLabel =
     mode === "timetrial"
       ? t && lang
         ? t(lang, "timeTrial")
         : "Time Trial"
+      : mode === "local"
+      ? localFlagsLabel
       : t && lang
       ? t(lang, "classic")
       : "Classic";
 
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
-    const byMode = progress?.[mode];
-    const stored = Number(byMode?.starsByLevel?.[levelId] || 0);
-    return Math.max(stored, Number(currentStars || 0));
-  }, [progress, mode, levelId, currentStars]);
+    return Math.max(Number(storedStars || 0), Number(currentStars || 0));
+  }, [storedStars, currentStars]);
 
   // ---------- HINT HANDLERS ----------
   function handleUseRemove2() {
@@ -433,7 +448,7 @@ export default function GameScreen({
     setSelectedAnswer(answer);
 
     // ----- CLASSIC -----
-    if (mode === "classic") {
+    if (isClassicMode) {
       if (isCorrect) {
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
@@ -449,7 +464,7 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore = bestStars > 0;
+            const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
             // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
             if (onProgressUpdate) {
@@ -506,7 +521,7 @@ export default function GameScreen({
             setRunStars(stars);
 
             // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore = bestStars > 0;
+            const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
             if (onProgressUpdate) {
               onProgressUpdate(mode, levelId, stars);
@@ -754,7 +769,9 @@ export default function GameScreen({
               color: "#0f172a",
             }}
           >
-            {(t && lang ? t(lang, "levelWord") : "Level") + " " + levelId}
+            {(t && lang ? t(lang, "levelWord") : "Level") +
+              " " +
+              (levelLabel || levelId)}
           </div>
 
           {/* stars badge (BEST EVER) */}
@@ -820,7 +837,7 @@ export default function GameScreen({
 
         {/* progress bar */}
         <div>
-          {mode === "classic" ? (
+          {isClassicMode ? (
             <div
               style={{
                 height: 10,
@@ -1248,6 +1265,18 @@ export default function GameScreen({
               <img
                 src={flagSrc(current.correct, 320)}
                 alt={current.correct.name}
+                onError={(event) => {
+                  const fallback = current?.correct?.fallbackImg;
+                  if (process.env.NODE_ENV !== "production") {
+                    console.warn(
+                      "Missing local flag image; using fallback.",
+                      current?.correct?.code
+                    );
+                  }
+                  if (fallback && event.currentTarget.src !== fallback) {
+                    event.currentTarget.src = fallback;
+                  }
+                }}
                 style={{
                   maxWidth: 256,
                   maxHeight: 160,
@@ -1287,6 +1316,20 @@ export default function GameScreen({
                     bg = "#f8fafc";
                   }
 
+                  const optionNameKey = optionNameKeys.get(opt);
+                  const optionTranslated =
+                    optionNameKey && t && lang
+                      ? t(lang, optionNameKey)
+                      : null;
+                  const countryTranslated =
+                    t && lang ? t(lang, "flag." + opt) : opt;
+                  const label =
+                    optionTranslated && optionTranslated !== optionNameKey
+                      ? optionTranslated
+                      : countryTranslated !== "flag." + opt
+                      ? countryTranslated
+                      : opt;
+
                   return (
                     <button
                       key={opt}
@@ -1307,7 +1350,7 @@ export default function GameScreen({
                         transition: "background 0.15s ease, border 0.15s ease",
                       }}
                     >
-                      {t && lang ? t(lang, "flag." + opt) : opt}
+                      {label}
                     </button>
                   );
                 })
