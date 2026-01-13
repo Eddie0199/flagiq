@@ -29,6 +29,7 @@
     "cap:sync": "npm run build && npx cap sync",
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
+    "validate:local-flags": "node scripts/validateLocalFlags.mjs",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
