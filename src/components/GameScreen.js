@@ -53,6 +53,7 @@ export default function GameScreen({
   lang,
   FLAGS,
   mode = "classic", // "classic" | "timetrial" | "local"
+  activeLocalPack,
   levelId,
   levelLabel,
   levels,
@@ -413,17 +414,37 @@ export default function GameScreen({
   const ttProgress =
     mode === "timetrial" ? clamp(1 - ttRemaining / TT_MS_PER_Q, 0, 1) * 100 : 0;
 
-  const localFlagsLabelRaw =
-    t && lang ? t(lang, "localFlags") : "Local Flags";
-  const localFlagsLabel =
-    localFlagsLabelRaw === "localFlags" ? "Local Flags" : localFlagsLabelRaw;
+  const text = (key, fallback) => {
+    if (!t || !lang) return fallback;
+    const value = t(lang, key);
+    return value === key ? fallback : value;
+  };
+  const localFlagsLabel = text("localFlags", "Local Flags");
+  const localPackLabel = (() => {
+    if (mode !== "local") return null;
+    const packId = String(activeLocalPack?.packId || "").toLowerCase();
+    if (packId && packId !== "all") {
+      return text(
+        `localFlags.packs.${packId}.name`,
+        activeLocalPack?.title || localFlagsLabel
+      );
+    }
+    if (packId === "all" && current?.correct && isLocalFlag(current.correct)) {
+      const nameKey = current.correct.nameKey;
+      return nameKey ? text(nameKey, current.correct.name) : current.correct.name;
+    }
+    return null;
+  })();
+  const localModeLabel = localPackLabel
+    ? `${localPackLabel} - ${localFlagsLabel}`
+    : localFlagsLabel;
   const modeLabel =
     mode === "timetrial"
       ? t && lang
         ? t(lang, "timeTrial")
         : "Time Trial"
       : mode === "local"
-      ? localFlagsLabel
+      ? localModeLabel
       : t && lang
       ? t(lang, "classic")
       : "Classic";
