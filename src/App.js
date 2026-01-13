@@ -1755,7 +1755,7 @@ export default function App() {
         <>
           <Header
             showBack
-            onBack={goHome}
+            onBack={() => setScreen("local-packs")}
             hearts={{
               current: heartsCurrent,
               max: heartsMax,
