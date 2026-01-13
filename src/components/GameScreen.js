@@ -1,7 +1,6 @@
 // src/components/GameScreen.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
-import { localFlags } from "../data/localFlags";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
 
 const QUESTION_COUNT_FALLBACK = 10;
@@ -326,10 +325,10 @@ export default function GameScreen({
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
   const getLocalFlagSrc = (flag) => {
-    const code = String(flag?.code || "");
+    const code = String(flag?.code || "").toLowerCase();
     const [countryCode, regionCode] = code.split("_");
     if (!countryCode || !regionCode) return null;
-    return localFlags?.[countryCode]?.[regionCode] || null;
+    return `/local-flags/${countryCode}/${regionCode}.svg`;
   };
   const optionNameKeys = useMemo(() => {
     const map = new Map();
