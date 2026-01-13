@@ -1,6 +1,7 @@
 // src/components/GameScreen.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
+import { localFlags } from "../data/localFlags";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
 
 const QUESTION_COUNT_FALLBACK = 10;
@@ -324,6 +325,12 @@ export default function GameScreen({
   const current = questions[qIndex];
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
+  const getLocalFlagSrc = (flag) => {
+    const code = String(flag?.code || "");
+    const [countryCode, regionCode] = code.split("_");
+    if (!countryCode || !regionCode) return null;
+    return localFlags?.[countryCode]?.[regionCode] || null;
+  };
   const optionNameKeys = useMemo(() => {
     const map = new Map();
     (levelDef?.pool || []).forEach((flag) => {
@@ -381,10 +388,7 @@ export default function GameScreen({
       : "Classic";
   const currentFlagSrc =
     current?.correct && isLocalFlag(current.correct)
-      ? current.correct.image ||
-        current.correct.img ||
-        current?.correct?.fallbackImg ||
-        ""
+      ? getLocalFlagSrc(current.correct) || current?.correct?.fallbackImg || ""
       : current?.correct
       ? flagSrc(current.correct, 320)
       : null;
