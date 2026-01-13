@@ -10,12 +10,19 @@ const svgDataUrl = (label, color = "#ef4444") => {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 };
 
-const buildFlag = (code, name, label, color) => ({
-  code,
-  name,
-  nameKey: `localFlags.subdivisions.${code}.name`,
-  fallbackImg: svgDataUrl(label, color),
-});
+const buildFlag = (code, name, label, color) => {
+  const normalizedCode = String(code || "").toLowerCase();
+  const [countryCode, subdivisionCode] = normalizedCode.split("_");
+  const imagePath = `/local-flags/${countryCode}/${subdivisionCode}.svg`;
+  return {
+    code: normalizedCode,
+    name,
+    nameKey: `localFlags.subdivisions.${normalizedCode}.name`,
+    image: imagePath,
+    img: imagePath,
+    fallbackImg: svgDataUrl(label, color),
+  };
+};
 
 const buildPackFlags = (items, color) =>
   items.map(([code, name, label]) => buildFlag(code, name, label, color));
