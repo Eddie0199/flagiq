@@ -1880,6 +1880,7 @@ export default function App() {
             lang={lang}
             FLAGS={FLAGS}
             mode={mode}
+            activeLocalPack={activeLocalPack}
             levelId={levelId}
             levelLabel={localLevelLabel}
             levels={activeLevels}
