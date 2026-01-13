@@ -29,28 +29,16 @@ export default function LocalPacksGrid({
     gb: "#6366f1",
   };
 
-  const sortedPacks = useMemo(() => {
-    const enriched = (packs || []).map((pack) => {
-      const levels = buildLocalPackLevels(pack);
-      const stats = getLocalPackProgress(pack, progress);
-      const unlocked = isLocalPackUnlocked(pack);
-      const hasProgress = stats.starsEarned > 0 || stats.completedLevels > 0;
-      return { pack, levels, stats, unlocked, hasProgress };
-    });
-
-    return enriched.sort((a, b) => {
-      if (a.pack.type !== b.pack.type) {
-        return a.pack.type === "all" ? -1 : 1;
-      }
-      if (a.hasProgress !== b.hasProgress) {
-        return a.hasProgress ? -1 : 1;
-      }
-      if (a.unlocked !== b.unlocked) {
-        return a.unlocked ? -1 : 1;
-      }
-      return a.pack.title.localeCompare(b.pack.title);
-    });
-  }, [packs, progress]);
+  const enrichedPacks = useMemo(
+    () =>
+      (packs || []).map((pack) => {
+        const levels = buildLocalPackLevels(pack);
+        const stats = getLocalPackProgress(pack, progress);
+        const unlocked = isLocalPackUnlocked(pack);
+        return { pack, levels, stats, unlocked };
+      }),
+    [packs, progress]
+  );
 
   return (
     <div style={{ width: "100%" }}>
@@ -76,7 +64,7 @@ export default function LocalPacksGrid({
           gap: 14,
         }}
       >
-        {sortedPacks.map(({ pack, levels, stats, unlocked }) => {
+        {enrichedPacks.map(({ pack, levels, stats, unlocked }) => {
           const locked = !unlocked;
           const packId = String(pack.packId || "").toLowerCase();
           const packName = text(
