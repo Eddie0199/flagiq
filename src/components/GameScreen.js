@@ -429,9 +429,8 @@ export default function GameScreen({
         activeLocalPack?.title || localFlagsLabel
       );
     }
-    if (packId === "all" && current?.correct && isLocalFlag(current.correct)) {
-      const nameKey = current.correct.nameKey;
-      return nameKey ? text(nameKey, current.correct.name) : current.correct.name;
+    if (packId === "all") {
+      return text("localFlags.packs.all.short", "All");
     }
     return null;
   })();
