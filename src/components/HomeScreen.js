@@ -600,6 +600,10 @@ export default function HomeScreen({
               gap: 8,
               fontWeight: 700,
               alignItems: "center",
+              justifyContent: "flex-end",
+              marginLeft: "auto",
+              whiteSpace: "nowrap",
+              lineHeight: 1.1,
             }}
           >
             <span>
