@@ -20,8 +20,6 @@ const STRINGS = {
     timeTrialDesc: "Beat the timer!",
     localFlags: "Local Flags",
     localFlagsDesc: "Expert players only",
-    "localFlags.packType.all": "All Pack",
-    "localFlags.packType.country": "Country Pack",
     "localFlags.packs.all.name": "All Local Flags",
     "localFlags.packs.ch.name": "Switzerland",
     "localFlags.packs.de.name": "Germany",
