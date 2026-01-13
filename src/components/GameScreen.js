@@ -89,6 +89,7 @@ export default function GameScreen({
   const hintKey = getHintSeenKey(playerId);
   const [showHintInfo, setShowHintInfo] = useState(false);
   const [localFlagImages, setLocalFlagImages] = useState({});
+  const localFlagPreloadRef = useRef(new Set());
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
@@ -368,6 +369,28 @@ export default function GameScreen({
     if (code && localFlagImages[code]) return;
     void loadLocalFlagImage(current.correct);
   }, [current?.correct, localFlagImages]);
+  useEffect(() => {
+    if (mode !== "local") return;
+    const pool = levelDef?.pool || [];
+    const localFlags = pool.filter(isLocalFlag);
+    if (!localFlags.length) return;
+
+    const queue = localFlags.filter(
+      (flag) =>
+        flag?.code &&
+        !localFlagImages[flag.code] &&
+        !localFlagPreloadRef.current.has(flag.code)
+    );
+    if (!queue.length) return;
+    queue.forEach((flag) => localFlagPreloadRef.current.add(flag.code));
+
+    const preloadNext = async (index) => {
+      if (index >= queue.length) return;
+      await loadLocalFlagImage(queue[index]);
+      await preloadNext(index + 1);
+    };
+    void preloadNext(0);
+  }, [levelDef, localFlagImages, mode]);
   const optionNameKeys = useMemo(() => {
     const map = new Map();
     (levelDef?.pool || []).forEach((flag) => {
@@ -416,7 +439,9 @@ export default function GameScreen({
   const isLocalCurrent = current?.correct && isLocalFlag(current.correct);
   const localFallbackSrc = current?.correct?.fallbackImg || "";
   const displayFlagSrc = isLocalCurrent
-    ? localFlagImages[current.correct.code] || localFallbackSrc || currentFlagSrc
+    ? localFlagImages[current.correct.code] ||
+      currentFlagSrc ||
+      localFallbackSrc
     : currentFlagSrc;
 
   // ---------- best-ever stars for badge (from persistent store) ----------
