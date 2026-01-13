@@ -569,7 +569,7 @@ export default function HomeScreen({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "18px 20px",
+          padding: "18px 14px",
           borderRadius: 22,
           border: "none",
           background: color,
@@ -608,7 +608,7 @@ export default function HomeScreen({
         ) : (
           <div
             style={{
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: 600,
               maxWidth: 220,
               whiteSpace: "nowrap",
@@ -758,7 +758,7 @@ export default function HomeScreen({
         />
         <Card
           color="#ef4444"
-          icon="🧭"
+          icon="💀"
           title={text("localFlags", "Local Flags")}
           stats={{ level: 0, stars: 0 }}
           onClick={() => onStart && onStart("local")}
