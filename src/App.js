@@ -1776,6 +1776,7 @@ export default function App() {
             pack={activeLocalPack}
             levels={localPackLevels}
             progress={progress}
+            onLockedAttempt={(info) => setLockInfo(info)}
             onLevelClick={(level) => {
               setMode("local");
               setLevelId(level.id);
