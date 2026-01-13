@@ -20,6 +20,7 @@ import {
   LOCAL_PACKS,
   buildLocalPackLevels,
   getLocalLevelStars,
+  getLocalPackProgress,
 } from "./localPacks";
 
 // 🔹 NEW: Supabase client import
@@ -1626,6 +1627,14 @@ export default function App() {
       : Number.isFinite(Number(modeProgress.unlockedUntil))
       ? Number(modeProgress.unlockedUntil)
       : computeUnlockedLevels(starsByLevel || {});
+  const localPackStarsTotal = useMemo(
+    () =>
+      LOCAL_PACKS.reduce((total, pack) => {
+        const stats = getLocalPackProgress(pack, progress);
+        return total + stats.starsEarned;
+      }, 0),
+    [progress]
+  );
   const localFlagsLabelRaw = t && lang ? t(lang, "localFlags") : "Local Flags";
   const localFlagsLabel =
     localFlagsLabelRaw === "localFlags" ? "Local Flags" : localFlagsLabelRaw;
@@ -1731,13 +1740,41 @@ export default function App() {
           <div style={{ padding: "12px 16px", maxWidth: 980, margin: "0 auto" }}>
             <div
               style={{
-                fontSize: 22,
-                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
                 marginBottom: 12,
-                color: "#0f172a",
               }}
             >
-              {localFlagsLabel}
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: "#0f172a",
+                }}
+              >
+                {localFlagsLabel}
+              </div>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.95)",
+                  border: "1px solid #e2e8f0",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  boxShadow: "0 6px 14px rgba(15, 23, 42, 0.08)",
+                }}
+                aria-label="Total stars earned"
+              >
+                <span>{localPackStarsTotal}</span>
+                <span style={{ fontSize: 14, lineHeight: 1 }}>★</span>
+              </div>
             </div>
             <LocalPacksGrid
               packs={LOCAL_PACKS}
