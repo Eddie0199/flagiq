@@ -420,7 +420,6 @@ export default function GameScreen({
     return value === key ? fallback : value;
   };
   const localFlagsLabel = text("localFlags", "Local Flags");
-  const localFlagLabel = text("localFlag", "Local Flag");
   const localPackLabel = (() => {
     if (mode !== "local") return null;
     const packId = String(activeLocalPack?.packId || "").toLowerCase();
@@ -437,7 +436,7 @@ export default function GameScreen({
     return null;
   })();
   const localModeLabel = localPackLabel
-    ? `${localPackLabel} - ${localFlagLabel}`
+    ? `${localPackLabel} - ${localFlagsLabel}`
     : localFlagsLabel;
   const modeLabel =
     mode === "timetrial"
