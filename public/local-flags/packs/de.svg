@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect width="96" height="64" rx="10" fill="#f59e0b" />
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#ffffff">DE</text>
+  <rect width="96" height="64" rx="10" fill="#000000" />
+  <rect y="21.3" width="96" height="21.3" fill="#dd0000" />
+  <rect y="42.6" width="96" height="21.4" fill="#ffce00" />
 </svg>

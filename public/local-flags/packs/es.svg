@@ -1,4 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect width="96" height="64" rx="10" fill="#f97316" />
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#ffffff">ES</text>
+  <rect width="96" height="64" rx="10" fill="#aa151b" />
+  <rect y="16" width="96" height="32" fill="#f1bf00" />
 </svg>

@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
-  <rect width="96" height="64" rx="10" fill="#3b82f6" />
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-size="20" font-weight="700" fill="#ffffff">US</text>
+  <rect width="96" height="64" rx="10" fill="#ffffff" />
+  <rect width="96" height="7" y="0" fill="#b22234" />
+  <rect width="96" height="7" y="14" fill="#b22234" />
+  <rect width="96" height="7" y="28" fill="#b22234" />
+  <rect width="96" height="7" y="42" fill="#b22234" />
+  <rect width="96" height="7" y="56" fill="#b22234" />
+  <rect width="42" height="35" fill="#3c3b6e" />
 </svg>
