@@ -1873,7 +1873,7 @@ export default function App() {
             t={t}
             lang={lang}
             coins={coins}
-            onCoinsClick={openStoreFromScreen}
+            disableCoinsClick
           />
           <GameScreen
             t={t}

@@ -101,7 +101,7 @@ function HeartsPill({ hearts, t, lang }) {
   );
 }
 
-function CoinsPill({ username, coinsProp, t, lang, onClick }) {
+function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
   const [coins, setCoins] = useState(() => getCoinsByUser(username));
 
   // keep in sync with storage so it updates when GameScreen/home change it
@@ -119,7 +119,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick }) {
 
   const label = t && lang ? t(lang, "coinsPillLabel") : "Shop"; // small hint it opens a shop
 
-  const clickable = typeof onClick === "function";
+  const clickable = typeof onClick === "function" && !disableClick;
   const Wrapper = clickable ? "button" : "div";
 
   return (
@@ -193,6 +193,7 @@ export default function Header({
   coins = 0, // live coins prop from parent
   username,
   onCoinsClick, // optional: when provided, coins pill becomes clickable
+  disableCoinsClick = false,
 }) {
   return (
     <div
@@ -242,6 +243,7 @@ export default function Header({
           t={t}
           lang={lang}
           onClick={onCoinsClick}
+          disableClick={disableCoinsClick}
         />
       </div>
 
