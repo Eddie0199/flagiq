@@ -1873,6 +1873,7 @@ export default function App() {
             t={t}
             lang={lang}
             coins={coins}
+            disableCoinsClick
           />
           <GameScreen
             t={t}
