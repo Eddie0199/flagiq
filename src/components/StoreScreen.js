@@ -406,8 +406,8 @@ export default function StoreScreen({
                   <div>
                     <div
                       style={{
-                        fontSize: 14,
-                        fontWeight: 700,
+                        fontSize: 12,
+                        fontWeight: 800,
                         color: "#0f172a",
                       }}
                     >
