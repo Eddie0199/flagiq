@@ -101,7 +101,7 @@ function HeartsPill({ hearts, t, lang }) {
   );
 }
 
-function CoinsPill({ username, coinsProp, t, lang, onClick }) {
+function CoinsPill({ username, coinsProp, t, lang, onClick, showShopLabel }) {
   const [coins, setCoins] = useState(() => getCoinsByUser(username));
 
   // keep in sync with storage so it updates when GameScreen/home change it
@@ -164,7 +164,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick }) {
     >
       <span aria-hidden="true">💰</span>
       <span>{displayCoins}</span>
-      {clickable && (
+      {clickable && showShopLabel && (
         <span
           style={{
             fontSize: 11,
@@ -193,6 +193,7 @@ export default function Header({
   coins = 0, // live coins prop from parent
   username,
   onCoinsClick, // optional: when provided, coins pill becomes clickable
+  showShopLabel = true,
 }) {
   return (
     <div
@@ -242,6 +243,7 @@ export default function Header({
           t={t}
           lang={lang}
           onClick={onCoinsClick}
+          showShopLabel={showShopLabel}
         />
       </div>
 

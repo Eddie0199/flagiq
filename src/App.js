@@ -1874,6 +1874,7 @@ export default function App() {
             lang={lang}
             coins={coins}
             onCoinsClick={openStoreFromScreen}
+            showShopLabel={false}
           />
           <GameScreen
             t={t}
