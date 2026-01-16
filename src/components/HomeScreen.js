@@ -602,14 +602,14 @@ export default function HomeScreen({
             style={{
               fontSize: 12,
               fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: 1,
-              background: "linear-gradient(135deg, #111827, #374151)",
-              color: "white",
-              padding: "6px 12px",
+              letterSpacing: 0.4,
+              background: "rgba(255, 255, 255, 0.95)",
+              color: "#111827",
+              padding: "7px 12px",
               borderRadius: 999,
               whiteSpace: "nowrap",
-              boxShadow: "0 6px 14px rgba(17,24,39,0.35)",
+              boxShadow: "0 8px 16px rgba(17,24,39,0.25)",
+              border: "1px solid rgba(17,24,39,0.15)",
             }}
           >
             {text("comingSoon", "Coming soon")}
