@@ -601,16 +601,18 @@ export default function HomeScreen({
           <div
             style={{
               fontSize: 12,
-              fontWeight: 700,
+              fontWeight: 800,
               textTransform: "uppercase",
-              letterSpacing: 0.8,
-              background: "rgba(107,114,128,0.15)",
-              padding: "6px 10px",
+              letterSpacing: 1,
+              background: "linear-gradient(135deg, #111827, #374151)",
+              color: "white",
+              padding: "6px 12px",
               borderRadius: 999,
               whiteSpace: "nowrap",
+              boxShadow: "0 6px 14px rgba(17,24,39,0.35)",
             }}
           >
-            Coming soon
+            {text("comingSoon", "Coming soon")}
           </div>
         ) : showProgress ? (
           <div
