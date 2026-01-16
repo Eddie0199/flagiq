@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.flaggame.app',
-  appName: 'Flag Game',
+  appId: 'com.wildmoustachegames.flagiq',
+  appName: 'FlagIQ',
   webDir: 'build',
   bundledWebRuntime: false,
   server: {
