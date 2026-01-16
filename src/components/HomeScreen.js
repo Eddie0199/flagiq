@@ -565,14 +565,16 @@ export default function HomeScreen({
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
 
-  const Card = ({ color, icon, title, stats, onClick, mode }) => {
+  const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
     const hasProgress = completedLevels > 0 || stars > 0;
+    const showProgress = hasProgress && !disabled;
 
     return (
       <button
-        onClick={onClick}
+        disabled={disabled}
+        onClick={disabled ? undefined : onClick}
         style={{
           width: "85%",
           maxWidth: 520,
@@ -584,16 +586,35 @@ export default function HomeScreen({
           padding: "18px 14px",
           borderRadius: 22,
           border: "none",
-          background: color,
-          boxShadow: "0 8px 18px rgba(0,0,0,.12)",
-          cursor: "pointer",
+          background: disabled ? "#e5e7eb" : color,
+          boxShadow: disabled ? "none" : "0 8px 18px rgba(0,0,0,.12)",
+          cursor: disabled ? "not-allowed" : "pointer",
+          color: disabled ? "#6b7280" : "inherit",
+          opacity: disabled ? 0.75 : 1,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 18 }}>{icon}</span>
           <span style={{ fontWeight: 800, fontSize: 22 }}>{title}</span>
         </div>
-        {hasProgress ? (
+        {disabled ? (
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: 0.4,
+              background: "rgba(255, 255, 255, 0.95)",
+              color: "#111827",
+              padding: "7px 12px",
+              borderRadius: 999,
+              whiteSpace: "nowrap",
+              boxShadow: "0 8px 16px rgba(17,24,39,0.25)",
+              border: "1px solid rgba(17,24,39,0.15)",
+            }}
+          >
+            {text("comingSoon", "Coming soon")}
+          </div>
+        ) : showProgress ? (
           <div
             style={{
               display: "flex",
@@ -779,6 +800,7 @@ export default function HomeScreen({
           stats={localFromStore}
           onClick={() => onStart && onStart("local")}
           mode="local"
+          disabled
         />
       </div>
 
