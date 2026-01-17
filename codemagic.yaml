@@ -5,7 +5,7 @@ workflows:
     instance_type: mac_mini_m1
     environment:
       groups:
-        - app_store_connect
+        - appstore_connect
       node: 18
       vars:
         BUNDLE_IDENTIFIER: com.wildmoustachegames.flagiq
