@@ -6,7 +6,7 @@ workflows:
     environment:
       groups:
         - appstore_connect
-      node: 18
+      node: 22
       vars:
         BUNDLE_IDENTIFIER: com.wildmoustachegames.flagiq
         XCODE_WORKSPACE: ios/App/App.xcworkspace
