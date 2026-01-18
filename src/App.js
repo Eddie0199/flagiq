@@ -32,8 +32,6 @@ import {
 } from "./playerStateApi";
 
 
-const VERSION = "v1.1";
-
 const LANGUAGE_STORAGE_KEY = "flagLang";
 const LEGACY_LANGUAGE_KEYS = ["flagiq:lang"];
 const SUPPORTED_LANGUAGE_CODES = new Set(LANGS.map((l) => l.code));
@@ -1839,23 +1837,6 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh" }}>
-      {/* version badge */}
-      <div
-        style={{
-          position: "fixed",
-          top: 6,
-          left: 8,
-          zIndex: 3,
-          fontSize: 11,
-          color: "#64748b",
-          background: "rgba(255,255,255,.8)",
-          padding: "2px 6px",
-          borderRadius: 8,
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        {VERSION}
-      </div>
       {debugOverlayEnabled && (
         <div
           onClick={handleDebugTap}
