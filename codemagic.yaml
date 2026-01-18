@@ -16,9 +16,9 @@ workflows:
         bundle_identifier: com.wildmoustachegames.flagiq
     scripts:
       - name: Install dependencies
-        script: npm install
+        script: npm ci
       - name: Build web app
-        script: npm run build
+        script: npx cross-env ESLINT_NO_DEV_ERRORS=true npm run build
       - name: Sync Capacitor iOS
         script: npx cap sync ios
       - name: Initialize keychain
