@@ -37,6 +37,8 @@ const VERSION = "v1.1";
 const LANGUAGE_STORAGE_KEY = "flagLang";
 const LEGACY_LANGUAGE_KEYS = ["flagiq:lang"];
 const SUPPORTED_LANGUAGE_CODES = new Set(LANGS.map((l) => l.code));
+const DEBUG_LOGS_STORAGE_KEY = "flagiq:debugLogs";
+const DEBUG_LOGS_MAX = 10;
 
 function normalizeLanguageCode(code) {
   const raw = String(code || "").toLowerCase();
@@ -65,6 +67,25 @@ function readLanguageFromStorage() {
     } catch (e) {}
   }
   return "en";
+}
+
+function readDebugLogs() {
+  try {
+    const raw = localStorage.getItem(DEBUG_LOGS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function persistDebugLogs(logs) {
+  try {
+    localStorage.setItem(DEBUG_LOGS_STORAGE_KEY, JSON.stringify(logs));
+  } catch (e) {
+    // ignore
+  }
 }
 
 // ----- constants -----
@@ -736,6 +757,19 @@ export default function App() {
     return <ResetPasswordPage />;
   }
 
+  const debugOverlayEnabled =
+    String(process.env.REACT_APP_DEBUG_OVERLAY || "true").toLowerCase() !==
+    "false";
+  const initialDebugLogs = useMemo(
+    () => (debugOverlayEnabled ? readDebugLogs() : []),
+    [debugOverlayEnabled]
+  );
+  const [debugLogs, setDebugLogs] = useState(initialDebugLogs);
+  const [debugError, setDebugError] = useState(initialDebugLogs[0] || null);
+  const [showDebugOverlay, setShowDebugOverlay] = useState(false);
+  const [showDebugScreen, setShowDebugScreen] = useState(false);
+  const debugTapRef = useRef({ count: 0, timer: null });
+
   // preferences
   const [lang, setLang] = useState(() => readLanguageFromStorage());
   const [backendPreferredLanguage, setBackendPreferredLanguage] = useState(null);
@@ -756,6 +790,131 @@ export default function App() {
     if (typeof window === "undefined") return;
     window.scrollTo(0, 0);
   }, [screen]);
+
+  const getDebugRoute = useCallback(() => {
+    if (typeof window === "undefined") return screen || "unknown";
+    const path = window.location?.pathname || "/";
+    const screenLabel = screen ? `screen:${screen}` : "";
+    return screenLabel ? `${path} (${screenLabel})` : path;
+  }, [screen]);
+
+  const captureDebugError = useCallback(
+    (error, meta = {}) => {
+      if (!debugOverlayEnabled) return;
+      const message =
+        typeof error === "string"
+          ? error
+          : error?.message || "Unknown error";
+      const stack =
+        typeof error === "string" ? "" : error?.stack || meta.stack || "";
+      const logEntry = {
+        id: Date.now(),
+        message,
+        stack,
+        route: getDebugRoute(),
+        timestamp: new Date().toISOString(),
+        source: meta.source || "",
+      };
+      setDebugError(logEntry);
+      setShowDebugOverlay(true);
+      setDebugLogs((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        const next = [logEntry, ...safePrev].slice(0, DEBUG_LOGS_MAX);
+        persistDebugLogs(next);
+        return next;
+      });
+    },
+    [debugOverlayEnabled, getDebugRoute]
+  );
+
+  const handleCopyDebugError = useCallback(() => {
+    if (!debugError || typeof document === "undefined") return;
+    const payload = [
+      `Message: ${debugError.message || "Unknown error"}`,
+      `Route: ${debugError.route || "unknown"}`,
+      `Time: ${debugError.timestamp || ""}`,
+      debugError.source ? `Source: ${debugError.source}` : null,
+      debugError.stack ? `Stack:\n${debugError.stack}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(payload).catch(() => {});
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = payload;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "absolute";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+    } catch (e) {
+      // ignore
+    }
+    document.body.removeChild(textarea);
+  }, [debugError]);
+
+  const handleDebugTap = useCallback(() => {
+    if (!debugOverlayEnabled) return;
+    const ref = debugTapRef.current;
+    ref.count += 1;
+    if (ref.timer) {
+      clearTimeout(ref.timer);
+    }
+    ref.timer = setTimeout(() => {
+      ref.count = 0;
+    }, 1200);
+    if (ref.count >= 7) {
+      ref.count = 0;
+      setShowDebugScreen(true);
+    }
+  }, [debugOverlayEnabled]);
+
+  useEffect(() => {
+    if (!debugOverlayEnabled || typeof window === "undefined") return;
+    const handleError = (event) => {
+      if (event?.error) {
+        captureDebugError(event.error, {
+          stack: event.error?.stack,
+          source: event.filename,
+        });
+        return;
+      }
+      captureDebugError(event?.message || "Unknown error", {
+        stack: "",
+        source: event?.filename,
+      });
+    };
+    const handleRejection = (event) => {
+      const reason = event?.reason;
+      if (reason instanceof Error) {
+        captureDebugError(reason);
+        return;
+      }
+      captureDebugError(
+        typeof reason === "string" ? reason : "Unhandled promise rejection",
+        { stack: reason?.stack }
+      );
+    };
+    window.addEventListener("error", handleError);
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => {
+      window.removeEventListener("error", handleError);
+      window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, [captureDebugError, debugOverlayEnabled]);
+
+  useEffect(() => {
+    return () => {
+      const ref = debugTapRef.current;
+      if (ref.timer) {
+        clearTimeout(ref.timer);
+      }
+    };
+  }, []);
 
   const [users, setUsers] = useLocalStorage("flagiq:users", {});
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
@@ -1697,6 +1856,21 @@ export default function App() {
       >
         {VERSION}
       </div>
+      {debugOverlayEnabled && (
+        <div
+          onClick={handleDebugTap}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: 72,
+            height: 72,
+            zIndex: 4,
+            background: "transparent",
+          }}
+          aria-hidden="true"
+        />
+      )}
 
       {/* HOME */}
       {screen === "home" && (
@@ -2013,6 +2187,195 @@ export default function App() {
       {!screen && (
         <div style={{ color: "white", textAlign: "center", marginTop: 100 }}>
           ⚠️ App loaded but no screen selected (state: {String(screen)})
+        </div>
+      )}
+
+      {debugOverlayEnabled && showDebugScreen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9998,
+            background: "rgba(15, 23, 42, 0.92)",
+            color: "white",
+            overflowY: "auto",
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 900,
+              margin: "0 auto",
+              background: "rgba(15, 23, 42, 0.8)",
+              borderRadius: 12,
+              padding: 20,
+              border: "1px solid rgba(148, 163, 184, 0.4)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ fontSize: 18, fontWeight: 700 }}>Debug Logs</div>
+              <button
+                onClick={() => setShowDebugScreen(false)}
+                style={{
+                  background: "rgba(148, 163, 184, 0.2)",
+                  border: "1px solid rgba(148, 163, 184, 0.4)",
+                  color: "white",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            {debugLogs.length === 0 && (
+              <div style={{ color: "#cbd5f5" }}>
+                No stored logs yet.
+              </div>
+            )}
+            {debugLogs.map((log) => (
+              <div
+                key={log.id || `${log.timestamp}-${log.message}`}
+                style={{
+                  border: "1px solid rgba(148, 163, 184, 0.3)",
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 12,
+                  background: "rgba(15, 23, 42, 0.65)",
+                }}
+              >
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                  {log.message || "Unknown error"}
+                </div>
+                <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+                  {log.timestamp || "Unknown time"}
+                </div>
+                <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+                  Route: {log.route || "unknown"}
+                </div>
+                {log.source && (
+                  <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+                    Source: {log.source}
+                  </div>
+                )}
+                {log.stack && (
+                  <pre
+                    style={{
+                      marginTop: 10,
+                      padding: 10,
+                      background: "rgba(2, 6, 23, 0.75)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {log.stack}
+                  </pre>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {debugOverlayEnabled && showDebugOverlay && debugError && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.92)",
+            color: "white",
+            padding: 20,
+            overflowY: "auto",
+          }}
+        >
+          <div
+            style={{
+              maxWidth: 900,
+              margin: "0 auto",
+              background: "rgba(15, 23, 42, 0.85)",
+              borderRadius: 12,
+              padding: 20,
+              border: "1px solid rgba(148, 163, 184, 0.4)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 18, fontWeight: 700 }}>
+                Debug Overlay
+              </div>
+              <button
+                onClick={() => setShowDebugOverlay(false)}
+                style={{
+                  background: "rgba(148, 163, 184, 0.2)",
+                  border: "1px solid rgba(148, 163, 184, 0.4)",
+                  color: "white",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  fontWeight: 600,
+                }}
+              >
+                Close
+              </button>
+            </div>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>
+              {debugError.message || "Unknown error"}
+            </div>
+            <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+              Route: {debugError.route || "unknown"}
+            </div>
+            {debugError.source && (
+              <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+                Source: {debugError.source}
+              </div>
+            )}
+            {debugError.stack && (
+              <pre
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: "rgba(2, 6, 23, 0.75)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                }}
+              >
+                {debugError.stack}
+              </pre>
+            )}
+            <div style={{ marginTop: 16 }}>
+              <button
+                onClick={handleCopyDebugError}
+                style={{
+                  background: "#38bdf8",
+                  color: "#0f172a",
+                  border: "none",
+                  padding: "10px 16px",
+                  borderRadius: 10,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
