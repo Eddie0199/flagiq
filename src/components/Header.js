@@ -196,79 +196,66 @@ export default function Header({
   disableCoinsClick = false,
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr auto auto auto",
-        alignItems: "center",
-        padding: "8px 12px",
-        gap: 10,
-      }}
-    >
-      {/* Back button */}
-      <div style={{ justifySelf: "start" }}>
-        {showBack ? (
-          <button
-            onClick={onBack}
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #e2e8f0",
-              background: "#fff",
-              cursor: "pointer",
-              fontWeight: 500,
-            }}
-          >
-            ← {t && lang ? t(lang, "back") : "Back"}
-          </button>
-        ) : null}
-      </div>
+    <div className="header-wrapper">
+      <div className="header-row">
+        {/* Back button */}
+        <div className="header-left">
+          {showBack ? (
+            <button
+              onClick={onBack}
+              className="header-back-button"
+              style={{
+                padding: "10px 12px",
+                borderRadius: 10,
+                border: "1px solid #e2e8f0",
+                background: "#fff",
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+            >
+              ← {t && lang ? t(lang, "back") : "Back"}
+            </button>
+          ) : null}
+        </div>
 
-      {/* Hearts pill */}
-      <div style={{ justifySelf: "center" }}>
-        {showHearts && hearts ? (
-          <HeartsPill
-            hearts={hearts}
+        {/* Hearts pill */}
+        <div className="header-center">
+          {showHearts && hearts ? (
+            <HeartsPill hearts={hearts} t={t} lang={lang} />
+          ) : null}
+        </div>
+
+        {/* Coins pill + Settings */}
+        <div className="header-right">
+          <CoinsPill
+            username={username}
+            coinsProp={coins}
             t={t}
             lang={lang}
+            onClick={onCoinsClick}
+            disableClick={disableCoinsClick}
           />
-        ) : null}
-      </div>
-
-      {/* Coins pill */}
-      <div style={{ justifySelf: "end" }}>
-        <CoinsPill
-          username={username}
-          coinsProp={coins}
-          t={t}
-          lang={lang}
-          onClick={onCoinsClick}
-          disableClick={disableCoinsClick}
-        />
-      </div>
-
-      {/* Settings */}
-      <div style={{ justifySelf: "end" }}>
-        <button
-          onClick={onSettings}
-          aria-label={t && lang ? t(lang, "settings") : "Settings"}
-          title={t && lang ? t(lang, "settings") : "Settings"}
-          style={{
-            background: "#f1f5f9",
-            color: "#0f172a",
-            border: "1px solid #e2e8f0",
-            borderRadius: 999,
-            width: 36,
-            height: 36,
-            lineHeight: "36px",
-            textAlign: "center",
-            fontSize: 18,
-            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-            cursor: "pointer",
-          }}
-        >
-          ⚙️
-        </button>
+          <button
+            onClick={onSettings}
+            aria-label={t && lang ? t(lang, "settings") : "Settings"}
+            title={t && lang ? t(lang, "settings") : "Settings"}
+            style={{
+              background: "#f1f5f9",
+              color: "#0f172a",
+              border: "1px solid #e2e8f0",
+              borderRadius: 999,
+              width: 36,
+              height: 36,
+              lineHeight: "36px",
+              textAlign: "center",
+              fontSize: 18,
+              boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+              cursor: "pointer",
+            }}
+          >
+            ⚙️
+          </button>
+        </div>
       </div>
     </div>
   );
