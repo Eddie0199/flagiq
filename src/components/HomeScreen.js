@@ -588,7 +588,7 @@ export default function HomeScreen({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "18px 14px",
+          padding: "12px 14px",
           borderRadius: 22,
           border: "none",
           background: disabled ? "#e5e7eb" : color,
