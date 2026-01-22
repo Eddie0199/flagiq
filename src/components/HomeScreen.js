@@ -542,6 +542,8 @@ export default function HomeScreen({
   progress,
   dailySpinLastClaimedAt,
   onDailySpinClaim,
+  loggedIn,
+  onAuthRequest,
 }) {
   // no scroll
   useEffect(() => {
@@ -761,41 +763,91 @@ export default function HomeScreen({
       </div>
 
       {/* game cards */}
-      <div
-        style={{
-          marginTop: 60,
-          width: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <Card
-          color="#f3cc2f"
-          icon="🚩"
-          title={text("classic", "Classic")}
-          stats={classicFromStore}
-          onClick={() => onStart && onStart("classic")}
-          mode="classic"
-        />
-        <Card
-          color="#38c5dd"
-          icon="⏱️"
-          title={text("timeTrial", "Time Trial")}
-          stats={timetrialFromStore}
-          onClick={() => onStart && onStart("timetrial")}
-          mode="timetrial"
-        />
-        <Card
-          color="#ef4444"
-          icon="💀"
-          title={text("localFlags", "Local Flags")}
-          stats={localFromStore}
-          onClick={() => onStart && onStart("local")}
-          mode="local"
-          disabled
-        />
-      </div>
+      {loggedIn ? (
+        <div
+          style={{
+            marginTop: 60,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <Card
+            color="#f3cc2f"
+            icon="🚩"
+            title={text("classic", "Classic")}
+            stats={classicFromStore}
+            onClick={() => onStart && onStart("classic")}
+            mode="classic"
+          />
+          <Card
+            color="#38c5dd"
+            icon="⏱️"
+            title={text("timeTrial", "Time Trial")}
+            stats={timetrialFromStore}
+            onClick={() => onStart && onStart("timetrial")}
+            mode="timetrial"
+          />
+          <Card
+            color="#ef4444"
+            icon="💀"
+            title={text("localFlags", "Local Flags")}
+            stats={localFromStore}
+            onClick={() => onStart && onStart("local")}
+            mode="local"
+            disabled
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            marginTop: 60,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+          }}
+        >
+          <button
+            onClick={() => onAuthRequest && onAuthRequest("login")}
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              padding: "12px 16px",
+              borderRadius: 22,
+              border: "none",
+              background: "#0f172a",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 16,
+              boxShadow: "0 8px 18px rgba(15,23,42,.2)",
+              cursor: "pointer",
+            }}
+          >
+            {text("login", "Log in")}
+          </button>
+          <button
+            onClick={() => onAuthRequest && onAuthRequest("signup")}
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              padding: "12px 16px",
+              borderRadius: 22,
+              border: "1px solid rgba(15,23,42,0.2)",
+              background: "rgba(255,255,255,0.95)",
+              color: "#0f172a",
+              fontWeight: 700,
+              fontSize: 16,
+              boxShadow: "0 8px 18px rgba(0,0,0,.12)",
+              cursor: "pointer",
+            }}
+          >
+            {text("auth.signupTab", "Sign up")}
+          </button>
+        </div>
+      )}
 
       {/* footer */}
       <div

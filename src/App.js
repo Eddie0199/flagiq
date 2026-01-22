@@ -1837,8 +1837,8 @@ export default function App() {
     tone(200, 0.1, "sawtooth");
   };
 
-  const openAuth = () => {
-    setAuthTab("login");
+  const openAuth = (tab = "login") => {
+    setAuthTab(tab);
     setAuthOpen(true);
   };
   const closeAuth = () => setAuthOpen(false);
@@ -1849,7 +1849,7 @@ export default function App() {
 
   const handleHomeStart = (nextMode, pack) => {
     if (!loggedIn) {
-      openAuth();
+      openAuth("login");
       return;
     }
     if (nextMode === "local") {
@@ -1867,7 +1867,7 @@ export default function App() {
   const handleLocalPackSelect = useCallback(
     (pack) => {
       if (!loggedIn) {
-        openAuth();
+        openAuth("login");
         return;
       }
       if (pack?.packId) {
@@ -2009,6 +2009,8 @@ export default function App() {
             cooldowns?.dailySpin?.last_claimed_at || null
           }
           onDailySpinClaim={handleDailySpinClaim}
+          loggedIn={loggedIn}
+          onAuthRequest={openAuth}
         />
       )}
 
