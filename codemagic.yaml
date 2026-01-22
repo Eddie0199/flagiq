@@ -51,6 +51,22 @@ workflows:
           echo "CFBundleShortVersionString: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$INFO_PLIST")"
           echo "CFBundleVersion: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")"
           echo "Final CFBundleVersion (App target): $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$INFO_PLIST")"
+      - name: Set iOS build number
+        script: |
+          #!/usr/bin/env bash
+          set -e
+
+          echo "CM_BUILD_NUMBER=$CM_BUILD_NUMBER"
+
+          INFO_PLIST="ios/App/App/App/Info.plist"
+
+          # Set build number (CFBundleVersion)
+           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CM_BUILD_NUMBER" "$INFO_PLIST" \
+           || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $CM_BUILD_NUMBER" "$INFO_PLIST"
+
+          # Print to confirm
+          /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$INFO_PLIST" || true
+          /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$INFO_PLIST" || true
       - name: Build IPA
         script: |
           xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
