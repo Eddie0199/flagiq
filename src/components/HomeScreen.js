@@ -615,18 +615,8 @@ export default function HomeScreen({
               minWidth: 0,
             }}
           >
-            <span style={{ fontWeight: 800, fontSize: 22 }}>{title}</span>
-            <span
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {description}
-            </span>
+            <span className="home-card-title">{title}</span>
+            <span className="home-card-description">{description}</span>
           </div>
         </div>
         {disabled ? (

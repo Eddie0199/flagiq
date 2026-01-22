@@ -1407,13 +1407,7 @@ export default function GameScreen({
           </div>
 
           {/* ANSWERS */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-              gap: 12,
-            }}
-          >
+          <div className="game-answers">
             {current
               ? current.options.map((opt) => {
                   const isSelected = selectedAnswer === opt;
@@ -1463,6 +1457,7 @@ export default function GameScreen({
                         opacity: isWrong ? 0.5 : 1,
                         transition: "background 0.15s ease, border 0.15s ease",
                       }}
+                      className="game-answer-button"
                     >
                       {label}
                     </button>
