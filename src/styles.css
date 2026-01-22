@@ -86,22 +86,34 @@ body {
 
 .home-card-title {
   font-weight: 800;
-  font-size: 22px;
+  font-size: 20px;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.home-card-description {
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.2;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.home-card-description {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.home-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 48px;
+  justify-content: center;
 }
 
 .mode-progress-row {

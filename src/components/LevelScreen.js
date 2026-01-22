@@ -79,17 +79,28 @@ export default function LevelScreen({
   }, [progress, mode, starsByLevelFromStore]);
 
   return (
-    <div style={{ padding: "6px 12px", maxWidth: 960, margin: "0 auto" }}>
+    <div
+      style={{
+        padding: "4px 12px 10px",
+        maxWidth: 960,
+        margin: "0 auto",
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       {/* Title row below header */}
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "1fr auto",
           alignItems: "center",
-          margin: "8px 0 10px",
+          margin: "4px 0 8px",
         }}
       >
-        <div style={{ justifySelf: "start", fontSize: 20, fontWeight: 800 }}>
+        <div style={{ justifySelf: "start", fontSize: 18, fontWeight: 800 }}>
           {t ? t(lang, "selectLevel") : "Select level"}
         </div>
         <div style={{ justifySelf: "end" }}>
@@ -100,8 +111,10 @@ export default function LevelScreen({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 14,
+          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+          gap: "clamp(8px, 2vw, 12px)",
+          flex: 1,
+          minHeight: 0,
         }}
       >
         {Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map((id) => {
