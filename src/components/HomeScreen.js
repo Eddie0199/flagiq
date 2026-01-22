@@ -568,8 +568,13 @@ export default function HomeScreen({
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
-    const hasProgress = completedLevels > 0 || stars > 0;
-    const showProgress = hasProgress && !disabled;
+    const showProgress = !disabled;
+    const description =
+      mode === "classic"
+        ? text("classicDesc", "Learn flags at your pace")
+        : mode === "timetrial"
+        ? text("timeTrialDesc", "Beat the timer!")
+        : text("localFlagsDesc", "Country packs focused on regional flags.");
 
     return (
       <button
@@ -583,7 +588,7 @@ export default function HomeScreen({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "18px 14px",
+          padding: "12px 14px",
           borderRadius: 22,
           border: "none",
           background: disabled ? "#e5e7eb" : color,
@@ -593,9 +598,36 @@ export default function HomeScreen({
           opacity: disabled ? 0.75 : 1,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flex: "1 1 auto",
+            minWidth: 0,
+          }}
+        >
           <span style={{ fontSize: 18 }}>{icon}</span>
-          <span style={{ fontWeight: 800, fontSize: 22 }}>{title}</span>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+            }}
+          >
+            <span style={{ fontWeight: 800, fontSize: 22 }}>{title}</span>
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
+              {description}
+            </span>
+          </div>
         </div>
         {disabled ? (
           <div
@@ -615,53 +647,26 @@ export default function HomeScreen({
             {text("comingSoon", "Coming soon")}
           </div>
         ) : showProgress ? (
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              fontWeight: 700,
-              alignItems: "center",
-              justifyContent: "flex-end",
-              marginLeft: "auto",
-              whiteSpace: "nowrap",
-              lineHeight: 1.1,
-            }}
-          >
-            <span>
-              {text("levelsCompleted", "Levels Completed")} {completedLevels}
+          <div className="mode-progress-row">
+            {/* Use icon tokens for progress to avoid localisation overflow. */}
+            <span className="mode-progress-token mode-progress-flag">
+              <span className="mode-progress-icon" aria-hidden="true">
+                🏁
+              </span>
+              <span className="mode-progress-value">{completedLevels}</span>
             </span>
-            <span>•</span>
-            <span
-              style={{
-                display: "flex",
-                gap: 3,
-                alignItems: "center",
-              }}
-            >
-              <span>{stars}</span>
-              <span style={{ fontSize: 15, lineHeight: 1 }}>★</span>
+            <span className="mode-progress-sep" aria-hidden="true">
+              ·
+            </span>
+            <span className="mode-progress-token mode-progress-stars">
+              <span className="mode-progress-icon" aria-hidden="true">
+                ⭐
+              </span>
+              <span className="mode-progress-value">{stars}</span>
             </span>
           </div>
         ) : (
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              maxWidth: 220,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {mode === "classic"
-              ? text("classicDesc", "Learn flags at your pace")
-              : mode === "timetrial"
-              ? text("timeTrialDesc", "Beat the timer!")
-              : text(
-                  "localFlagsDesc",
-                  "Country packs focused on regional flags."
-                )}
-          </div>
+          <div />
         )}
       </button>
     );

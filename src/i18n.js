@@ -205,7 +205,6 @@ const STRINGS = {
     coins: "Coins",
 
     levelWord: "Level",
-    levelsCompleted: "Levels Completed",
 
     coinsEarnedMessage: "You earned 100 coins!",
 
@@ -623,7 +622,6 @@ const STRINGS = {
     createAccount: "Crear cuenta",
 
     levelWord: "Nivel",
-    levelsCompleted: "Niveles completados",
     coins: "Monedas",
     coinsEarnedMessage: "¡Has ganado 100 monedas!",
 
@@ -1049,7 +1047,6 @@ const STRINGS = {
     createAccount: "Criar conta",
 
     levelWord: "Nível",
-    levelsCompleted: "Níveis concluídos",
 
     gameOver: "Fim de jogo",
     tryAgain: "Tentar novamente",
@@ -1476,7 +1473,6 @@ const STRINGS = {
     storeAllBundle: "Dreierpaket (je 1)",
 
     levelWord: "Level",
-    levelsCompleted: "Abgeschlossene Level",
 
     gameOver: "Spiel vorbei",
     tryAgain: "Nochmal",
@@ -1908,7 +1904,6 @@ const STRINGS = {
     storeAllBundle: "Pack triple (1 de chaque)",
 
     levelWord: "Niveau",
-    levelsCompleted: "Niveaux terminés",
 
     gameOver: "Partie terminée",
     tryAgain: "Rejouer",
@@ -2336,7 +2331,6 @@ const STRINGS = {
     storeAllBundle: "Triple-pack (1 van elke)",
 
     levelWord: "Level",
-    levelsCompleted: "Voltooide levels",
 
     gameOver: "Game over",
     tryAgain: "Opnieuw proberen",

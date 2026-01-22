@@ -22,3 +22,54 @@ body {
 #root {
   min-height: 100vh;
 }
+
+.mode-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(4px, 1.5vw, 8px);
+  font-weight: 700;
+  white-space: nowrap;
+  line-height: 1.1;
+  margin-left: auto;
+  flex-shrink: 1;
+}
+
+.mode-progress-token {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(2px, 1vw, 6px);
+}
+
+.mode-progress-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+@media (max-width: 380px) {
+  .mode-progress-row {
+    gap: 4px;
+  }
+
+  .mode-progress-token {
+    gap: 2px;
+  }
+}
+
+@media (max-width: 340px) {
+  .mode-progress-sep {
+    display: none;
+  }
+}
+
+@media (max-width: 320px) {
+  .mode-progress-stars {
+    display: none;
+  }
+}
+
+@media (max-width: 300px) {
+  .mode-progress-icon {
+    display: none;
+  }
+}
