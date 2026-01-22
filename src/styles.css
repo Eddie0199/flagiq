@@ -111,8 +111,9 @@ body {
 .home-card-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 64px;
+  gap: 2px;
+  min-height: 48px;
+  justify-content: center;
 }
 
 .mode-progress-row {
