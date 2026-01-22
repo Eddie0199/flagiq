@@ -24,7 +24,12 @@ import {
 } from "./localPacks";
 
 // 🔹 NEW: Supabase client import
-import { missingSupabaseEnv, supabase } from "./supabaseClient";
+import {
+  missingSupabaseEnv,
+  supabase,
+  restoreSupabaseSession,
+  subscribeToSupabaseAuth,
+} from "./supabaseClient";
 import {
   ensurePlayerState,
   getPlayerState,
@@ -76,6 +81,17 @@ function readDebugLogs() {
   } catch (e) {
     return [];
   }
+}
+
+function getAuthUserLabel(user) {
+  if (!user) return "";
+  return (
+    user.user_metadata?.display_name ||
+    user.user_metadata?.username ||
+    user.email ||
+    user.id ||
+    ""
+  );
 }
 
 function persistDebugLogs(logs) {
@@ -1064,6 +1080,46 @@ export default function App() {
   const loggedIn = !!activeUser;
   const [backendLoaded, setBackendLoaded] = useState(false);
 
+  useEffect(() => {
+    if (!supabase) return;
+    let cancelled = false;
+    (async () => {
+      await restoreSupabaseSession();
+      if (cancelled) return;
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        const user = data?.user;
+        if (user && !cancelled) {
+          setActiveUser(user.id || user.email || "");
+          setActiveUserLabel(getAuthUserLabel(user));
+        }
+      } catch (e) {
+        // ignore restore errors
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setActiveUser, setActiveUserLabel]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const unsubscribe = subscribeToSupabaseAuth((event, session) => {
+      if (event === "SIGNED_OUT" || !session?.user) {
+        setActiveUser("");
+        setActiveUserLabel("");
+        return;
+      }
+      const user = session.user;
+      setActiveUser(user.id || user.email || "");
+      setActiveUserLabel(getAuthUserLabel(user));
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [setActiveUser, setActiveUserLabel]);
+
   const handleLanguageChange = useCallback(
     (next) => {
       const normalized = normalizeLanguageCode(next);
@@ -1652,6 +1708,22 @@ export default function App() {
     () => (activeLocalPack ? buildLocalPackLevels(activeLocalPack) : []),
     [activeLocalPack]
   );
+  const localMaxLevels = useMemo(
+    () =>
+      LOCAL_PACKS.reduce(
+        (total, pack) => total + buildLocalPackLevels(pack).length,
+        0
+      ),
+    []
+  );
+  const homeMaxLevels = useMemo(
+    () => ({
+      classic: levels.length,
+      timetrial: levels.length,
+      local: localMaxLevels,
+    }),
+    [levels.length, localMaxLevels]
+  );
   const localLevelLabel = useMemo(() => {
     if (mode !== "local") return null;
     return localPackLevels.find((level) => level.id === levelId)?.label || null;
@@ -2001,6 +2073,7 @@ export default function App() {
           onStart={handleHomeStart}
           classicStats={classicStats}
           timetrialStats={timetrialStats}
+          maxLevelsByMode={homeMaxLevels}
           t={t}
           lang={lang}
           setHints={setHints}

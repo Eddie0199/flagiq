@@ -536,6 +536,7 @@ export default function HomeScreen({
   onStart,
   classicStats, // still accepted but unused; we rely on fresh calc
   timetrialStats, // (kept for backward compatibility with App)
+  maxLevelsByMode,
   t,
   lang,
   setHints, // pass from parent so spinner can add hints
@@ -571,6 +572,8 @@ export default function HomeScreen({
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
     const showProgress = !disabled;
+    const maxLevels = Number(maxLevelsByMode?.[mode] ?? 0);
+    const maxStars = maxLevels * 3;
     const description =
       mode === "classic"
         ? text("classicDesc", "Learn flags at your pace")
@@ -643,7 +646,9 @@ export default function HomeScreen({
               <span className="mode-progress-icon" aria-hidden="true">
                 🏁
               </span>
-              <span className="mode-progress-value">{completedLevels}</span>
+              <span className="mode-progress-value">
+                {completedLevels}/{maxLevels}
+              </span>
             </span>
             <span className="mode-progress-sep" aria-hidden="true">
               ·
@@ -652,7 +657,9 @@ export default function HomeScreen({
               <span className="mode-progress-icon" aria-hidden="true">
                 ⭐
               </span>
-              <span className="mode-progress-value">{stars}</span>
+              <span className="mode-progress-value">
+                {stars}/{maxStars}
+              </span>
             </span>
           </div>
         ) : (
