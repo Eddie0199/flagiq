@@ -61,7 +61,7 @@ workflows:
           #!/usr/bin/env bash
           set -e
 
-          BUILD_NUMBER="5"
+          BUILD_NUMBER="6"
           echo "BUILD_NUMBER=$BUILD_NUMBER"
 
           INFO_PLIST="ios/App/App/App/Info.plist"
