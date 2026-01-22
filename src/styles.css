@@ -112,7 +112,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 76px;
+  min-height: 64px;
 }
 
 .mode-progress-row {
