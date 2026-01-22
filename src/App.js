@@ -1892,19 +1892,45 @@ export default function App() {
     }
     return audioCtxRef.current;
   };
+  useEffect(() => {
+    if (!soundOn) return;
+    const unlockAudio = () => {
+      const ctx = ensureAudio();
+      if (!ctx || ctx.state !== "suspended") return;
+      ctx.resume().catch(() => {});
+    };
+    document.addEventListener("touchstart", unlockAudio, { passive: true });
+    document.addEventListener("pointerdown", unlockAudio, { passive: true });
+    document.addEventListener("mousedown", unlockAudio, { passive: true });
+    document.addEventListener("keydown", unlockAudio, { passive: true });
+    return () => {
+      document.removeEventListener("touchstart", unlockAudio);
+      document.removeEventListener("pointerdown", unlockAudio);
+      document.removeEventListener("mousedown", unlockAudio);
+      document.removeEventListener("keydown", unlockAudio);
+    };
+  }, [soundOn]);
+
   const tone = (f, d, type = "sine", delay = 0) => {
     if (!soundOn) return;
     const ctx = ensureAudio();
     if (!ctx) return;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = type;
-    o.frequency.value = f;
-    g.gain.value = volume;
-    o.connect(g).connect(ctx.destination);
-    const t0 = ctx.currentTime + delay;
-    o.start(t0);
-    o.stop(t0 + d);
+    const playTone = () => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = f;
+      g.gain.value = volume;
+      o.connect(g).connect(ctx.destination);
+      const t0 = ctx.currentTime + delay;
+      o.start(t0);
+      o.stop(t0 + d);
+    };
+    if (ctx.state === "suspended") {
+      ctx.resume().then(playTone).catch(() => {});
+      return;
+    }
+    playTone();
   };
   const soundCorrect = () => {
     tone(523.25, 0.12, "triangle", 0.0);
