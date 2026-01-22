@@ -311,9 +311,7 @@ export default function StoreScreen({
               const isPurchasing = state === CTA_STATES.purchasing;
               const isOwned = state === CTA_STATES.owned;
               const disabled = !affordable || isPurchasing || isSuccess || isOwned;
-              const successLabel = item.nonConsumable
-                ? text("storeUnlockedShort", "Unlocked ✓")
-                : text("storePurchasedShort", "Purchased ✓");
+              const successLabel = "✓";
 
               return (
                 <div
@@ -458,7 +456,7 @@ export default function StoreScreen({
                 {heartsFull
                   ? text("storeHeartsFull", "Full")
                   : heartCtaState === CTA_STATES.success
-                  ? text("storePurchasedShort", "Purchased ✓")
+                  ? "✓"
                   : `💰 ${HEART_COIN_COST}`}
               </button>
             </div>
