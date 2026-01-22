@@ -1,7 +1,7 @@
 // src/components/SettingsModal.js
 import React, { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
-import { supabase } from "../supabaseClient";
+import { clearSupabaseSession, supabase } from "../supabaseClient";
 
 const LANG_DISPLAY = {
   en: "English",
@@ -30,6 +30,20 @@ export default function SettingsModal({
 }) {
   const loggedIn = !!activeUser;
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
+  const handleLogout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (e) {
+      // ignore logout errors
+    } finally {
+      await clearSupabaseSession();
+      setActiveUser("");
+      setActiveUserLabel && setActiveUserLabel("");
+      onClose();
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -359,11 +373,7 @@ export default function SettingsModal({
 
         {loggedIn && (
           <button
-            onClick={() => {
-              setActiveUser("");
-              setActiveUserLabel && setActiveUserLabel("");
-              onClose();
-            }}
+            onClick={handleLogout}
             style={{
               width: "100%",
               background: "#f8fafc",
