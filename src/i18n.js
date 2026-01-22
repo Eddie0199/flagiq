@@ -260,6 +260,8 @@ const STRINGS = {
     "auth.show": "Show",
     "auth.hide": "Hide",
     "auth.forgot": "Forgot password?",
+    "auth.keepSignedIn": "Keep me signed in",
+    "auth.keepSignedInHelper": "Recommended on personal devices.",
     "auth.passwordHint":
       "At least 6 characters, 1 uppercase, 1 lowercase, 1 special.",
 
@@ -686,6 +688,8 @@ const STRINGS = {
     "auth.show": "Mostrar",
     "auth.hide": "Ocultar",
     "auth.forgot": "¿Olvidaste tu contraseña?",
+    "auth.keepSignedIn": "Mantener la sesión iniciada",
+    "auth.keepSignedInHelper": "Recomendado en dispositivos personales.",
     "auth.passwordHint":
       "Al menos 6 caracteres, 1 mayúscula, 1 minúscula y 1 carácter especial.",
 
@@ -1111,6 +1115,8 @@ const STRINGS = {
     "auth.show": "Mostrar",
     "auth.hide": "Ocultar",
     "auth.forgot": "Esqueceu-se da palavra-passe?",
+    "auth.keepSignedIn": "Manter a sessão iniciada",
+    "auth.keepSignedInHelper": "Recomendado em dispositivos pessoais.",
     "auth.passwordHint":
       "Pelo menos 6 caracteres, 1 maiúscula, 1 minúscula e 1 carácter especial.",
 
@@ -1537,6 +1543,8 @@ const STRINGS = {
     "auth.show": "Anzeigen",
     "auth.hide": "Verbergen",
     "auth.forgot": "Passwort vergessen?",
+    "auth.keepSignedIn": "Angemeldet bleiben",
+    "auth.keepSignedInHelper": "Empfohlen auf persönlichen Geräten.",
     "auth.passwordHint":
       "Mindestens 6 Zeichen, 1 Großbuchstabe, 1 Kleinbuchstabe, 1 Sonderzeichen.",
 
@@ -1967,6 +1975,8 @@ const STRINGS = {
     "auth.show": "Afficher",
     "auth.hide": "Masquer",
     "auth.forgot": "Mot de passe oublié ?",
+    "auth.keepSignedIn": "Rester connecté",
+    "auth.keepSignedInHelper": "Recommandé sur les appareils personnels.",
     "auth.passwordHint":
       "Au moins 6 caractères, 1 majuscule, 1 minuscule, 1 caractère spécial.",
 
@@ -2392,6 +2402,8 @@ const STRINGS = {
     "auth.show": "Tonen",
     "auth.hide": "Verbergen",
     "auth.forgot": "Wachtwoord vergeten?",
+    "auth.keepSignedIn": "Aangemeld blijven",
+    "auth.keepSignedInHelper": "Aanbevolen op persoonlijke apparaten.",
     "auth.passwordHint":
       "Minimaal 6 tekens, 1 hoofdletter, 1 kleine letter, 1 speciaal teken.",
 
