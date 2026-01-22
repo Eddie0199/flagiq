@@ -6,7 +6,6 @@
   "main": "src/index.tsx",
   "homepage": ".",
   "dependencies": {
-    "@capacitor-community/secure-storage-plugin": "^6.0.0",
     "@capacitor/core": "^6.0.0",
     "@supabase/supabase-js": "^2.48.0",
     "ajv": "^6.12.6",

@@ -1,6 +1,5 @@
 // src/supabaseClient.js
 import { Capacitor } from "@capacitor/core";
-import { SecureStoragePlugin } from "@capacitor-community/secure-storage-plugin";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -32,9 +31,6 @@ export const setSupabaseSessionPersistence = (enabled) => {
 };
 
 const getSecureStorage = () => {
-  if (SecureStoragePlugin?.get && SecureStoragePlugin?.set) {
-    return SecureStoragePlugin;
-  }
   const plugin = Capacitor?.Plugins?.SecureStoragePlugin;
   if (plugin?.get && plugin?.set) {
     return plugin;
