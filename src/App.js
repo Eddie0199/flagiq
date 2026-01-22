@@ -884,9 +884,9 @@ export default function App() {
     let mounted = true;
     (async () => {
       try {
-        const module = await import("@capacitor/app");
-        if (!module?.App?.getInfo) return;
-        const info = await module.App.getInfo();
+        const plugin = Capacitor?.Plugins?.App;
+        if (!plugin?.getInfo) return;
+        const info = await plugin.getInfo();
         if (!mounted) return;
         setAppInfo({
           version: info?.version || "",
