@@ -1982,7 +1982,7 @@ export default function App() {
           onClick={handleDebugTap}
           style={{
             position: "fixed",
-            top: 0,
+            bottom: "env(safe-area-inset-bottom, 0px)",
             left: 0,
             width: 72,
             height: 72,
