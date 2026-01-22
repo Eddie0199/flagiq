@@ -547,7 +547,7 @@ export default function AuthModal({
                   onChange={(e) => setRememberMe(e.target.checked)}
                   style={{ width: 16, height: 16 }}
                 />
-                Keep me signed in
+                {tr("auth.keepSignedIn", "Keep me signed in")}
               </label>
               <div
                 style={{
@@ -556,7 +556,10 @@ export default function AuthModal({
                   marginBottom: 14,
                 }}
               >
-                Recommended on personal devices.
+                {tr(
+                  "auth.keepSignedInHelper",
+                  "Recommended on personal devices."
+                )}
               </div>
 
               <button
