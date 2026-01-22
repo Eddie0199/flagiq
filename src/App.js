@@ -2120,7 +2120,14 @@ export default function App() {
 
       {/* LEVELS */}
       {loggedIn && screen === "levels" && (
-        <>
+        <div
+          style={{
+            height:
+              "calc(100vh - var(--safe-area-top) - var(--safe-area-bottom))",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           <Header
             showBack
             onBack={goHome}
@@ -2147,7 +2154,7 @@ export default function App() {
             mode={mode}
             progress={progress}
           />
-        </>
+        </div>
       )}
 
       {/* GAME */}

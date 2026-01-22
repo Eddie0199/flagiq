@@ -588,7 +588,8 @@ export default function HomeScreen({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
-          padding: "12px 14px",
+          padding: "10px 12px",
+          minHeight: 88,
           borderRadius: 22,
           border: "none",
           background: disabled ? "#e5e7eb" : color,
@@ -609,11 +610,8 @@ export default function HomeScreen({
         >
           <span style={{ fontSize: 18 }}>{icon}</span>
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              minWidth: 0,
-            }}
+            className="home-card-text"
+            style={{ minWidth: 0 }}
           >
             <span className="home-card-title">{title}</span>
             <span className="home-card-description">{description}</span>
@@ -808,6 +806,9 @@ export default function HomeScreen({
           transform: "translateX(-50%)",
           color: "rgba(255,255,255,0.85)",
           fontWeight: 600,
+          fontSize: 12,
+          textAlign: "center",
+          whiteSpace: "nowrap",
         }}
       >
         Powered by <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span>
