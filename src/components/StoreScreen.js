@@ -1,7 +1,7 @@
 // /src/components/StoreScreen.js
 // Booster shop: spend coins on hints & (dev) get more coins.
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { purchaseProduct } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 
@@ -48,6 +48,69 @@ const COIN_PACKS = SHOP_PRODUCTS.filter((p) => p.type === "coins");
 
 // 💖 cost for +1 heart (coins)
 const HEART_COIN_COST = 50;
+const CTA_STATES = {
+  idle: "idle",
+  purchasing: "purchasing",
+  success: "success",
+  owned: "owned",
+};
+
+function useCtaStateMachine(successDurationMs = 1200) {
+  const [states, setStates] = useState({});
+  const timersRef = useRef({});
+
+  const clearTimer = (id) => {
+    if (timersRef.current[id]) {
+      clearTimeout(timersRef.current[id]);
+      delete timersRef.current[id];
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      Object.values(timersRef.current).forEach(clearTimeout);
+      timersRef.current = {};
+    };
+  }, []);
+
+  const setState = (id, state) => {
+    setStates((prev) => {
+      if (prev[id] === state) return prev;
+      return { ...prev, [id]: state };
+    });
+  };
+
+  const beginPurchase = (id) => {
+    clearTimer(id);
+    setState(id, CTA_STATES.purchasing);
+  };
+
+  const markSuccess = (id, { owned = false } = {}) => {
+    clearTimer(id);
+    if (owned) {
+      setState(id, CTA_STATES.owned);
+      return;
+    }
+    setState(id, CTA_STATES.success);
+    timersRef.current[id] = setTimeout(() => {
+      setState(id, CTA_STATES.idle);
+    }, successDurationMs);
+  };
+
+  const resetState = (id) => {
+    clearTimer(id);
+    setState(id, CTA_STATES.idle);
+  };
+
+  const getState = (id) => states[id] || CTA_STATES.idle;
+
+  return {
+    getState,
+    beginPurchase,
+    markSuccess,
+    resetState,
+  };
+}
 
 export default function StoreScreen({
   t,
@@ -62,8 +125,20 @@ export default function StoreScreen({
   onBuyHeartWithCoins,
 }) {
   const [message, setMessage] = useState("");
+  const ctaState = useCtaStateMachine(1200);
 
-  const text = (key, fallback) => (t && lang ? t(lang, key) : fallback);
+  const text = (key, fallback) => {
+    if (t && lang) {
+      const value = t(lang, key);
+      return value === key ? fallback : value;
+    }
+    return fallback;
+  };
+
+  const purchaseFailedMessage = text(
+    "storePurchaseFailedRetry",
+    "Purchase failed. Please try again."
+  );
 
   const ensureHintsShape = (prev) => {
     const base = prev || {};
@@ -74,37 +149,64 @@ export default function StoreScreen({
     };
   };
 
-  function buyBooster(item) {
-    if (!onUpdateCoins || !setHints) return;
+  async function buyBooster(item) {
+    if (!onUpdateCoins || !setHints) {
+      setMessage(purchaseFailedMessage);
+      return;
+    }
     if (coins < item.cost) {
       setMessage(text("storeNotEnoughCoins", "Not enough coins for that."));
       return;
     }
 
-    onUpdateCoins(coins - item.cost);
+    ctaState.beginPurchase(item.id);
 
-    setHints((prev) => {
-      const base = ensureHintsShape(prev);
-      if (item.type === "bundle") {
+    try {
+      onUpdateCoins(coins - item.cost);
+
+      setHints((prev) => {
+        const base = ensureHintsShape(prev);
+        if (item.type === "bundle") {
+          return {
+            ...base,
+            remove2: base.remove2 + 1,
+            autoPass: base.autoPass + 1,
+            pause: base.pause + 1,
+          };
+        }
         return {
           ...base,
-          remove2: base.remove2 + 1,
-          autoPass: base.autoPass + 1,
-          pause: base.pause + 1,
+          [item.type]: base[item.type] + item.qty,
         };
-      }
-      return {
-        ...base,
-        [item.type]: base[item.type] + item.qty,
-      };
-    });
+      });
 
-    const wonStr =
-      item.type === "bundle"
-        ? text("storeBoughtBundle", "You bought 1 of each hint!")
-        : text("storeBoughtSingle", "Purchase successful!");
+      setMessage("");
+      ctaState.markSuccess(item.id);
+    } catch (e) {
+      ctaState.resetState(item.id);
+      setMessage(purchaseFailedMessage);
+    }
+  }
 
-    setMessage(wonStr);
+  async function buyHeartWithCoins() {
+    const id = "heart_coin";
+    if (!onBuyHeartWithCoins) {
+      setMessage(purchaseFailedMessage);
+      return;
+    }
+    if (!canBuyHeartWithCoins) {
+      return;
+    }
+
+    ctaState.beginPurchase(id);
+    try {
+      await onBuyHeartWithCoins();
+      setMessage("");
+      ctaState.markSuccess(id);
+    } catch (e) {
+      ctaState.resetState(id);
+      setMessage(purchaseFailedMessage);
+    }
   }
 
   async function buyCoins(pack) {
@@ -128,6 +230,12 @@ export default function StoreScreen({
   const heartsProduct = SHOP_PRODUCTS.find(
     (p) => p.id === PRODUCT_IDS.HEARTS_REFILL
   );
+  const heartCtaState = ctaState.getState("heart_coin");
+  const heartCtaDisabled =
+    !canBuyHeartWithCoins ||
+    heartCtaState === CTA_STATES.purchasing ||
+    heartCtaState === CTA_STATES.success ||
+    heartCtaState === CTA_STATES.owned;
 
   return (
     <div style={{ padding: "10px 16px 24px", maxWidth: 900, margin: "0 auto" }}>
@@ -198,6 +306,14 @@ export default function StoreScreen({
             {BOOSTER_ITEMS.map((item) => {
               const affordable = coins >= item.cost;
               const label = text(item.labelKey, item.fallbackLabel);
+              const state = ctaState.getState(item.id);
+              const isSuccess = state === CTA_STATES.success;
+              const isPurchasing = state === CTA_STATES.purchasing;
+              const isOwned = state === CTA_STATES.owned;
+              const disabled = !affordable || isPurchasing || isSuccess || isOwned;
+              const successLabel = item.nonConsumable
+                ? text("storeUnlockedShort", "Unlocked ✓")
+                : text("storePurchasedShort", "Purchased ✓");
 
               return (
                 <div
@@ -246,21 +362,26 @@ export default function StoreScreen({
 
                   <button
                     onClick={() => buyBooster(item)}
-                    disabled={!affordable}
+                    disabled={disabled}
                     style={{
                       border: "none",
                       borderRadius: 999,
                       padding: "6px 14px",
                       fontSize: 12,
                       fontWeight: 700,
-                      cursor: affordable ? "pointer" : "not-allowed",
-                      background: affordable ? "#0f172a" : "#cbd5e1",
+                      cursor: disabled ? "not-allowed" : "pointer",
+                      background: isSuccess
+                        ? "#16a34a"
+                        : affordable
+                        ? "#0f172a"
+                        : "#cbd5e1",
+                      border: isSuccess ? "1px dashed #15803d" : "none",
                       color: "#fff",
                       minWidth: 80,
                       textAlign: "center",
                     }}
                   >
-                    💰 {item.cost}
+                    {isSuccess ? successLabel : `💰 ${item.cost}`}
                   </button>
                 </div>
               );
@@ -310,16 +431,25 @@ export default function StoreScreen({
               </div>
 
               <button
-                onClick={onBuyHeartWithCoins}
-                disabled={!canBuyHeartWithCoins}
+                onClick={buyHeartWithCoins}
+                disabled={heartCtaDisabled}
                 style={{
                   border: "none",
                   borderRadius: 999,
                   padding: "6px 14px",
                   fontSize: 12,
                   fontWeight: 700,
-                  cursor: canBuyHeartWithCoins ? "pointer" : "not-allowed",
-                  background: canBuyHeartWithCoins ? "#b91c1c" : "#fecaca",
+                  cursor: heartCtaDisabled ? "not-allowed" : "pointer",
+                  background:
+                    heartCtaState === CTA_STATES.success
+                      ? "#16a34a"
+                      : canBuyHeartWithCoins
+                      ? "#b91c1c"
+                      : "#fecaca",
+                  border:
+                    heartCtaState === CTA_STATES.success
+                      ? "1px dashed #15803d"
+                      : "none",
                   color: "#fff",
                   minWidth: 80,
                   textAlign: "center",
@@ -327,6 +457,8 @@ export default function StoreScreen({
               >
                 {heartsFull
                   ? text("storeHeartsFull", "Full")
+                  : heartCtaState === CTA_STATES.success
+                  ? text("storePurchasedShort", "Purchased ✓")
                   : `💰 ${HEART_COIN_COST}`}
               </button>
             </div>

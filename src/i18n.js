@@ -181,9 +181,12 @@ const STRINGS = {
       "Prototype mode: tapping a pack simply adds coins to your balance.",
 
     storeBuyButton: "Buy",
+    storePurchasedShort: "Purchased ✓",
+    storeUnlockedShort: "Unlocked ✓",
     storeNotEnoughCoins: "Not enough coins for that.",
     storeBoughtBundle: "You bought 1 of each hint!",
     storeBoughtSingle: "Purchase successful!",
+    storePurchaseFailedRetry: "Purchase failed. Please try again.",
     storeCoinsAdded: "Dev mode: coins added to your balance.",
     storeCoinsLabel: "coins",
 
