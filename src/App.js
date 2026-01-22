@@ -24,7 +24,7 @@ import {
 } from "./localPacks";
 
 // 🔹 NEW: Supabase client import
-import { supabase } from "./supabaseClient";
+import { missingSupabaseEnv, supabase } from "./supabaseClient";
 import {
   ensurePlayerState,
   getPlayerState,
@@ -36,7 +36,7 @@ const LANGUAGE_STORAGE_KEY = "flagLang";
 const LEGACY_LANGUAGE_KEYS = ["flagiq:lang"];
 const SUPPORTED_LANGUAGE_CODES = new Set(LANGS.map((l) => l.code));
 const DEBUG_LOGS_STORAGE_KEY = "flagiq:debugLogs";
-const DEBUG_LOGS_MAX = 10;
+const DEBUG_LOGS_MAX = 100;
 
 function normalizeLanguageCode(code) {
   const raw = String(code || "").toLowerCase();
@@ -83,6 +83,16 @@ function persistDebugLogs(logs) {
     localStorage.setItem(DEBUG_LOGS_STORAGE_KEY, JSON.stringify(logs));
   } catch (e) {
     // ignore
+  }
+}
+
+function formatLogValue(value) {
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message || String(value);
+  try {
+    return JSON.stringify(value);
+  } catch (e) {
+    return String(value);
   }
 }
 
@@ -749,10 +759,53 @@ function isResetPasswordRoute() {
   return window.location.pathname === "/reset-password";
 }
 
+function ConfigMissingScreen({ missingKeys }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        background: "#0f172a",
+        color: "white",
+        textAlign: "center",
+      }}
+    >
+      <div style={{ maxWidth: 520 }}>
+        <h1 style={{ fontSize: 22, marginBottom: 12 }}>Configuration Missing</h1>
+        <p style={{ color: "#cbd5f5", marginBottom: 16 }}>
+          The app cannot start because required environment variables are not
+          defined.
+        </p>
+        <div
+          style={{
+            background: "rgba(15, 23, 42, 0.8)",
+            border: "1px solid rgba(148, 163, 184, 0.4)",
+            borderRadius: 12,
+            padding: 16,
+            textAlign: "left",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+            fontSize: 13,
+          }}
+        >
+          {missingKeys.map((key) => (
+            <div key={key}>• {key}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // 🔐 Handle Supabase password reset redirect
   if (isResetPasswordRoute()) {
     return <ResetPasswordPage />;
+  }
+  if (missingSupabaseEnv.length > 0) {
+    return <ConfigMissingScreen missingKeys={missingSupabaseEnv} />;
   }
 
   const debugOverlayEnabled =
@@ -767,6 +820,7 @@ export default function App() {
   const [showDebugOverlay, setShowDebugOverlay] = useState(false);
   const [showDebugScreen, setShowDebugScreen] = useState(false);
   const debugTapRef = useRef({ count: 0, timer: null });
+  const [appInfo, setAppInfo] = useState({ version: "", build: "" });
 
   // preferences
   const [lang, setLang] = useState(() => readLanguageFromStorage());
@@ -807,6 +861,7 @@ export default function App() {
         typeof error === "string" ? "" : error?.stack || meta.stack || "";
       const logEntry = {
         id: Date.now(),
+        level: "error",
         message,
         stack,
         route: getDebugRoute(),
@@ -825,14 +880,99 @@ export default function App() {
     [debugOverlayEnabled, getDebugRoute]
   );
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const module = await import("@capacitor/app");
+        if (!module?.App?.getInfo) return;
+        const info = await module.App.getInfo();
+        if (!mounted) return;
+        setAppInfo({
+          version: info?.version || "",
+          build: info?.build || "",
+        });
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.__FLIQ_DEBUG_CAPTURE = captureDebugError;
+    return () => {
+      if (window.__FLIQ_DEBUG_CAPTURE === captureDebugError) {
+        delete window.__FLIQ_DEBUG_CAPTURE;
+      }
+    };
+  }, [captureDebugError]);
+
+  useEffect(() => {
+    if (!debugOverlayEnabled || typeof console === "undefined") return;
+    const original = {
+      log: console.log,
+      warn: console.warn,
+      error: console.error,
+    };
+    const recordLog = (level, args) => {
+      const message = args.map(formatLogValue).join(" ");
+      const logEntry = {
+        id: Date.now() + Math.random(),
+        level,
+        message,
+        route: getDebugRoute(),
+        timestamp: new Date().toISOString(),
+      };
+      setDebugLogs((prev) => {
+        const safePrev = Array.isArray(prev) ? prev : [];
+        const next = [logEntry, ...safePrev].slice(0, DEBUG_LOGS_MAX);
+        persistDebugLogs(next);
+        return next;
+      });
+    };
+    console.log = (...args) => {
+      original.log(...args);
+      recordLog("log", args);
+    };
+    console.warn = (...args) => {
+      original.warn(...args);
+      recordLog("warn", args);
+    };
+    console.error = (...args) => {
+      original.error(...args);
+      recordLog("error", args);
+    };
+    return () => {
+      console.log = original.log;
+      console.warn = original.warn;
+      console.error = original.error;
+    };
+  }, [debugOverlayEnabled, getDebugRoute]);
+
   const handleCopyDebugError = useCallback(() => {
     if (!debugError || typeof document === "undefined") return;
+    const infoLine =
+      appInfo.version || appInfo.build
+        ? `App: ${appInfo.version || "unknown"} (${
+            appInfo.build || "unknown"
+          })`
+        : null;
+    const logs = debugLogs.slice(0, 20).map((log) => {
+      const level = log.level ? log.level.toUpperCase() : "LOG";
+      return `[${level}] ${log.timestamp || ""} ${log.message || ""}`.trim();
+    });
     const payload = [
+      infoLine,
       `Message: ${debugError.message || "Unknown error"}`,
       `Route: ${debugError.route || "unknown"}`,
       `Time: ${debugError.timestamp || ""}`,
       debugError.source ? `Source: ${debugError.source}` : null,
       debugError.stack ? `Stack:\n${debugError.stack}` : null,
+      logs.length > 0 ? `Recent logs:\n${logs.join("\n")}` : null,
     ]
       .filter(Boolean)
       .join("\n");
@@ -853,7 +993,7 @@ export default function App() {
       // ignore
     }
     document.body.removeChild(textarea);
-  }, [debugError]);
+  }, [appInfo, debugError, debugLogs]);
 
   const handleDebugTap = useCallback(() => {
     if (!debugOverlayEnabled) return;
@@ -2233,7 +2373,8 @@ export default function App() {
                 }}
               >
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                  {log.message || "Unknown error"}
+                  {log.level ? `[${log.level}] ` : ""}
+                  {log.message || "Unknown log"}
                 </div>
                 <div style={{ fontSize: 12, color: "#cbd5f5" }}>
                   {log.timestamp || "Unknown time"}
@@ -2317,6 +2458,12 @@ export default function App() {
             <div style={{ fontWeight: 700, marginBottom: 6 }}>
               {debugError.message || "Unknown error"}
             </div>
+            {(appInfo.version || appInfo.build) && (
+              <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+                App: {appInfo.version || "unknown"} (
+                {appInfo.build || "unknown"})
+              </div>
+            )}
             <div style={{ fontSize: 12, color: "#cbd5f5" }}>
               Route: {debugError.route || "unknown"}
             </div>
@@ -2339,6 +2486,38 @@ export default function App() {
               >
                 {debugError.stack}
               </pre>
+            )}
+            {debugLogs.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                  Recent logs
+                </div>
+                <div
+                  style={{
+                    maxHeight: 220,
+                    overflowY: "auto",
+                    background: "rgba(2, 6, 23, 0.6)",
+                    borderRadius: 8,
+                    padding: 10,
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    whiteSpace: "pre-wrap",
+                  }}
+                >
+                  {debugLogs
+                    .slice(0, 20)
+                    .map((log) => {
+                      const level = log.level
+                        ? log.level.toUpperCase()
+                        : "LOG";
+                      return `[${level}] ${log.timestamp || ""} ${
+                        log.message || ""
+                      }`;
+                    })
+                    .join("\n")}
+                </div>
+              </div>
             )}
             <div style={{ marginTop: 16 }}>
               <button

@@ -1,13 +1,26 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
 root.render(
   <StrictMode>
-    <App />
+    <ErrorBoundary
+      onError={(error, info) => {
+        if (typeof window === "undefined") return;
+        if (window.__FLIQ_DEBUG_CAPTURE) {
+          window.__FLIQ_DEBUG_CAPTURE(error, {
+            source: "ErrorBoundary",
+            stack: info?.componentStack,
+          });
+        }
+      }}
+    >
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );
 
