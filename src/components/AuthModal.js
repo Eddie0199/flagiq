@@ -1,7 +1,11 @@
 // src/components/AuthModal.js
 import React, { useState } from "react";
 import { emailRx } from "../App";
-import { supabase } from "../supabaseClient";
+import {
+  clearSupabaseSession,
+  setSupabaseSessionPersistence,
+  supabase,
+} from "../supabaseClient";
 import { LANGS } from "../i18n";
 
 const SUPPORTED_LANG_CODES = new Set(LANGS.map((l) => l.code));
@@ -24,6 +28,7 @@ export default function AuthModal({
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPwd, setLoginPwd] = useState("");
   const [loginErr, setLoginErr] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
 
   // signup fields
   const [suUser, setSuUser] = useState("");
@@ -83,6 +88,11 @@ export default function AuthModal({
 
     const em = loginEmail.trim();
     const pwd = loginPwd;
+
+    setSupabaseSessionPersistence(rememberMe);
+    if (!rememberMe) {
+      await clearSupabaseSession();
+    }
 
     if (!em || !pwd) {
       setLoginErr(
@@ -518,6 +528,35 @@ export default function AuthModal({
                 >
                   {tr("auth.forgot", "Forgot password?")}
                 </button>
+              </div>
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 4,
+                  color: "#0f172a",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                Keep me signed in
+              </label>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  marginBottom: 14,
+                }}
+              >
+                Recommended on personal devices.
               </div>
 
               <button
