@@ -218,15 +218,11 @@ export default function Header({
           ) : null}
         </div>
 
-        {/* Hearts pill */}
-        <div className="header-center">
+        {/* Hearts + Coins pill + Settings */}
+        <div className="header-right">
           {showHearts && hearts ? (
             <HeartsPill hearts={hearts} t={t} lang={lang} />
           ) : null}
-        </div>
-
-        {/* Coins pill + Settings */}
-        <div className="header-right">
           <CoinsPill
             username={username}
             coinsProp={coins}
