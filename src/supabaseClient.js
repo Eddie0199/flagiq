@@ -1,5 +1,6 @@
 // src/supabaseClient.js
 import { Capacitor } from "@capacitor/core";
+import { SecureStoragePlugin } from "@capacitor-community/secure-storage-plugin";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
@@ -21,6 +22,26 @@ if (missingSupabaseEnv.length > 0) {
 
 const SUPABASE_SESSION_KEY = "flagiq:supabase:session";
 
+let shouldPersistSupabaseSession = true;
+
+export const setSupabaseSessionPersistence = (enabled) => {
+  shouldPersistSupabaseSession = Boolean(enabled);
+  if (!shouldPersistSupabaseSession) {
+    clearSupabaseSession();
+  }
+};
+
+const getSecureStorage = () => {
+  if (SecureStoragePlugin?.get && SecureStoragePlugin?.set) {
+    return SecureStoragePlugin;
+  }
+  const plugin = Capacitor?.Plugins?.SecureStoragePlugin;
+  if (plugin?.get && plugin?.set) {
+    return plugin;
+  }
+  return null;
+};
+
 const getCapacitorStorage = () => {
   if (!Capacitor?.Plugins) return null;
   return Capacitor.Plugins.Preferences || Capacitor.Plugins.Storage || null;
@@ -29,6 +50,13 @@ const getCapacitorStorage = () => {
 const storageAdapter = {
   getItem: async (key) => {
     const storageKey = key || SUPABASE_SESSION_KEY;
+    const secureStorage = getSecureStorage();
+    if (secureStorage?.get) {
+      try {
+        const result = await secureStorage.get({ key: storageKey });
+        if (typeof result?.value === "string") return result.value;
+      } catch (e) {}
+    }
     const plugin = getCapacitorStorage();
     if (plugin?.get) {
       try {
@@ -43,7 +71,17 @@ const storageAdapter = {
     }
   },
   setItem: async (key, value) => {
+    if (!shouldPersistSupabaseSession) {
+      return;
+    }
     const storageKey = key || SUPABASE_SESSION_KEY;
+    const secureStorage = getSecureStorage();
+    if (secureStorage?.set) {
+      try {
+        await secureStorage.set({ key: storageKey, value: String(value ?? "") });
+        return;
+      } catch (e) {}
+    }
     const plugin = getCapacitorStorage();
     if (plugin?.set) {
       try {
@@ -57,6 +95,13 @@ const storageAdapter = {
   },
   removeItem: async (key) => {
     const storageKey = key || SUPABASE_SESSION_KEY;
+    const secureStorage = getSecureStorage();
+    if (secureStorage?.remove) {
+      try {
+        await secureStorage.remove({ key: storageKey });
+        return;
+      } catch (e) {}
+    }
     const plugin = getCapacitorStorage();
     if (plugin?.remove) {
       try {
@@ -89,13 +134,16 @@ export async function restoreSupabaseSession() {
   if (!raw) return null;
   try {
     const session = JSON.parse(raw);
-    if (session?.access_token && session?.refresh_token) {
-      const result = await supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      });
-      return result?.data?.session || null;
+    if (!session?.access_token || !session?.refresh_token) return null;
+    const result = await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+    if (result?.error) {
+      await storageAdapter.removeItem(SUPABASE_SESSION_KEY);
+      return null;
     }
+    return result?.data?.session || null;
   } catch (e) {}
   return null;
 }
@@ -105,9 +153,14 @@ export function subscribeToSupabaseAuth(onSession) {
   const { data } = supabase.auth.onAuthStateChange(
     async (event, session) => {
       if (session) {
+        const payload = {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: session.expires_at,
+        };
         await storageAdapter.setItem(
           SUPABASE_SESSION_KEY,
-          JSON.stringify(session)
+          JSON.stringify(payload)
         );
       } else {
         await storageAdapter.removeItem(SUPABASE_SESSION_KEY);

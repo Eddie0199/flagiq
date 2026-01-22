@@ -1093,9 +1093,15 @@ export default function App() {
         if (user && !cancelled) {
           setActiveUser(user.id || user.email || "");
           setActiveUserLabel(getAuthUserLabel(user));
+        } else if (!cancelled) {
+          setActiveUser("");
+          setActiveUserLabel("");
         }
       } catch (e) {
-        // ignore restore errors
+        if (!cancelled) {
+          setActiveUser("");
+          setActiveUserLabel("");
+        }
       }
     })();
     return () => {
