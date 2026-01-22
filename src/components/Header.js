@@ -48,7 +48,7 @@ function HeartsPill({ hearts, t, lang }) {
         background: "#ffffff",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
-        padding: "4px 8px",
+        padding: "4px 6px",
         height: 36,
         boxShadow: "0 1px 2px rgba(0,0,0,.04)",
       }}
@@ -126,7 +126,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
     <Wrapper
       onClick={clickable ? onClick : undefined}
       style={{
-        padding: "6px 10px",
+        padding: "5px 8px",
         background: "#f1f5f9",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
@@ -169,7 +169,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
           style={{
             fontSize: 11,
             fontWeight: 600,
-            padding: "2px 6px",
+            padding: "2px 5px",
             borderRadius: 999,
             background: "#e2e8f0",
             color: "#0f172a",
@@ -218,15 +218,11 @@ export default function Header({
           ) : null}
         </div>
 
-        {/* Hearts pill */}
-        <div className="header-center">
+        {/* Hearts + Coins pill + Settings */}
+        <div className="header-right">
           {showHearts && hearts ? (
             <HeartsPill hearts={hearts} t={t} lang={lang} />
           ) : null}
-        </div>
-
-        {/* Coins pill + Settings */}
-        <div className="header-right">
           <CoinsPill
             username={username}
             coinsProp={coins}
