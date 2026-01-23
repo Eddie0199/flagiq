@@ -61,6 +61,8 @@ export default function GameScreen({
   storedStars = 0,
   onProgressUpdate,
   onRunLost,
+  heartsCurrent,
+  onNoLives,
   soundCorrect,
   soundWrong,
   onBack,
@@ -746,6 +748,14 @@ export default function GameScreen({
     submittedTimeTrialResultRef.current = false;
   };
 
+  const handleFailRetry = () => {
+    if (typeof heartsCurrent === "number" && heartsCurrent <= 0) {
+      if (onNoLives) onNoLives();
+      return;
+    }
+    resetAndRebuild();
+  };
+
   return (
     <div style={{ padding: "10px 12px 60px" }}>
       {/* HINT INFO POPUP (first time) */}
@@ -1170,7 +1180,7 @@ export default function GameScreen({
             }}
           >
             <button
-              onClick={resetAndRebuild}
+              onClick={handleFailRetry}
               style={{
                 padding: "8px 14px",
                 borderRadius: 14,
