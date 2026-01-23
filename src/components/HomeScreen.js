@@ -207,6 +207,7 @@ function DailySpinButton({
   const youWonTxt = t && lang ? t(lang, "youWon") : "You won";
   const readyText =
     t && lang ? t(lang, "readyToSpin") : "Ready – pick a box!";
+  const claimText = t && lang ? t(lang, "claim") : "Claim";
   const statusText =
     statusMessage ||
     (!isOnline
@@ -313,19 +314,41 @@ function DailySpinButton({
           onClick={handleOpen}
           style={{
             background: "rgba(255,255,255,.95)",
-            border: "1px solid rgba(0,0,0,0.08)",
+            border: canSpin
+              ? "1px solid rgba(245, 158, 11, 0.9)"
+              : "1px solid rgba(0,0,0,0.08)",
             borderRadius: 999,
             padding: "4px 10px",
             display: "flex",
             gap: 6,
             alignItems: "center",
             cursor: "pointer",
+            boxShadow: canSpin
+              ? "0 0 0 2px rgba(245, 158, 11, 0.55)"
+              : "none",
           }}
         >
           <span style={{ fontSize: 15 }}>🎡</span>
           <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
             {label}
           </span>
+          {canSpin && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: 0.6,
+                padding: "2px 6px",
+                borderRadius: 999,
+                background: "#f59e0b",
+                color: "#1f2937",
+                boxShadow: "0 2px 6px rgba(245, 158, 11, 0.45)",
+              }}
+            >
+              {claimText}
+            </span>
+          )}
         </button>
         <span
           style={{
