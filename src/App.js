@@ -2297,6 +2297,8 @@ export default function App() {
             storedStars={storedStars}
             onProgressUpdate={updateProgressAfterLevel}
             onRunLost={onRunLost}
+            heartsCurrent={heartsCurrent}
+            onNoLives={() => setNoLivesOpen(true)}
             soundCorrect={soundCorrect}
             soundWrong={soundWrong}
             onBack={handleGameBack}
