@@ -161,6 +161,7 @@ const STRINGS = {
     spinForHintsTitle: "Booster Wheel",
     youWon: "You won",
     spinOncePerDay: "Spin once every 24 hours",
+    claim: "Claim",
 
     profileSettings: "Profile & Settings",
     sound: "Sound",
@@ -591,6 +592,7 @@ const STRINGS = {
     spinForHintsTitle: "Ruleta de potenciadores",
     youWon: "Has ganado",
     spinOncePerDay: "Gira una vez cada 24 horas",
+    claim: "Reclamar",
 
     storeTitle: "Tienda de potenciadores",
     storeSubtitle: "Gasta tus monedas en pistas o consigue más monedas.",
@@ -1016,6 +1018,7 @@ const STRINGS = {
     spinForHintsTitle: "Roda de Bónus",
     youWon: "Ganhaste",
     spinOncePerDay: "Gira uma vez a cada 24 horas",
+    claim: "Resgatar",
 
     profileSettings: "Perfil e definições",
     sound: "Som",
@@ -1456,6 +1459,7 @@ const STRINGS = {
     spinForHintsTitle: "Booster-Rad",
     youWon: "Du hast gewonnen",
     spinOncePerDay: "Einmal alle 24 Stunden drehen",
+    claim: "Einlösen",
 
     login: "Anmelden",
     createAccount: "Konto erstellen",
@@ -1865,6 +1869,7 @@ const STRINGS = {
     spinForHintsTitle: "Roue de bonus",
     spinOncePerDay: "Tourne une fois toutes les 24 heures",
     youWon: "Tu as gagné",
+    claim: "Récupérer",
 
     selectLevel: "Choisir un niveau",
     totalStars: "Total",
@@ -2303,6 +2308,7 @@ const STRINGS = {
     spinForHintsTitle: "Boosterrad",
     youWon: "Je hebt gewonnen",
     spinOncePerDay: "Draai één keer per 24 uur",
+    claim: "Ophalen",
 
     coins: "Munten",
     coinsEarnedMessage: "Je hebt 100 munten verdiend!",
