@@ -1072,7 +1072,7 @@ export default function HomeScreen({
                     letterSpacing: 0.8,
                   }}
                 >
-                  Top 100 Players • Total Score
+                  Top 100 Players • Total Points
                 </div>
               </div>
               {leaderboardLoading ? (
@@ -1150,15 +1150,26 @@ export default function HomeScreen({
                       >
                         {entry.name.slice(0, 1).toUpperCase()}
                       </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          fontWeight: 700,
-                          color: "#0f172a",
-                          fontSize: 16,
-                        }}
-                      >
-                        {entry.name}
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontWeight: 700,
+                            color: "#0f172a",
+                            fontSize: 16,
+                          }}
+                        >
+                          {entry.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#94a3b8",
+                            marginTop: 2,
+                          }}
+                        >
+                          {entry.attempts} attempts
+                        </div>
                       </div>
                       <div
                         style={{

@@ -7,9 +7,10 @@ export async function fetchTimeTrialLeaderboard(limit = 100) {
   }
 
   const { data, error } = await supabase
-    .from("time_trial_leaderboard")
-    .select("user_id, display_name, username, total_score, rank")
-    .order("total_score", { ascending: false })
+    .from("time_trial_overall_leaderboard")
+    .select("user_id, username, total_best_points, total_plays")
+    .order("total_best_points", { ascending: false })
+    .order("total_plays", { ascending: false })
     .limit(limit);
 
   if (error) {
@@ -17,9 +18,10 @@ export async function fetchTimeTrialLeaderboard(limit = 100) {
   }
 
   const entries = (data || []).map((row, index) => ({
-    rank: Number(row?.rank ?? index + 1),
-    name: row?.display_name || row?.username || "Anonymous",
-    score: Number(row?.total_score ?? 0),
+    rank: index + 1,
+    name: row?.username || "Anonymous",
+    score: Number(row?.total_best_points ?? 0),
+    attempts: Number(row?.total_plays ?? 0),
     userId: row?.user_id || null,
   }));
 
