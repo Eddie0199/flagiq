@@ -569,6 +569,9 @@ export default function HomeScreen({
   loggedIn,
   onAuthRequest,
 }) {
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+
   // no scroll
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -697,10 +700,7 @@ export default function HomeScreen({
       style={{
         position: "fixed",
         inset: 0,
-        backgroundImage:
-          "url(https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1600&auto=format&fit=crop)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundColor: "#0b74ff",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -708,7 +708,57 @@ export default function HomeScreen({
         paddingBottom: 120,
       }}
     >
-      {/* top bar */}
+      {/* top left icons */}
+      <div
+        style={{
+          position: "absolute",
+          top: "env(safe-area-inset-top, 12px)",
+          left: 12,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          zIndex: 9999,
+        }}
+      >
+        <button
+          onClick={() => setShowInfoModal(true)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 999,
+            background: "rgba(255,255,255,.95)",
+            border: "1px solid rgba(0,0,0,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: 20,
+          }}
+          aria-label={text("homeInfoTitle", "About Flaq IQ")}
+        >
+          ❓
+        </button>
+        <button
+          onClick={() => setShowLeaderboardModal(true)}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 999,
+            background: "rgba(255,255,255,.95)",
+            border: "1px solid rgba(0,0,0,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: 20,
+          }}
+          aria-label={text("homeLeaderboardTitle", "Leaderboard")}
+        >
+          🏆
+        </button>
+      </div>
+
+      {/* top right icons */}
       <div
         style={{
           position: "absolute",
@@ -772,25 +822,154 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: 110,
+          marginTop: 120,
           padding: "18px 26px",
           borderRadius: 20,
-          background: "rgba(0,0,0,0.5)",
+          background: "rgba(0,0,0,0.35)",
           textAlign: "center",
           color: "white",
           textShadow: "0 3px 8px rgba(0,0,0,.8)",
         }}
       >
-        <div style={{ fontSize: 56, fontWeight: 900, letterSpacing: -1 }}>
-          {text("appTitle", "FlagIQ")}
+        <div
+          style={{
+            width: 120,
+            height: 120,
+            borderRadius: 28,
+            background: "rgba(255,255,255,0.15)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 12px",
+            boxShadow: "0 12px 26px rgba(0,0,0,0.25)",
+          }}
+        >
+          <img
+            src="/icon-512.png"
+            alt={text("appTitle", "Flaq IQ")}
+            style={{
+              width: 96,
+              height: 96,
+              borderRadius: 24,
+            }}
+          />
         </div>
-        <div style={{ marginTop: 8, fontSize: 18, fontWeight: 500 }}>
-          {text(
-            "appSubtitle",
-            "Test your world knowledge — one flag at a time"
-          )}
+        <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -1 }}>
+          {text("appTitle", "Flaq IQ")}
         </div>
       </div>
+
+      {showInfoModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 10000,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              background: "white",
+              borderRadius: 20,
+              padding: "22px 22px 18px",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
+              color: "#0f172a",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
+              {text("homeInfoTitle", "About Flaq IQ")}
+            </div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, color: "#334155" }}>
+              {text(
+                "homeInfoBody",
+                "Test your flag knowledge across classic and timed modes, earn stars, and return daily for rewards."
+              )}
+            </div>
+            <button
+              onClick={() => setShowInfoModal(false)}
+              style={{
+                marginTop: 18,
+                width: "100%",
+                borderRadius: 999,
+                border: "none",
+                padding: "10px 14px",
+                fontWeight: 700,
+                background: "#0b74ff",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              {text("close", "Close")}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showLeaderboardModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+            zIndex: 10000,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              background: "white",
+              borderRadius: 20,
+              padding: "22px 22px 18px",
+              boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
+              color: "#0f172a",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
+              {text("homeLeaderboardTitle", "Leaderboard")}
+            </div>
+            <div style={{ fontSize: 15, lineHeight: 1.5, color: "#334155" }}>
+              {text(
+                "homeLeaderboardBody",
+                "The global leaderboard is on the way. Stay tuned for competitive rankings."
+              )}
+            </div>
+            <button
+              onClick={() => setShowLeaderboardModal(false)}
+              style={{
+                marginTop: 18,
+                width: "100%",
+                borderRadius: 999,
+                border: "none",
+                padding: "10px 14px",
+                fontWeight: 700,
+                background: "#0b74ff",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              {text("close", "Close")}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* game cards */}
       {loggedIn ? (
