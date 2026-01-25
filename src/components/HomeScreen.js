@@ -1,5 +1,6 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
 import React, { useEffect, useMemo, useState } from "react";
+import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -564,37 +565,9 @@ export default function HomeScreen({
     return value === key ? fallback : value;
   };
 
-  const leaderboardEntries = useMemo(() => {
-    const seedNames = [
-      "ArgentinianPro",
-      "colincap57",
-      "adfgl",
-      "nntive",
-      "Tillilani",
-      "sirjan",
-      "ZacGoat",
-      "downesy",
-      "TomasAloisi",
-      "VioletQuest",
-      "MapleRush",
-      "PolarFox",
-      "SwiftHarbor",
-      "NovaTrail",
-      "AtlasRider",
-      "GeoPulse",
-      "FlagRunner",
-      "AstraNova",
-      "BrightJet",
-      "PrimeAtlas",
-    ];
-
-    return Array.from({ length: 100 }, (_, index) => {
-      const rank = index + 1;
-      const name = seedNames[index] || `Player ${rank}`;
-      const score = Math.max(180, 920 - index * 7);
-      return { rank, name, score };
-    });
-  }, []);
+  const [leaderboardEntries, setLeaderboardEntries] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState("");
 
   const leaderboardModes = useMemo(
     () => [
@@ -611,6 +584,33 @@ export default function HomeScreen({
     2: "🥈",
     3: "🥉",
   };
+  const emptyLeaderboardLabel = "No Time Trial scores yet.";
+
+  useEffect(() => {
+    if (!showLeaderboardModal) return;
+    let isActive = true;
+
+    const loadLeaderboard = async () => {
+      setLeaderboardLoading(true);
+      setLeaderboardError("");
+      const { entries, error } = await fetchTimeTrialLeaderboard(100);
+      if (!isActive) return;
+      if (error) {
+        console.error("Failed to load leaderboard", error);
+        setLeaderboardError("Unable to load leaderboard right now.");
+        setLeaderboardEntries([]);
+      } else {
+        setLeaderboardEntries(entries);
+      }
+      setLeaderboardLoading(false);
+    };
+
+    loadLeaderboard();
+
+    return () => {
+      isActive = false;
+    };
+  }, [showLeaderboardModal]);
 
   // per-mode stats derived from the same store logic as App.js
   // compute on every render so newly loaded progress shows immediately
@@ -1075,69 +1075,104 @@ export default function HomeScreen({
                   Top 100 Players • Total Score
                 </div>
               </div>
-              {leaderboardEntries.map((entry) => {
-                const medal = medalByRank[entry.rank];
-                return (
-                  <div
-                    key={entry.rank}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 16px",
-                      background: "white",
-                      borderBottom: "1px solid #e2e8f0",
-                    }}
-                  >
+              {leaderboardLoading ? (
+                <div
+                  style={{
+                    padding: "22px 16px",
+                    textAlign: "center",
+                    fontWeight: 600,
+                    color: "#64748b",
+                  }}
+                >
+                  Loading leaderboard...
+                </div>
+              ) : leaderboardError ? (
+                <div
+                  style={{
+                    padding: "22px 16px",
+                    textAlign: "center",
+                    fontWeight: 600,
+                    color: "#ef4444",
+                  }}
+                >
+                  {leaderboardError}
+                </div>
+              ) : leaderboardEntries.length === 0 ? (
+                <div
+                  style={{
+                    padding: "22px 16px",
+                    textAlign: "center",
+                    fontWeight: 600,
+                    color: "#64748b",
+                  }}
+                >
+                  {emptyLeaderboardLabel}
+                </div>
+              ) : (
+                leaderboardEntries.map((entry) => {
+                  const medal = medalByRank[entry.rank];
+                  return (
                     <div
+                      key={entry.userId || entry.rank}
                       style={{
-                        width: 28,
-                        textAlign: "center",
-                        fontWeight: 800,
-                        color: medal ? "#f59e0b" : "#94a3b8",
-                        fontSize: medal ? 18 : 14,
-                      }}
-                    >
-                      {medal || entry.rank}
-                    </div>
-                    <div
-                      style={{
-                        width: 38,
-                        height: 38,
-                        borderRadius: "50%",
-                        background: "#60a5fa",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        color: "white",
-                        fontWeight: 700,
-                        fontSize: 16,
+                        gap: 12,
+                        padding: "12px 16px",
+                        background: "white",
+                        borderBottom: "1px solid #e2e8f0",
                       }}
                     >
-                      {entry.name.slice(0, 1).toUpperCase()}
+                      <div
+                        style={{
+                          width: 28,
+                          textAlign: "center",
+                          fontWeight: 800,
+                          color: medal ? "#f59e0b" : "#94a3b8",
+                          fontSize: medal ? 18 : 14,
+                        }}
+                      >
+                        {medal || entry.rank}
+                      </div>
+                      <div
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: "50%",
+                          background: "#60a5fa",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontWeight: 700,
+                          fontSize: 16,
+                        }}
+                      >
+                        {entry.name.slice(0, 1).toUpperCase()}
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          fontWeight: 700,
+                          color: "#0f172a",
+                          fontSize: 16,
+                        }}
+                      >
+                        {entry.name}
+                      </div>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          color: "#1f2937",
+                          fontSize: 16,
+                        }}
+                      >
+                        {entry.score}
+                      </div>
                     </div>
-                    <div
-                      style={{
-                        flex: 1,
-                        fontWeight: 700,
-                        color: "#0f172a",
-                        fontSize: 16,
-                      }}
-                    >
-                      {entry.name}
-                    </div>
-                    <div
-                      style={{
-                        fontWeight: 800,
-                        color: "#1f2937",
-                        fontSize: 16,
-                      }}
-                    >
-                      {entry.score}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
