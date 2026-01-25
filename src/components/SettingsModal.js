@@ -1,6 +1,5 @@
 // src/components/SettingsModal.js
 import React, { useEffect, useMemo, useState } from "react";
-import { Capacitor } from "@capacitor/core";
 import { clearSupabaseSession, supabase } from "../supabaseClient";
 
 const LANG_DISPLAY = {
@@ -32,6 +31,7 @@ export default function SettingsModal({
   const [userCreatedAt, setUserCreatedAt] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const handleLogout = async () => {
     try {
       if (supabase) {
@@ -70,11 +70,8 @@ export default function SettingsModal({
       );
       return;
     }
-    const confirmText = t
-      ? t(lang, "deleteAccountConfirm")
-      : "Delete your account and all associated data?";
-    if (!window.confirm(confirmText)) return;
 
+    setShowDeleteConfirm(false);
     setIsDeleting(true);
     setDeleteError("");
     try {
@@ -181,26 +178,6 @@ export default function SettingsModal({
         code,
         name: LANG_DISPLAY[code] || LANGS[code]?.name || code,
       }));
-
-  const openExternalLink = async (url) => {
-    if (
-      Capacitor.isNativePlatform() &&
-      typeof Capacitor.isPluginAvailable === "function" &&
-      Capacitor.isPluginAvailable("Browser")
-    ) {
-      try {
-        await Capacitor.Plugins?.Browser?.open?.({ url });
-        return;
-      } catch (error) {
-        console.error("Failed to open link with Capacitor Browser", error);
-      }
-    }
-
-    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
-    if (newWindow) {
-      newWindow.opener = null;
-    }
-  };
 
   return (
     <div
@@ -365,34 +342,41 @@ export default function SettingsModal({
         </label>
 
         <div style={{ marginBottom: loggedIn ? 16 : 0 }}>
-          <label
+          <div
             style={{
-              display: "block",
-              fontSize: 13,
-              fontWeight: 500,
-              marginBottom: 6,
-              color: "#0f172a",
-            }}
-          >
-            {t ? t(lang, "language") : "Language"}
-          </label>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            style={{
-              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "12px 14px",
+              borderRadius: 16,
               border: "1px solid #e2e8f0",
-              borderRadius: 14,
-              padding: "9px 12px",
-              fontSize: 14,
+              background: "#ffffff",
+              boxShadow: "0 6px 16px rgba(15, 23, 42, 0.08)",
             }}
           >
-            {langList.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              {t ? t(lang, "language") : "Language"}
+            </div>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{
+                minWidth: 160,
+                border: "1px solid #e2e8f0",
+                borderRadius: 12,
+                padding: "6px 10px",
+                fontSize: 13,
+                background: "#fff",
+              }}
+            >
+              {langList.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* DEV / TESTING: reset progress for current user (not for production) */}
@@ -453,44 +437,7 @@ export default function SettingsModal({
           </div>
         )}
 
-        <div style={{ marginTop: 12, marginBottom: 6 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <button
-              onClick={() =>
-                openExternalLink("https://wildmoustachegames.com/privacy.html")
-              }
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "#0f172a",
-                textDecoration: "underline",
-                fontSize: 13,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              {t ? t(lang, "privacyPolicy") : "Privacy Policy"}
-            </button>
-            <button
-              onClick={() =>
-                openExternalLink("https://wildmoustachegames.com/terms.html")
-              }
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "#0f172a",
-                textDecoration: "underline",
-                fontSize: 13,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              {t ? t(lang, "termsAndConditions") : "Terms & Conditions"}
-            </button>
-          </div>
-        </div>
+        <div style={{ marginTop: 12, marginBottom: 6 }} />
 
         {loggedIn && (
           <>
@@ -510,19 +457,21 @@ export default function SettingsModal({
               {t ? t(lang, "logout") : "Log out"}
             </button>
             <button
-              onClick={handleDeleteAccount}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
               style={{
                 width: "100%",
-                background: isDeleting ? "#fca5a5" : "#ef4444",
+                background: "none",
                 border: "none",
-                borderRadius: 16,
-                padding: "12px 0",
-                fontWeight: 700,
-                marginTop: 10,
+                borderRadius: 12,
+                padding: "6px 0",
+                fontWeight: 600,
+                marginTop: 14,
                 cursor: isDeleting ? "not-allowed" : "pointer",
-                color: "white",
-                boxShadow: "0 8px 18px rgba(239, 68, 68, 0.35)",
+                color: "#ef4444",
+                textDecoration: "underline",
+                fontSize: 12,
+                textAlign: "center",
               }}
             >
               {t ? t(lang, "deleteAccount") : "Delete Account"}
@@ -532,6 +481,7 @@ export default function SettingsModal({
                 marginTop: 6,
                 fontSize: 12,
                 color: "#64748b",
+                textAlign: "center",
               }}
             >
               {t
@@ -546,6 +496,76 @@ export default function SettingsModal({
           </>
         )}
       </div>
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 999,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 18,
+              width: "min(320px, 90vw)",
+              padding: "18px 16px",
+              boxShadow: "0 12px 28px rgba(15,23,42,0.25)",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+              {t ? t(lang, "areYouSure") : "Are you sure?"}
+            </h3>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
+              {t
+                ? t(lang, "deleteAccountBody")
+                : "This will permanently delete your account and all associated data."}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                justifyContent: "center",
+              }}
+            >
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 12,
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {t ? t(lang, "close") : "Close"}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: isDeleting ? "#fca5a5" : "#ef4444",
+                  color: "white",
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                }}
+              >
+                {t ? t(lang, "deleteAccount") : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

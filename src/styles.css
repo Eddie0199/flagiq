@@ -31,6 +31,10 @@ body {
 }
 
 .header-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: #0b74ff;
   padding-top: 2px;
   padding-right: 12px;
   padding-bottom: 8px;

@@ -103,6 +103,11 @@ function DailySpinButton({
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
   const offlineMessage = "Connect to the internet to claim your daily spin.";
+  const text = (key, fallback) => {
+    if (!t || !lang) return fallback;
+    const value = t(lang, key);
+    return value === key ? fallback : value;
+  };
 
   // rewards
   const baseRewards = useMemo(
@@ -564,7 +569,22 @@ export default function HomeScreen({
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
-  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 28px)";
+  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 12px)";
+  const footerLinkStyle = {
+    background: "none",
+    border: "none",
+    padding: 0,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+    cursor: "pointer",
+  };
+
+  const openExternalLink = (url) => {
+    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (newWindow) {
+      newWindow.opener = null;
+    }
+  };
 
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
@@ -753,8 +773,9 @@ export default function HomeScreen({
             borderRadius: 999,
             width: 36,
             height: 36,
-            lineHeight: "36px",
-            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             fontSize: 18,
             boxShadow: "0 1px 3px rgba(0,0,0,.06)",
             cursor: "pointer",
@@ -796,7 +817,7 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: 92,
+          marginTop: 8,
           padding: "18px 26px",
           borderRadius: 20,
           background: "rgba(0,0,0,0.35)",
@@ -858,8 +879,16 @@ export default function HomeScreen({
               boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
               color: "#0f172a",
               textAlign: "left",
+              position: "relative",
             }}
           >
+            <button
+              onClick={() => setShowInfoModal(false)}
+              className="modal-close-button"
+              aria-label={text("close", "Close")}
+            >
+              ×
+            </button>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
               {text("homeInfoTitle", "How to Play")}
             </div>
@@ -879,22 +908,6 @@ export default function HomeScreen({
                 "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters."
               )}
             </div>
-            <button
-              onClick={() => setShowInfoModal(false)}
-              style={{
-                marginTop: 18,
-                width: "100%",
-                borderRadius: 999,
-                border: "none",
-                padding: "10px 14px",
-                fontWeight: 700,
-                background: "#0b74ff",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {text("close", "Close")}
-            </button>
           </div>
         </div>
       ) : null}
@@ -924,8 +937,16 @@ export default function HomeScreen({
               boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
               color: "#0f172a",
               textAlign: "left",
+              position: "relative",
             }}
           >
+            <button
+              onClick={() => setShowLeaderboardModal(false)}
+              className="modal-close-button"
+              aria-label={text("close", "Close")}
+            >
+              ×
+            </button>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
               {text("homeLeaderboardTitle", "Leaderboard")}
             </div>
@@ -935,22 +956,6 @@ export default function HomeScreen({
                 "The global leaderboard is on the way. Stay tuned for competitive rankings."
               )}
             </div>
-            <button
-              onClick={() => setShowLeaderboardModal(false)}
-              style={{
-                marginTop: 18,
-                width: "100%",
-                borderRadius: 999,
-                border: "none",
-                padding: "10px 14px",
-                fontWeight: 700,
-                background: "#0b74ff",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {text("close", "Close")}
-            </button>
           </div>
         </div>
       ) : null}
@@ -1053,10 +1058,52 @@ export default function HomeScreen({
           fontWeight: 600,
           fontSize: 12,
           textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
           whiteSpace: "nowrap",
         }}
       >
-        Powered by <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span>
+        <div>
+          Powered by{" "}
+          <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            fontWeight: 500,
+          }}
+        >
+          <button
+            onClick={() =>
+              openExternalLink("https://wildmoustachegames.com/terms.html")
+            }
+            style={footerLinkStyle}
+          >
+            {text("footerTerms", "Terms")}
+          </button>
+          <span aria-hidden="true">•</span>
+          <button
+            onClick={() =>
+              openExternalLink("https://wildmoustachegames.com/privacy.html")
+            }
+            style={footerLinkStyle}
+          >
+            {text("footerPrivacy", "Privacy")}
+          </button>
+          <span aria-hidden="true">•</span>
+          <button
+            onClick={() => {
+              window.location.href = "mailto:support@wildmoustachegames.com";
+            }}
+            style={footerLinkStyle}
+          >
+            {text("footerContact", "Contact")}
+          </button>
+        </div>
       </div>
     </div>
   );

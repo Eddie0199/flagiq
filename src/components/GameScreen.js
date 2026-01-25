@@ -760,10 +760,10 @@ export default function GameScreen({
 
   const actionGroupStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gridTemplateColumns: "minmax(0, 1fr)",
     gap: 10,
     justifyContent: "center",
-    width: "min(320px, 90vw)",
+    width: "min(260px, 90vw)",
     margin: "0 auto",
   };
 
@@ -884,7 +884,7 @@ export default function GameScreen({
       {/* TOP INFO (blue box) */}
       <div
         style={{
-          background: "#eef2ff",
+          background: "#fff",
           borderRadius: 22,
           padding: "12px 16px 14px",
           marginBottom: 16,
@@ -1085,22 +1085,16 @@ export default function GameScreen({
                 {t && lang ? t(lang, "nextLevel") : "Next Level"}
               </button>
               <button
-                onClick={onShop}
-                style={secondaryActionButton}
-              >
-                {t && lang ? t(lang, "shop") : "Shop"}
-              </button>
-              <button
-                onClick={onMainMenu}
-                style={secondaryActionButton}
-              >
-                {t && lang ? t(lang, "mainMenu") : "Main Menu"}
-              </button>
-              <button
                 onClick={resetAndRebuild}
                 style={secondaryActionButton}
               >
                 {t && lang ? t(lang, "tryAgain") : "Try Again"}
+              </button>
+              <button onClick={onShop} style={secondaryActionButton}>
+                {t && lang ? t(lang, "goToShop") : "Go to Shop"}
+              </button>
+              <button onClick={onMainMenu} style={secondaryActionButton}>
+                {t && lang ? t(lang, "goToMainMenu") : "Go to Main Menu"}
               </button>
             </div>
           </div>
@@ -1151,22 +1145,16 @@ export default function GameScreen({
                 {t && lang ? t(lang, "nextLevel") : "Next Level"}
               </button>
               <button
-                onClick={onShop}
-                style={secondaryActionButton}
-              >
-                {t && lang ? t(lang, "shop") : "Shop"}
-              </button>
-              <button
-                onClick={onMainMenu}
-                style={secondaryActionButton}
-              >
-                {t && lang ? t(lang, "mainMenu") : "Main Menu"}
-              </button>
-              <button
                 onClick={resetAndRebuild}
                 style={secondaryActionButton}
               >
                 {t && lang ? t(lang, "tryAgain") : "Try Again"}
+              </button>
+              <button onClick={onShop} style={secondaryActionButton}>
+                {t && lang ? t(lang, "goToShop") : "Go to Shop"}
+              </button>
+              <button onClick={onMainMenu} style={secondaryActionButton}>
+                {t && lang ? t(lang, "goToMainMenu") : "Go to Main Menu"}
               </button>
             </div>
           </div>
@@ -1186,22 +1174,16 @@ export default function GameScreen({
           </h2>
           <div style={actionGroupStyle}>
             <button
-              onClick={onShop}
-              style={secondaryActionButton}
-            >
-              {t && lang ? t(lang, "shop") : "Shop"}
-            </button>
-            <button
-              onClick={onMainMenu}
-              style={secondaryActionButton}
-            >
-              {t && lang ? t(lang, "mainMenu") : "Main Menu"}
-            </button>
-            <button
               onClick={handleFailRetry}
               style={primaryActionButton}
             >
               {t && lang ? t(lang, "tryAgain") : "Try Again"}
+            </button>
+            <button onClick={onShop} style={secondaryActionButton}>
+              {t && lang ? t(lang, "goToShop") : "Go to Shop"}
+            </button>
+            <button onClick={onMainMenu} style={secondaryActionButton}>
+              {t && lang ? t(lang, "goToMainMenu") : "Go to Main Menu"}
             </button>
           </div>
           {hintError ? (
@@ -1365,7 +1347,7 @@ export default function GameScreen({
           {/* FLAG */}
           <div
             style={{
-              background: "#e2e8f0",
+              background: "#fff",
               borderRadius: 16,
               height: 200,
               display: "flex",
