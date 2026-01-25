@@ -100,7 +100,14 @@ export default function LevelScreen({
           margin: "4px 0 8px",
         }}
       >
-        <div style={{ justifySelf: "start", fontSize: 18, fontWeight: 800 }}>
+        <div
+          style={{
+            justifySelf: "start",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#fff",
+          }}
+        >
           {t ? t(lang, "selectLevel") : "Select level"}
         </div>
         <div style={{ justifySelf: "end" }}>

@@ -253,7 +253,7 @@ export default function StoreScreen({
             fontSize: 26,
             fontWeight: 800,
             margin: "4px 0 2px",
-            color: "#0f172a",
+            color: "#fff",
           }}
         >
           {text("storeTitle", "Booster shop")}
