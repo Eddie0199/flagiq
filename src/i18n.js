@@ -184,6 +184,7 @@ const STRINGS = {
       "This will permanently delete your account and all associated data.",
     deleteAccountConfirm: "Delete your account and all associated data?",
     deleteAccountFailed: "Unable to delete your account right now.",
+    areYouSure: "Are you sure?",
     close: "Close",
     username: "Username",
 
@@ -656,6 +657,7 @@ const STRINGS = {
       "Esto eliminará permanentemente tu cuenta y todos los datos asociados.",
     deleteAccountConfirm: "¿Eliminar tu cuenta y todos los datos asociados?",
     deleteAccountFailed: "No se pudo eliminar tu cuenta en este momento.",
+    areYouSure: "¿Estás seguro?",
     close: "Cerrar",
     username: "Nombre de usuario",
 
@@ -1077,6 +1079,7 @@ const STRINGS = {
       "Isto irá eliminar permanentemente a tua conta e todos os dados associados.",
     deleteAccountConfirm: "Eliminar a tua conta e todos os dados associados?",
     deleteAccountFailed: "Não foi possível eliminar a tua conta neste momento.",
+    areYouSure: "Tens a certeza?",
     close: "Fechar",
     username: "Nome de utilizador",
     coins: "Moedas",
@@ -1520,6 +1523,7 @@ const STRINGS = {
     deleteAccountConfirm: "Dein Konto und alle zugehörigen Daten löschen?",
     deleteAccountFailed:
       "Dein Konto konnte gerade nicht gelöscht werden.",
+    areYouSure: "Bist du sicher?",
     close: "Schließen",
     username: "Benutzername",
     coins: "Münzen",
@@ -1974,6 +1978,7 @@ const STRINGS = {
       "Supprimer ton compte et toutes les données associées ?",
     deleteAccountFailed:
       "Impossible de supprimer ton compte pour le moment.",
+    areYouSure: "Es-tu sûr ?",
     close: "Fermer",
     username: "Nom d’utilisateur",
     coins: "Pièces",
@@ -2428,6 +2433,7 @@ const STRINGS = {
     deleteAccountConfirm:
       "Je account en alle bijbehorende gegevens verwijderen?",
     deleteAccountFailed: "Je account kan momenteel niet worden verwijderd.",
+    areYouSure: "Weet je het zeker?",
     close: "Sluiten",
     username: "Gebruikersnaam",
     coinsPillLabel: "Winkel",

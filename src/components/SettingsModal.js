@@ -571,9 +571,7 @@ export default function SettingsModal({
             }}
           >
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
-              {t
-                ? t(lang, "deleteAccountConfirm")
-                : "Delete your account and all associated data?"}
+              {t ? t(lang, "areYouSure") : "Are you sure?"}
             </h3>
             <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
               {t

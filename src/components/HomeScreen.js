@@ -863,8 +863,16 @@ export default function HomeScreen({
               boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
               color: "#0f172a",
               textAlign: "left",
+              position: "relative",
             }}
           >
+            <button
+              onClick={() => setShowInfoModal(false)}
+              className="modal-close-button"
+              aria-label={text("close", "Close")}
+            >
+              ×
+            </button>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
               {text("homeInfoTitle", "How to Play")}
             </div>
@@ -884,22 +892,6 @@ export default function HomeScreen({
                 "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters."
               )}
             </div>
-            <button
-              onClick={() => setShowInfoModal(false)}
-              style={{
-                marginTop: 18,
-                width: "100%",
-                borderRadius: 999,
-                border: "none",
-                padding: "10px 14px",
-                fontWeight: 700,
-                background: "#0b74ff",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {text("close", "Close")}
-            </button>
           </div>
         </div>
       ) : null}
@@ -929,8 +921,16 @@ export default function HomeScreen({
               boxShadow: "0 18px 40px rgba(0,0,0,0.25)",
               color: "#0f172a",
               textAlign: "left",
+              position: "relative",
             }}
           >
+            <button
+              onClick={() => setShowLeaderboardModal(false)}
+              className="modal-close-button"
+              aria-label={text("close", "Close")}
+            >
+              ×
+            </button>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
               {text("homeLeaderboardTitle", "Leaderboard")}
             </div>
@@ -940,22 +940,6 @@ export default function HomeScreen({
                 "The global leaderboard is on the way. Stay tuned for competitive rankings."
               )}
             </div>
-            <button
-              onClick={() => setShowLeaderboardModal(false)}
-              style={{
-                marginTop: 18,
-                width: "100%",
-                borderRadius: 999,
-                border: "none",
-                padding: "10px 14px",
-                fontWeight: 700,
-                background: "#0b74ff",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {text("close", "Close")}
-            </button>
           </div>
         </div>
       ) : null}

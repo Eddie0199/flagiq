@@ -884,7 +884,7 @@ export default function GameScreen({
       {/* TOP INFO (blue box) */}
       <div
         style={{
-          background: "#eef2ff",
+          background: "#fff",
           borderRadius: 22,
           padding: "12px 16px 14px",
           marginBottom: 16,
@@ -1347,7 +1347,7 @@ export default function GameScreen({
           {/* FLAG */}
           <div
             style={{
-              background: "#e2e8f0",
+              background: "#fff",
               borderRadius: 16,
               height: 200,
               display: "flex",
