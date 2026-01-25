@@ -817,7 +817,7 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: 8,
+          marginTop: 32,
           padding: "18px 26px",
           borderRadius: 20,
           background: "rgba(0,0,0,0.35)",
