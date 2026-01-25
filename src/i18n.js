@@ -11,8 +11,14 @@ export const LANGS = [
 
 const STRINGS = {
   en: {
-    appTitle: "FlagIQ",
+    appTitle: "Flaq IQ",
     appSubtitle: "Test your world knowledge — one flag at a time",
+    homeInfoTitle: "About Flaq IQ",
+    homeInfoBody:
+      "Test your flag knowledge across classic and timed modes, earn stars, and return daily for rewards.",
+    homeLeaderboardTitle: "Leaderboard",
+    homeLeaderboardBody:
+      "The global leaderboard is on the way. Stay tuned for competitive rankings.",
 
     classic: "Classic",
     classicDesc: "Learn flags at your pace",
@@ -558,9 +564,15 @@ const STRINGS = {
   },
 
   es: {
-    appTitle: "FlagIQ",
+    appTitle: "Flaq IQ",
     appSubtitle:
       "Pon a prueba tu conocimiento del mundo — una bandera a la vez",
+    homeInfoTitle: "Sobre Flaq IQ",
+    homeInfoBody:
+      "Pon a prueba tus conocimientos de banderas en modos clásico y contrarreloj, gana estrellas y vuelve a diario por recompensas.",
+    homeLeaderboardTitle: "Clasificación",
+    homeLeaderboardBody:
+      "La clasificación global está en camino. Pronto habrá rankings competitivos.",
 
     classic: "Clásico",
     classicDesc: "Aprende banderas a tu ritmo",
@@ -988,8 +1000,14 @@ const STRINGS = {
   },
 
   pt: {
-    appTitle: "FlagIQ",
+    appTitle: "Flaq IQ",
     appSubtitle: "Teste o seu conhecimento do mundo — uma bandeira de cada vez",
+    homeInfoTitle: "Sobre o Flaq IQ",
+    homeInfoBody:
+      "Teste o seu conhecimento de bandeiras nos modos clássico e contra o tempo, ganhe estrelas e volte diariamente para recompensas.",
+    homeLeaderboardTitle: "Classificação",
+    homeLeaderboardBody:
+      "A classificação global está a caminho. Fique atento aos rankings competitivos.",
 
     classic: "Clássico",
     classicDesc: "Aprenda bandeiras no seu ritmo",
@@ -1416,8 +1434,14 @@ const STRINGS = {
   },
 
   de: {
-    appTitle: "FlagIQ",
+    appTitle: "Flaq IQ",
     appSubtitle: "Teste dein Weltwissen – Fahne für Fahne",
+    homeInfoTitle: "Über Flaq IQ",
+    homeInfoBody:
+      "Teste dein Flaggenwissen in klassischen und Zeitmodi, sammle Sterne und kehre täglich für Belohnungen zurück.",
+    homeLeaderboardTitle: "Bestenliste",
+    homeLeaderboardBody:
+      "Die globale Bestenliste ist unterwegs. Bleib dran für Wettbewerbsrankings.",
 
     classic: "Klassisch",
     classicDesc: "Lerne Flaggen in deinem Tempo",
@@ -1846,8 +1870,14 @@ const STRINGS = {
   },
 
   fr: {
-    appTitle: "FlagIQ",
+    appTitle: "Flaq IQ",
     appSubtitle: "Teste tes connaissances du monde — un drapeau à la fois",
+    homeInfoTitle: "À propos de Flaq IQ",
+    homeInfoBody:
+      "Teste tes connaissances des drapeaux en modes classique et chronométré, gagne des étoiles et reviens chaque jour pour des récompenses.",
+    homeLeaderboardTitle: "Classement",
+    homeLeaderboardBody:
+      "Le classement mondial arrive bientôt. Reste connecté pour les classements compétitifs.",
 
     classic: "Classique",
     classicDesc: "Apprends les drapeaux à ton rythme",
@@ -2279,8 +2309,14 @@ const STRINGS = {
   },
 
   nl: {
-    appTitle: "FlagIQ",
+    appTitle: "Flaq IQ",
     appSubtitle: "Test je wereldkennis — vlag voor vlag",
+    homeInfoTitle: "Over Flaq IQ",
+    homeInfoBody:
+      "Test je vlagkennis in klassieke en getimede modi, verdien sterren en kom dagelijks terug voor beloningen.",
+    homeLeaderboardTitle: "Ranglijst",
+    homeLeaderboardBody:
+      "De wereldwijde ranglijst komt eraan. Blijf op de hoogte voor competitieve rankings.",
 
     classic: "Klassiek",
     classicDesc: "Leer vlaggen in je eigen tempo",
