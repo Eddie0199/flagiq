@@ -570,6 +570,21 @@ export default function HomeScreen({
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
   const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 28px)";
+  const footerLinkStyle = {
+    background: "none",
+    border: "none",
+    padding: 0,
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 12,
+    cursor: "pointer",
+  };
+
+  const openExternalLink = (url) => {
+    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (newWindow) {
+      newWindow.opener = null;
+    }
+  };
 
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
@@ -1042,10 +1057,52 @@ export default function HomeScreen({
           fontWeight: 600,
           fontSize: 12,
           textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
           whiteSpace: "nowrap",
         }}
       >
-        Powered by <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span>
+        <div>
+          Powered by{" "}
+          <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            fontWeight: 500,
+          }}
+        >
+          <button
+            onClick={() =>
+              openExternalLink("https://wildmoustachegames.com/terms.html")
+            }
+            style={footerLinkStyle}
+          >
+            {text("footerTerms", "Terms")}
+          </button>
+          <span aria-hidden="true">•</span>
+          <button
+            onClick={() =>
+              openExternalLink("https://wildmoustachegames.com/privacy.html")
+            }
+            style={footerLinkStyle}
+          >
+            {text("footerPrivacy", "Privacy")}
+          </button>
+          <span aria-hidden="true">•</span>
+          <button
+            onClick={() => {
+              window.location.href = "mailto:support@wildmoustachegames.com";
+            }}
+            style={footerLinkStyle}
+          >
+            {text("footerContact", "Contact")}
+          </button>
+        </div>
       </div>
     </div>
   );

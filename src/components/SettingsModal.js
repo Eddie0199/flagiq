@@ -1,6 +1,5 @@
 // src/components/SettingsModal.js
 import React, { useEffect, useMemo, useState } from "react";
-import { Capacitor } from "@capacitor/core";
 import { clearSupabaseSession, supabase } from "../supabaseClient";
 
 const LANG_DISPLAY = {
@@ -179,26 +178,6 @@ export default function SettingsModal({
         code,
         name: LANG_DISPLAY[code] || LANGS[code]?.name || code,
       }));
-
-  const openExternalLink = async (url) => {
-    if (
-      Capacitor.isNativePlatform() &&
-      typeof Capacitor.isPluginAvailable === "function" &&
-      Capacitor.isPluginAvailable("Browser")
-    ) {
-      try {
-        await Capacitor.Plugins?.Browser?.open?.({ url });
-        return;
-      } catch (error) {
-        console.error("Failed to open link with Capacitor Browser", error);
-      }
-    }
-
-    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
-    if (newWindow) {
-      newWindow.opener = null;
-    }
-  };
 
   return (
     <div
@@ -451,44 +430,7 @@ export default function SettingsModal({
           </div>
         )}
 
-        <div style={{ marginTop: 12, marginBottom: 6 }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <button
-              onClick={() =>
-                openExternalLink("https://wildmoustachegames.com/privacy.html")
-              }
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "#0f172a",
-                textDecoration: "underline",
-                fontSize: 13,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              {t ? t(lang, "privacyPolicy") : "Privacy Policy"}
-            </button>
-            <button
-              onClick={() =>
-                openExternalLink("https://wildmoustachegames.com/terms.html")
-              }
-              style={{
-                background: "none",
-                border: "none",
-                padding: 0,
-                color: "#0f172a",
-                textDecoration: "underline",
-                fontSize: 13,
-                cursor: "pointer",
-                textAlign: "left",
-              }}
-            >
-              {t ? t(lang, "termsAndConditions") : "Terms & Conditions"}
-            </button>
-          </div>
-        </div>
+        <div style={{ marginTop: 12, marginBottom: 6 }} />
 
         {loggedIn && (
           <>
