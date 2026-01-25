@@ -288,17 +288,8 @@ export default function AuthModal({
         {/* close */}
         <button
           onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            width: 34,
-            height: 34,
-            borderRadius: "999px",
-            border: "1px solid #e2e8f0",
-            background: "#fff",
-            cursor: "pointer",
-          }}
+          className="modal-close-button"
+          aria-label={tr("close", "Close")}
         >
           ×
         </button>

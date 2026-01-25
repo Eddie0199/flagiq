@@ -72,6 +72,25 @@ body {
   text-overflow: ellipsis;
 }
 
+.modal-close-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #0f172a;
+  background: #fff;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
 .game-answers {
   display: flex;
   flex-direction: column;

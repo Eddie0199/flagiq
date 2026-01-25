@@ -2344,6 +2344,8 @@ export default function App() {
             soundWrong={soundWrong}
             onBack={handleGameBack}
             onNextLevel={handleNextLevel}
+            onShop={openStoreFromScreen}
+            onMainMenu={goHome}
             starsFromLives={starsFromLives}
             hints={hints}
             setHints={setHints}
