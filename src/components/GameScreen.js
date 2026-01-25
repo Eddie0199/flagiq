@@ -67,6 +67,8 @@ export default function GameScreen({
   soundWrong,
   onBack,
   onNextLevel,
+  onShop,
+  onMainMenu,
   starsFromLives,
   // hints
   hints,
@@ -756,6 +758,38 @@ export default function GameScreen({
     resetAndRebuild();
   };
 
+  const actionGroupStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 10,
+    justifyContent: "center",
+    width: "min(320px, 90vw)",
+    margin: "0 auto",
+  };
+
+  const actionButtonBase = {
+    padding: "10px 14px",
+    borderRadius: 16,
+    fontWeight: 700,
+    fontSize: 14,
+    cursor: "pointer",
+  };
+
+  const primaryActionButton = {
+    ...actionButtonBase,
+    border: "none",
+    background: "#0f172a",
+    color: "#fff",
+    boxShadow: "0 8px 18px rgba(15,23,42,0.25)",
+  };
+
+  const secondaryActionButton = {
+    ...actionButtonBase,
+    border: "1px solid #0f172a",
+    background: "#fff",
+    color: "#0f172a",
+  };
+
   return (
     <div style={{ padding: "10px 12px 60px" }}>
       {/* HINT INFO POPUP (first time) */}
@@ -1046,38 +1080,27 @@ export default function GameScreen({
               </div>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                justifyContent: "center",
-              }}
-            >
-              <button
-                onClick={resetAndRebuild}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 14,
-                  border: "1px solid #0f172a",
-                  background: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {t && lang ? t(lang, "tryAgain") : "Try Again"}
+            <div style={actionGroupStyle}>
+              <button onClick={onNextLevel} style={primaryActionButton}>
+                {t && lang ? t(lang, "nextLevel") : "Next Level"}
               </button>
               <button
-                onClick={onNextLevel}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: "#0f172a",
-                  color: "#fff",
-                  fontWeight: 600,
-                }}
+                onClick={onShop}
+                style={secondaryActionButton}
               >
-                {t && lang ? t(lang, "nextLevel") : "Next Level"}
+                {t && lang ? t(lang, "shop") : "Shop"}
+              </button>
+              <button
+                onClick={onMainMenu}
+                style={secondaryActionButton}
+              >
+                {t && lang ? t(lang, "mainMenu") : "Main Menu"}
+              </button>
+              <button
+                onClick={resetAndRebuild}
+                style={secondaryActionButton}
+              >
+                {t && lang ? t(lang, "tryAgain") : "Try Again"}
               </button>
             </div>
           </div>
@@ -1087,7 +1110,7 @@ export default function GameScreen({
               style={{
                 fontSize: 26,
                 fontWeight: 700,
-                color: "#166534",
+                color: "#fff",
                 marginBottom: 10,
               }}
             >
@@ -1123,38 +1146,27 @@ export default function GameScreen({
               </div>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                gap: 12,
-                justifyContent: "center",
-              }}
-            >
-              <button
-                onClick={resetAndRebuild}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 14,
-                  border: "1px solid #0f172a",
-                  background: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {t && lang ? t(lang, "tryAgain") : "Try Again"}
+            <div style={actionGroupStyle}>
+              <button onClick={onNextLevel} style={primaryActionButton}>
+                {t && lang ? t(lang, "nextLevel") : "Next Level"}
               </button>
               <button
-                onClick={onNextLevel}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: "#0f172a",
-                  color: "#fff",
-                  fontWeight: 600,
-                }}
+                onClick={onShop}
+                style={secondaryActionButton}
               >
-                {t && lang ? t(lang, "nextLevel") : "Next Level"}
+                {t && lang ? t(lang, "shop") : "Shop"}
+              </button>
+              <button
+                onClick={onMainMenu}
+                style={secondaryActionButton}
+              >
+                {t && lang ? t(lang, "mainMenu") : "Main Menu"}
+              </button>
+              <button
+                onClick={resetAndRebuild}
+                style={secondaryActionButton}
+              >
+                {t && lang ? t(lang, "tryAgain") : "Try Again"}
               </button>
             </div>
           </div>
@@ -1166,45 +1178,30 @@ export default function GameScreen({
             style={{
               fontSize: 26,
               fontWeight: 700,
-              color: "#b91c1c",
+              color: "#fff",
               marginBottom: 10,
             }}
           >
             {t && lang ? t(lang, "gameOver") : "Game over"}
           </h2>
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              justifyContent: "center",
-            }}
-          >
+          <div style={actionGroupStyle}>
             <button
-              onClick={handleFailRetry}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 14,
-                border: "none",
-                background: "#0f172a",
-                color: "#fff",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
+              onClick={onShop}
+              style={secondaryActionButton}
             >
-              {t && lang ? t(lang, "tryAgain") : "Try again"}
+              {t && lang ? t(lang, "shop") : "Shop"}
             </button>
             <button
-              onClick={onBack}
-              style={{
-                padding: "8px 14px",
-                borderRadius: 14,
-                border: "1px solid #0f172a",
-                background: "#fff",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
+              onClick={onMainMenu}
+              style={secondaryActionButton}
             >
-              {t && lang ? t(lang, "back") : "Back"}
+              {t && lang ? t(lang, "mainMenu") : "Main Menu"}
+            </button>
+            <button
+              onClick={handleFailRetry}
+              style={primaryActionButton}
+            >
+              {t && lang ? t(lang, "tryAgain") : "Try Again"}
             </button>
           </div>
           {hintError ? (

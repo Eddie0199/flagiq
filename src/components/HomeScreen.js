@@ -369,17 +369,8 @@ function DailySpinButton({
             {/* close */}
             <button
               onClick={() => setIsOpen(false)}
-              style={{
-                position: "absolute",
-                top: 10,
-                right: 10,
-                border: "none",
-                background: "#fff",
-                borderRadius: 999,
-                width: 26,
-                height: 26,
-                cursor: "pointer",
-              }}
+              className="modal-close-button"
+              aria-label={text("close", "Close")}
             >
               ×
             </button>
@@ -573,6 +564,7 @@ export default function HomeScreen({
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
+  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 28px)";
 
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
@@ -692,7 +684,7 @@ export default function HomeScreen({
       <div
         style={{
           position: "absolute",
-          top: "env(safe-area-inset-top, 12px)",
+          top: topIconOffset,
           left: 12,
           display: "flex",
           flexDirection: "column",
@@ -742,7 +734,7 @@ export default function HomeScreen({
       <div
         style={{
           position: "absolute",
-          top: "env(safe-area-inset-top, 12px)",
+          top: topIconOffset,
           right: 12,
           display: "flex",
           flexDirection: "column",
@@ -804,7 +796,7 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: 108,
+          marginTop: 92,
           padding: "18px 26px",
           borderRadius: 20,
           background: "rgba(0,0,0,0.35)",

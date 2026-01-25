@@ -232,19 +232,7 @@ export default function SettingsModal({
         <button
           onClick={onClose}
           aria-label={t ? t(lang, "close") : "Close"}
-          style={{
-            position: "absolute",
-            top: 14,
-            right: 14,
-            width: 30,
-            height: 30,
-            borderRadius: "999px",
-            border: "1px solid rgba(15,23,42,1)",
-            background: "#fff",
-            cursor: "pointer",
-            fontSize: 16,
-            lineHeight: "28px",
-          }}
+          className="modal-close-button"
         >
           ×
         </button>

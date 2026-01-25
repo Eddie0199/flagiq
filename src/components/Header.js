@@ -126,7 +126,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
     <Wrapper
       onClick={clickable ? onClick : undefined}
       style={{
-        padding: "5px 8px",
+        padding: "4px 10px",
         background: "#f1f5f9",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
@@ -136,6 +136,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
         display: "inline-flex",
         gap: 6,
         alignItems: "center",
+        height: 36,
         cursor: clickable ? "pointer" : "default",
         boxShadow: clickable ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
         transition: "transform 0.08s ease, box-shadow 0.08s ease",
@@ -205,8 +206,12 @@ export default function Header({
               onClick={onBack}
               className="header-back-button"
               style={{
-                padding: "10px 12px",
-                borderRadius: 10,
+                padding: "0 12px",
+                height: 36,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                borderRadius: 12,
                 border: "1px solid #e2e8f0",
                 background: "#fff",
                 cursor: "pointer",
