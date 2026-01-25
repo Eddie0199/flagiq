@@ -103,6 +103,11 @@ function DailySpinButton({
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
   const offlineMessage = "Connect to the internet to claim your daily spin.";
+  const text = (key, fallback) => {
+    if (!t || !lang) return fallback;
+    const value = t(lang, key);
+    return value === key ? fallback : value;
+  };
 
   // rewards
   const baseRewards = useMemo(

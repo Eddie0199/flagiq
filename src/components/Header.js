@@ -48,16 +48,16 @@ function HeartsPill({ hearts, t, lang }) {
         background: "#ffffff",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
-        padding: "4px 6px",
-        height: 36,
+        padding: "3px 6px",
+        height: 30,
         boxShadow: "0 1px 2px rgba(0,0,0,.04)",
       }}
     >
       <div
         style={{
           position: "relative",
-          width: 28,
-          height: 28,
+          width: 24,
+          height: 24,
           borderRadius: 8,
           background: "#fff",
           border: "1px solid #e2e8f0",
@@ -67,7 +67,7 @@ function HeartsPill({ hearts, t, lang }) {
         }}
         title={t && lang ? t(lang, "lives") : "Lives"}
       >
-        <span style={{ fontSize: 18 }} role="img" aria-label="heart">
+        <span style={{ fontSize: 16 }} role="img" aria-label="heart">
           ❤️
         </span>
         <span
@@ -75,7 +75,7 @@ function HeartsPill({ hearts, t, lang }) {
             position: "absolute",
             bottom: 1,
             right: 3,
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 800,
             color: "#0f172a",
             textShadow: "0 1px 0 rgba(255,255,255,.7)",
@@ -87,7 +87,7 @@ function HeartsPill({ hearts, t, lang }) {
       {showTimer && (
         <span
           style={{
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: 800,
             color: "#0f172a",
             fontVariantNumeric: "tabular-nums",
@@ -126,17 +126,17 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
     <Wrapper
       onClick={clickable ? onClick : undefined}
       style={{
-        padding: "4px 10px",
+        padding: "3px 8px",
         background: "#f1f5f9",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 800,
         color: "#0f172a",
         display: "inline-flex",
         gap: 6,
         alignItems: "center",
-        height: 36,
+        height: 30,
         cursor: clickable ? "pointer" : "default",
         boxShadow: clickable ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
         transition: "transform 0.08s ease, box-shadow 0.08s ease",
@@ -168,9 +168,9 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
       {clickable && (
         <span
           style={{
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 600,
-            padding: "2px 5px",
+            padding: "1px 4px",
             borderRadius: 999,
             background: "#e2e8f0",
             color: "#0f172a",
@@ -206,8 +206,8 @@ export default function Header({
               onClick={onBack}
               className="header-back-button"
               style={{
-                padding: "0 12px",
-                height: 36,
+                padding: "0 10px",
+                height: 30,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
@@ -245,11 +245,11 @@ export default function Header({
               color: "#0f172a",
               border: "1px solid #e2e8f0",
               borderRadius: 999,
-              width: 36,
-              height: 36,
-              lineHeight: "36px",
+              width: 30,
+              height: 30,
+              lineHeight: "30px",
               textAlign: "center",
-              fontSize: 18,
+              fontSize: 16,
               boxShadow: "0 1px 3px rgba(0,0,0,.06)",
               cursor: "pointer",
             }}

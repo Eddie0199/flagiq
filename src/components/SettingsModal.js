@@ -32,6 +32,7 @@ export default function SettingsModal({
   const [userCreatedAt, setUserCreatedAt] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const handleLogout = async () => {
     try {
       if (supabase) {
@@ -70,11 +71,8 @@ export default function SettingsModal({
       );
       return;
     }
-    const confirmText = t
-      ? t(lang, "deleteAccountConfirm")
-      : "Delete your account and all associated data?";
-    if (!window.confirm(confirmText)) return;
 
+    setShowDeleteConfirm(false);
     setIsDeleting(true);
     setDeleteError("");
     try {
@@ -510,19 +508,21 @@ export default function SettingsModal({
               {t ? t(lang, "logout") : "Log out"}
             </button>
             <button
-              onClick={handleDeleteAccount}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting}
               style={{
                 width: "100%",
-                background: isDeleting ? "#fca5a5" : "#ef4444",
+                background: "none",
                 border: "none",
-                borderRadius: 16,
-                padding: "12px 0",
-                fontWeight: 700,
-                marginTop: 10,
+                borderRadius: 12,
+                padding: "6px 0",
+                fontWeight: 600,
+                marginTop: 14,
                 cursor: isDeleting ? "not-allowed" : "pointer",
-                color: "white",
-                boxShadow: "0 8px 18px rgba(239, 68, 68, 0.35)",
+                color: "#ef4444",
+                textDecoration: "underline",
+                fontSize: 12,
+                textAlign: "center",
               }}
             >
               {t ? t(lang, "deleteAccount") : "Delete Account"}
@@ -532,6 +532,7 @@ export default function SettingsModal({
                 marginTop: 6,
                 fontSize: 12,
                 color: "#64748b",
+                textAlign: "center",
               }}
             >
               {t
@@ -546,6 +547,78 @@ export default function SettingsModal({
           </>
         )}
       </div>
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 999,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 18,
+              width: "min(320px, 90vw)",
+              padding: "18px 16px",
+              boxShadow: "0 12px 28px rgba(15,23,42,0.25)",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+              {t
+                ? t(lang, "deleteAccountConfirm")
+                : "Delete your account and all associated data?"}
+            </h3>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
+              {t
+                ? t(lang, "deleteAccountBody")
+                : "This will permanently delete your account and all associated data."}
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                justifyContent: "center",
+              }}
+            >
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 12,
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {t ? t(lang, "close") : "Close"}
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: isDeleting ? "#fca5a5" : "#ef4444",
+                  color: "white",
+                  fontWeight: 700,
+                  cursor: isDeleting ? "not-allowed" : "pointer",
+                }}
+              >
+                {t ? t(lang, "deleteAccount") : "Delete Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
