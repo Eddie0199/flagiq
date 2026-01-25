@@ -820,7 +820,7 @@ export default function HomeScreen({
           marginTop: 32,
           padding: "18px 26px",
           borderRadius: 20,
-          background: "rgba(0,0,0,0.35)",
+          background: "transparent",
           textAlign: "center",
           color: "white",
           textShadow: "0 3px 8px rgba(0,0,0,.8)",
