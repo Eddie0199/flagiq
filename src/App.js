@@ -815,6 +815,37 @@ function ConfigMissingScreen({ missingKeys }) {
   );
 }
 
+function AuthBootScreen() {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundImage:
+          "url(https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1600&auto=format&fit=crop)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div
+        style={{
+          padding: "12px 20px",
+          borderRadius: 999,
+          background: "rgba(15, 23, 42, 0.75)",
+          color: "#fff",
+          fontWeight: 700,
+          letterSpacing: 0.4,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+        }}
+      >
+        Loading…
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   // 🔐 Handle Supabase password reset redirect
   if (isResetPasswordRoute()) {
@@ -1078,15 +1109,16 @@ export default function App() {
   );
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
+  const [authReady, setAuthReady] = useState(!supabase);
   const [backendLoaded, setBackendLoaded] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
     let cancelled = false;
     (async () => {
-      await restoreSupabaseSession();
-      if (cancelled) return;
       try {
+        await restoreSupabaseSession();
+        if (cancelled) return;
         const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
         const user = data?.user;
@@ -1102,12 +1134,16 @@ export default function App() {
           setActiveUser("");
           setActiveUserLabel("");
         }
+      } finally {
+        if (!cancelled) {
+          setAuthReady(true);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [setActiveUser, setActiveUserLabel]);
+  }, [setActiveUser, setActiveUserLabel, setAuthReady]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1847,8 +1883,9 @@ export default function App() {
 
   // home guard
   useEffect(() => {
+    if (!authReady) return;
     if (!loggedIn && screen !== "home") setScreen("home");
-  }, [loggedIn, screen, setScreen]);
+  }, [authReady, loggedIn, screen, setScreen]);
 
   const goHome = () => setScreen("home");
   const goLevels = () => setScreen("levels");
@@ -1952,6 +1989,9 @@ export default function App() {
   const timetrialStats = deriveModeStatsFromProgress(progress, "timetrial");
 
   const handleHomeStart = (nextMode, pack) => {
+    if (!authReady) {
+      return;
+    }
     if (!loggedIn) {
       openAuth("login");
       return;
@@ -2078,6 +2118,10 @@ export default function App() {
       setScreen("levels");
     }
   };
+
+  if (!authReady) {
+    return <AuthBootScreen />;
+  }
 
   return (
     <div style={{ minHeight: "100vh" }}>
