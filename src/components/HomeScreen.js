@@ -194,27 +194,23 @@ function DailySpinButton({
   }
 
   // translations / labels
-  const label = t && lang ? t(lang, "dailySpin") : "Daily bonus";
+  const label = t && lang ? t(lang, "dailySpin") : "Daily booster";
   const infoTitle = t && lang ? t(lang, "spinInfoTitle") : "How it works";
   const infoBody =
     t && lang
       ? t(lang, "spinInfoBody")
       : "Tap any box to reveal a random hint. ⭐ is rare and gives all 3. You can play again when the timer ends.";
-  const titleText = t && lang ? t(lang, "spinForHintsTitle") : "Booster Wheel";
+  const titleText = t && lang ? t(lang, "spinForHintsTitle") : "Daily Booster";
   const subtitleText =
-    t && lang ? t(lang, "spinOncePerDay") : "Spin once every 24 hours";
+    t && lang
+      ? t(lang, "spinOncePerDay")
+      : "Select a box once every 24 hours";
   const comeBackTxt = t && lang ? t(lang, "comeBackIn") : "Come back in";
   const youWonTxt = t && lang ? t(lang, "youWon") : "You won";
   const readyText =
     t && lang ? t(lang, "readyToSpin") : "Ready – pick a box!";
   const claimText = t && lang ? t(lang, "claim") : "Claim";
-  const statusText =
-    statusMessage ||
-    (!isOnline
-      ? offlineMessage
-      : canSpin
-      ? readyText
-      : `${comeBackTxt} ${formatMs(remainingMs)}`);
+  const statusText = canSpin ? claimText : formatMs(remainingMs);
 
   function handleOpen() {
     setIsOpen(true);
@@ -307,7 +303,6 @@ function DailySpinButton({
           flexDirection: "column",
           alignItems: "center",
           gap: 6,
-          marginTop: 4,
         }}
       >
         <button
@@ -315,8 +310,8 @@ function DailySpinButton({
           aria-label={label}
           style={{
             position: "relative",
-            width: 46,
-            height: 46,
+            width: 36,
+            height: 36,
             borderRadius: 999,
             background: "rgba(255,255,255,.95)",
             border: canSpin
@@ -331,38 +326,8 @@ function DailySpinButton({
               : "0 6px 16px rgba(15,23,42,0.15)",
           }}
         >
-          <span style={{ fontSize: 20 }}>🎡</span>
-          {canSpin && (
-            <span
-              style={{
-                position: "absolute",
-                bottom: -6,
-                right: -6,
-                fontSize: 9,
-                fontWeight: 800,
-                textTransform: "uppercase",
-                letterSpacing: 0.4,
-                padding: "3px 6px",
-                borderRadius: 999,
-                background: "#f59e0b",
-                color: "#1f2937",
-                boxShadow: "0 2px 8px rgba(245, 158, 11, 0.45)",
-              }}
-            >
-              {claimText}
-            </span>
-          )}
+          <span style={{ fontSize: 18 }}>🎡</span>
         </button>
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: "white",
-            textShadow: "0 1px 3px rgba(0,0,0,.5)",
-          }}
-        >
-          {label}
-        </span>
         <span
           style={{
             fontSize: 10,
@@ -780,11 +745,31 @@ export default function HomeScreen({
           top: "env(safe-area-inset-top, 12px)",
           right: 12,
           display: "flex",
-          gap: 10,
-          alignItems: "flex-start",
+          flexDirection: "column",
+          gap: 8,
+          alignItems: "center",
           zIndex: 9999,
         }}
       >
+        <button
+          onClick={onSettings}
+          aria-label={text("settings", "Settings")}
+          style={{
+            background: "#f1f5f9",
+            color: "#0f172a",
+            border: "1px solid #e2e8f0",
+            borderRadius: 999,
+            width: 36,
+            height: 36,
+            lineHeight: "36px",
+            textAlign: "center",
+            fontSize: 18,
+            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+            cursor: "pointer",
+          }}
+        >
+          ⚙️
+        </button>
         {username && (
           <DailySpinButton
             t={t}
@@ -814,33 +799,12 @@ export default function HomeScreen({
             }}
           />
         )}
-
-        <button
-          onClick={onSettings}
-          aria-label={text("settings", "Settings")}
-          style={{
-            background: "#f1f5f9",
-            color: "#0f172a",
-            border: "1px solid #e2e8f0",
-            borderRadius: 999,
-            width: 36,
-            height: 36,
-            lineHeight: "36px",
-            textAlign: "center",
-            fontSize: 18,
-            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-            cursor: "pointer",
-            marginTop: 4,
-          }}
-        >
-          ⚙️
-        </button>
       </div>
 
       {/* title area */}
       <div
         style={{
-          marginTop: 120,
+          marginTop: 108,
           padding: "18px 26px",
           borderRadius: 20,
           background: "rgba(0,0,0,0.35)",
@@ -905,12 +869,22 @@ export default function HomeScreen({
             }}
           >
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
-          {text("homeInfoTitle", "About FlagIQ")}
+              {text("homeInfoTitle", "How to Play")}
             </div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, color: "#334155" }}>
+            <div
+              style={{
+                fontSize: 15,
+                lineHeight: 1.5,
+                color: "#334155",
+                whiteSpace: "pre-line",
+                maxHeight: "55vh",
+                overflowY: "auto",
+                paddingRight: 6,
+              }}
+            >
               {text(
                 "homeInfoBody",
-                "Test your flag knowledge across classic and timed modes, earn stars, and return daily for rewards."
+                "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters."
               )}
             </div>
             <button

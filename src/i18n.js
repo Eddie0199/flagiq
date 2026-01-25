@@ -13,9 +13,9 @@ const STRINGS = {
   en: {
     appTitle: "FlagIQ",
     appSubtitle: "Test your world knowledge — one flag at a time",
-    homeInfoTitle: "About FlagIQ",
+    homeInfoTitle: "How to Play",
     homeInfoBody:
-      "Test your flag knowledge across classic and timed modes, earn stars, and return daily for rewards.",
+      "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters.",
     homeLeaderboardTitle: "Leaderboard",
     homeLeaderboardBody:
       "The global leaderboard is on the way. Stay tuned for competitive rankings.",
@@ -164,9 +164,9 @@ const STRINGS = {
     storeRefillHeartsLabel: "Refill hearts to max",
     storeHeartsFull: "Full",
 
-    spinForHintsTitle: "Booster Wheel",
+    spinForHintsTitle: "Daily Booster",
     youWon: "You won",
-    spinOncePerDay: "Spin once every 24 hours",
+    spinOncePerDay: "Select a box once every 24 hours",
     claim: "Claim",
 
     profileSettings: "Profile & Settings",
@@ -177,6 +177,13 @@ const STRINGS = {
     volume: "Volume",
     language: "Language",
     logout: "Log out",
+    privacyPolicy: "Privacy Policy",
+    termsAndConditions: "Terms & Conditions",
+    deleteAccount: "Delete Account",
+    deleteAccountBody:
+      "This will permanently delete your account and all associated data.",
+    deleteAccountConfirm: "Delete your account and all associated data?",
+    deleteAccountFailed: "Unable to delete your account right now.",
     close: "Close",
     username: "Username",
 
@@ -236,14 +243,14 @@ const STRINGS = {
     loading: "Loading…",
     loadingChoices: "Loading choices…",
 
-    dailySpin: "Daily spin",
+    dailySpin: "Daily Booster",
     readyToSpin: "Ready to spin",
     comeBackIn: "Come back in",
     spinForHints: "Booster Wheel",
     spinEveryDay: "Spin once every 24 hours",
     spinInfoTitle: "How it works",
     spinInfoBody:
-      "Spin once a day for free hint boosts. ⭐ is rare and gives all 3. You can spin again when the timer ends.",
+      "Select a box once a day for free hint boosts.",
     spinToReveal: " ",
     spinNow: "Spin now",
     spinning: "Spinning…",
@@ -570,9 +577,9 @@ const STRINGS = {
     appTitle: "FlagIQ",
     appSubtitle:
       "Pon a prueba tu conocimiento del mundo — una bandera a la vez",
-    homeInfoTitle: "Sobre FlagIQ",
+    homeInfoTitle: "Cómo jugar",
     homeInfoBody:
-      "Pon a prueba tus conocimientos de banderas en modos clásico y contrarreloj, gana estrellas y vuelve a diario por recompensas.",
+      "🎮 Modos: Clásico para aprender a tu ritmo, Contrarreloj para competir con el tiempo.\n💡 Pistas: Usa potenciadores como Quitar 2, Pase automático y Pausar.\n🎁 Potenciador diario: Elige una caja cada 24 horas para pistas gratis.\n⭐ Estrellas y monedas: Gana estrellas para desbloquear niveles y monedas para comprar potenciadores.",
     homeLeaderboardTitle: "Clasificación",
     homeLeaderboardBody:
       "La clasificación global está en camino. Pronto habrá rankings competitivos.",
@@ -604,9 +611,9 @@ const STRINGS = {
     storeRefillHeartsLabel: "Rellenar corazones al máximo",
     storeHeartsFull: "Lleno",
 
-    spinForHintsTitle: "Ruleta de potenciadores",
+    spinForHintsTitle: "Potenciador diario",
     youWon: "Has ganado",
-    spinOncePerDay: "Gira una vez cada 24 horas",
+    spinOncePerDay: "Elige una caja una vez cada 24 horas",
     claim: "Reclamar",
 
     storeTitle: "Tienda de potenciadores",
@@ -640,6 +647,13 @@ const STRINGS = {
     volume: "Volumen",
     language: "Idioma",
     logout: "Cerrar sesión",
+    privacyPolicy: "Política de privacidad",
+    termsAndConditions: "Términos y condiciones",
+    deleteAccount: "Eliminar cuenta",
+    deleteAccountBody:
+      "Esto eliminará permanentemente tu cuenta y todos los datos asociados.",
+    deleteAccountConfirm: "¿Eliminar tu cuenta y todos los datos asociados?",
+    deleteAccountFailed: "No se pudo eliminar tu cuenta en este momento.",
     close: "Cerrar",
     username: "Nombre de usuario",
 
@@ -673,14 +687,14 @@ const STRINGS = {
     loading: "Cargando…",
     loadingChoices: "Cargando opciones…",
 
-    dailySpin: "Giro diario",
+    dailySpin: "Potenciador diario",
     readyToSpin: "Listo para girar",
     comeBackIn: "Vuelve en",
     spinForHints: "Rueda de potenciadores",
     spinEveryDay: "Gira una vez cada 24 horas",
     spinInfoTitle: "Cómo funciona",
     spinInfoBody:
-      "Gira una vez al día para conseguir potenciadores gratis. ⭐ es raro y te da los 3. Podrás volver a girar cuando acabe el temporizador.",
+      "Elige una caja una vez al día para conseguir potenciadores de pista gratis.",
     spinToReveal: " ",
     spinNow: "Girar ahora",
     spinning: "Girando…",
@@ -1008,9 +1022,9 @@ const STRINGS = {
   pt: {
     appTitle: "FlagIQ",
     appSubtitle: "Teste o seu conhecimento do mundo — uma bandeira de cada vez",
-    homeInfoTitle: "Sobre o FlagIQ",
+    homeInfoTitle: "Como jogar",
     homeInfoBody:
-      "Teste o seu conhecimento de bandeiras nos modos clássico e contra o tempo, ganhe estrelas e volte diariamente para recompensas.",
+      "🎮 Modos: Clássico para aprender no seu ritmo, Contra o tempo para correr contra o relógio.\n💡 Dicas: Use bónus como Remover 2, Passar automático e Pausar.\n🎁 Bónus diário: Escolha uma caixa a cada 24 horas para dicas grátis.\n⭐ Estrelas e moedas: Ganhe estrelas para desbloquear níveis e moedas para comprar bónus.",
     homeLeaderboardTitle: "Classificação",
     homeLeaderboardBody:
       "A classificação global está a caminho. Fique atento aos rankings competitivos.",
@@ -1039,9 +1053,9 @@ const STRINGS = {
     back: "Voltar",
     coinsPillLabel: "Loja",
 
-    spinForHintsTitle: "Roda de Bónus",
+    spinForHintsTitle: "Bónus diário",
     youWon: "Ganhaste",
-    spinOncePerDay: "Gira uma vez a cada 24 horas",
+    spinOncePerDay: "Escolha uma caixa uma vez a cada 24 horas",
     claim: "Resgatar",
 
     profileSettings: "Perfil e definições",
@@ -1052,6 +1066,13 @@ const STRINGS = {
     volume: "Volume",
     language: "Idioma",
     logout: "Terminar sessão",
+    privacyPolicy: "Política de privacidade",
+    termsAndConditions: "Termos e condições",
+    deleteAccount: "Eliminar conta",
+    deleteAccountBody:
+      "Isto irá eliminar permanentemente a tua conta e todos os dados associados.",
+    deleteAccountConfirm: "Eliminar a tua conta e todos os dados associados?",
+    deleteAccountFailed: "Não foi possível eliminar a tua conta neste momento.",
     close: "Fechar",
     username: "Nome de utilizador",
     coins: "Moedas",
@@ -1109,14 +1130,14 @@ const STRINGS = {
     loading: "A carregar…",
     loadingChoices: "A carregar opções…",
 
-    dailySpin: "Giro diário",
+    dailySpin: "Bónus diário",
     readyToSpin: "Pronto para girar",
     comeBackIn: "Volta em",
     spinForHints: "Roda de bônus",
     spinEveryDay: "Gira uma vez a cada 24 horas",
     spinInfoTitle: "Como funciona",
     spinInfoBody:
-      "Gira uma vez por dia para ganhar bônus grátis. ⭐ é raro e dá os 3. Podes girar novamente quando o temporizador terminar.",
+      "Escolha uma caixa uma vez por dia para ganhar bónus de dicas grátis.",
     spinToReveal: " ",
     spinNow: "Girar agora",
     spinning: "Girando…",
@@ -1445,9 +1466,9 @@ const STRINGS = {
   de: {
     appTitle: "FlagIQ",
     appSubtitle: "Teste dein Weltwissen – Fahne für Fahne",
-    homeInfoTitle: "Über FlagIQ",
+    homeInfoTitle: "So spielst du",
     homeInfoBody:
-      "Teste dein Flaggenwissen in klassischen und Zeitmodi, sammle Sterne und kehre täglich für Belohnungen zurück.",
+      "🎮 Modi: Klassisch zum Lernen in deinem Tempo, Zeitmodus gegen die Uhr.\n💡 Hinweise: Nutze Booster wie 2 entfernen, Auto-Pass und Pause.\n🎁 Täglicher Booster: Wähle alle 24 Stunden eine Box für kostenlose Hinweis-Boosts.\n⭐ Sterne & Münzen: Sammle Sterne zum Freischalten und Münzen für Booster.",
     homeLeaderboardTitle: "Bestenliste",
     homeLeaderboardBody:
       "Die globale Bestenliste ist unterwegs. Bleib dran für Wettbewerbsrankings.",
@@ -1485,6 +1506,14 @@ const STRINGS = {
     volume: "Lautstärke",
     language: "Sprache",
     logout: "Abmelden",
+    privacyPolicy: "Datenschutzerklärung",
+    termsAndConditions: "AGB",
+    deleteAccount: "Konto löschen",
+    deleteAccountBody:
+      "Dadurch wird dein Konto und alle zugehörigen Daten dauerhaft gelöscht.",
+    deleteAccountConfirm: "Dein Konto und alle zugehörigen Daten löschen?",
+    deleteAccountFailed:
+      "Dein Konto konnte gerade nicht gelöscht werden.",
     close: "Schließen",
     username: "Benutzername",
     coins: "Münzen",
@@ -1492,9 +1521,9 @@ const STRINGS = {
     storeRefillHeartsLabel: "Herzen vollständig auffüllen",
     storeHeartsFull: "Voll",
 
-    spinForHintsTitle: "Booster-Rad",
+    spinForHintsTitle: "Täglicher Booster",
     youWon: "Du hast gewonnen",
-    spinOncePerDay: "Einmal alle 24 Stunden drehen",
+    spinOncePerDay: "Wähle einmal alle 24 Stunden eine Box",
     claim: "Einlösen",
 
     login: "Anmelden",
@@ -1548,14 +1577,14 @@ const STRINGS = {
     loading: "Wird geladen…",
     loadingChoices: "Antworten werden geladen…",
 
-    dailySpin: "Tägliches Rad",
+    dailySpin: "Täglicher Booster",
     readyToSpin: "Bereit zum Drehen",
     comeBackIn: "Komm zurück in",
     spinForHints: "Booster-Rad",
     spinEveryDay: "Einmal alle 24 Stunden drehen",
     spinInfoTitle: "So funktioniert’s",
     spinInfoBody:
-      "Drehe einmal täglich, um kostenlose Booster zu erhalten. ⭐ ist selten und gibt dir alle 3. Du kannst erneut drehen, wenn der Timer endet.",
+      "Wähle einmal täglich eine Box für kostenlose Hinweis-Boosts.",
     spinToReveal: " ",
     spinNow: "Jetzt drehen",
     spinning: "Dreht sich…",
@@ -1884,9 +1913,9 @@ const STRINGS = {
   fr: {
     appTitle: "FlagIQ",
     appSubtitle: "Teste tes connaissances du monde — un drapeau à la fois",
-    homeInfoTitle: "À propos de FlagIQ",
+    homeInfoTitle: "Comment jouer",
     homeInfoBody:
-      "Teste tes connaissances des drapeaux en modes classique et chronométré, gagne des étoiles et reviens chaque jour pour des récompenses.",
+      "🎮 Modes : Classique pour apprendre à ton rythme, Contre-la-montre pour battre le chrono.\n💡 Indices : Utilise des boosters comme Retirer 2, Passe auto et Pause.\n🎁 Booster quotidien : Choisis une boîte toutes les 24 heures pour des boosts d’indices gratuits.\n⭐ Étoiles et pièces : Gagne des étoiles pour débloquer des niveaux et des pièces pour acheter des boosters.",
     homeLeaderboardTitle: "Classement",
     homeLeaderboardBody:
       "Le classement mondial arrive bientôt. Reste connecté pour les classements compétitifs.",
@@ -1908,8 +1937,8 @@ const STRINGS = {
     "localFlags.packs.gb.name": "Royaume-Uni",
     "localFlags.packs.us.name": "États-Unis",
 
-    spinForHintsTitle: "Roue de bonus",
-    spinOncePerDay: "Tourne une fois toutes les 24 heures",
+    spinForHintsTitle: "Booster quotidien",
+    spinOncePerDay: "Choisis une boîte une fois toutes les 24 heures",
     youWon: "Tu as gagné",
     claim: "Récupérer",
 
@@ -1928,6 +1957,15 @@ const STRINGS = {
     volume: "Volume",
     language: "Langue",
     logout: "Se déconnecter",
+    privacyPolicy: "Politique de confidentialité",
+    termsAndConditions: "Conditions générales",
+    deleteAccount: "Supprimer le compte",
+    deleteAccountBody:
+      "Cela supprimera définitivement ton compte et toutes les données associées.",
+    deleteAccountConfirm:
+      "Supprimer ton compte et toutes les données associées ?",
+    deleteAccountFailed:
+      "Impossible de supprimer ton compte pour le moment.",
     close: "Fermer",
     username: "Nom d’utilisateur",
     coins: "Pièces",
@@ -1990,14 +2028,14 @@ const STRINGS = {
     loading: "Chargement…",
     loadingChoices: "Chargement des choix…",
 
-    dailySpin: "Roue quotidienne",
+    dailySpin: "Booster quotidien",
     readyToSpin: "Prêt à tourner",
     comeBackIn: "Reviens dans",
     spinForHints: "Roue des bonus",
     spinEveryDay: "Tournez une fois toutes les 24 heures",
     spinInfoTitle: "Comment ça marche",
     spinInfoBody:
-      "Tourne la roue chaque jour pour gagner des bonus gratuits. ⭐ est rare et te donne les 3. Tu pourras rejouer quand le minuteur se termine.",
+      "Choisis une boîte une fois par jour pour des boosts d’indices gratuits.",
     spinToReveal: " ",
     spinNow: "Tourner maintenant",
     spinning: "En rotation…",
@@ -2326,9 +2364,9 @@ const STRINGS = {
   nl: {
     appTitle: "FlagIQ",
     appSubtitle: "Test je wereldkennis — vlag voor vlag",
-    homeInfoTitle: "Over FlagIQ",
+    homeInfoTitle: "Zo speel je",
     homeInfoBody:
-      "Test je vlagkennis in klassieke en getimede modi, verdien sterren en kom dagelijks terug voor beloningen.",
+      "🎮 Modi: Klassiek om op je tempo te leren, Tijdrit om tegen de klok te racen.\n💡 Hints: Gebruik boosters zoals Verwijder 2, Auto-pass en Pauze.\n🎁 Dagelijkse booster: Kies elke 24 uur een doosje voor gratis hint-boosts.\n⭐ Sterren & munten: Verdien sterren om levels te ontgrendelen en munten om boosters te kopen.",
     homeLeaderboardTitle: "Ranglijst",
     homeLeaderboardBody:
       "De wereldwijde ranglijst komt eraan. Blijf op de hoogte voor competitieve rankings.",
@@ -2356,9 +2394,9 @@ const STRINGS = {
     needMoreStars: "Je hebt meer sterren nodig om dit deel te ontgrendelen.",
     back: "Terug",
 
-    spinForHintsTitle: "Boosterrad",
+    spinForHintsTitle: "Dagelijkse booster",
     youWon: "Je hebt gewonnen",
-    spinOncePerDay: "Draai één keer per 24 uur",
+    spinOncePerDay: "Kies één keer per 24 uur een doosje",
     claim: "Ophalen",
 
     coins: "Munten",
@@ -2372,6 +2410,14 @@ const STRINGS = {
     volume: "Volume",
     language: "Taal",
     logout: "Uitloggen",
+    privacyPolicy: "Privacybeleid",
+    termsAndConditions: "Algemene voorwaarden",
+    deleteAccount: "Account verwijderen",
+    deleteAccountBody:
+      "Dit verwijdert je account en alle bijbehorende gegevens permanent.",
+    deleteAccountConfirm:
+      "Je account en alle bijbehorende gegevens verwijderen?",
+    deleteAccountFailed: "Je account kan momenteel niet worden verwijderd.",
     close: "Sluiten",
     username: "Gebruikersnaam",
     coinsPillLabel: "Winkel",
@@ -2428,14 +2474,14 @@ const STRINGS = {
     loading: "Laden…",
     loadingChoices: "Keuzes laden…",
 
-    dailySpin: "Dagelijkse draai",
+    dailySpin: "Dagelijkse booster",
     readyToSpin: "Klaar om te draaien",
     comeBackIn: "Kom terug over",
     spinForHints: "Boosterwiel",
     spinEveryDay: "Draai één keer per 24 uur",
     spinInfoTitle: "Hoe het werkt",
     spinInfoBody:
-      "Draai elke dag om gratis boosts te winnen. ⭐ is zeldzaam en geeft alle 3. Je kunt opnieuw draaien als de timer is afgelopen.",
+      "Kies één keer per dag een doosje voor gratis hint-boosts.",
     spinToReveal: " ",
     spinNow: "Nu draaien",
     spinning: "Aan het draaien…",

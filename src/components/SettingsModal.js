@@ -30,6 +30,8 @@ export default function SettingsModal({
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
   const [userEmail, setUserEmail] = useState("");
   const [userCreatedAt, setUserCreatedAt] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const handleLogout = async () => {
     try {
       if (supabase) {
@@ -42,6 +44,68 @@ export default function SettingsModal({
       setActiveUser("");
       setActiveUserLabel && setActiveUserLabel("");
       onClose();
+    }
+  };
+
+  const clearLocalUserData = (username) => {
+    if (!username || typeof window === "undefined") return;
+    const key = String(username).trim().toLowerCase();
+    try {
+      localStorage.removeItem(`flagiq:progress:${username}`);
+      localStorage.removeItem(`flagiq:u:${username}:hints`);
+      localStorage.removeItem(`flagiq:u:${username}:coins`);
+      localStorage.removeItem(`flag_progress_${key}`);
+    } catch (error) {
+      // ignore local storage errors
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!loggedIn || isDeleting) return;
+    if (!supabase) {
+      setDeleteError(
+        t
+          ? t(lang, "deleteAccountFailed")
+          : "Unable to delete your account right now."
+      );
+      return;
+    }
+    const confirmText = t
+      ? t(lang, "deleteAccountConfirm")
+      : "Delete your account and all associated data?";
+    if (!window.confirm(confirmText)) return;
+
+    setIsDeleting(true);
+    setDeleteError("");
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      const userId = data?.user?.id;
+      if (!userId) throw new Error("Missing user id.");
+
+      await Promise.allSettled([
+        supabase.from("player_state").delete().eq("user_id", userId),
+        supabase.from("purchases").delete().eq("user_id", userId),
+      ]);
+
+      if (supabase?.auth?.admin?.deleteUser) {
+        const { error: deleteError } = await supabase.auth.admin.deleteUser(
+          userId
+        );
+        if (deleteError) throw deleteError;
+      }
+
+      clearLocalUserData(activeUser);
+      await handleLogout();
+    } catch (error) {
+      console.error("Failed to delete account", error);
+      setDeleteError(
+        t
+          ? t(lang, "deleteAccountFailed")
+          : "Unable to delete your account right now."
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -277,12 +341,12 @@ export default function SettingsModal({
               width: 50,
               height: 28,
               borderRadius: 999,
-              background: soundOn ? "#8b5cf6" : "#cbd5f5",
+              background: soundOn ? "#0b74ff" : "#cbd5f5",
               display: "flex",
               alignItems: "center",
               padding: 3,
               boxShadow: soundOn
-                ? "0 6px 12px rgba(139, 92, 246, 0.35)"
+                ? "0 6px 12px rgba(11, 116, 255, 0.35)"
                 : "inset 0 1px 3px rgba(15, 23, 42, 0.2)",
               transition: "all 0.2s ease",
             }}
@@ -418,7 +482,7 @@ export default function SettingsModal({
                 textAlign: "left",
               }}
             >
-              Privacy Policy
+              {t ? t(lang, "privacyPolicy") : "Privacy Policy"}
             </button>
             <button
               onClick={() =>
@@ -435,27 +499,63 @@ export default function SettingsModal({
                 textAlign: "left",
               }}
             >
-              Terms & Conditions
+              {t ? t(lang, "termsAndConditions") : "Terms & Conditions"}
             </button>
           </div>
         </div>
 
         {loggedIn && (
-          <button
-            onClick={handleLogout}
-            style={{
-              width: "100%",
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: 16,
-              padding: "10px 0",
-              fontWeight: 600,
-              marginTop: 14,
-              cursor: "pointer",
-            }}
-          >
-            {t ? t(lang, "logout") : "Log out"}
-          </button>
+          <>
+            <button
+              onClick={handleLogout}
+              style={{
+                width: "100%",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 16,
+                padding: "10px 0",
+                fontWeight: 600,
+                marginTop: 14,
+                cursor: "pointer",
+              }}
+            >
+              {t ? t(lang, "logout") : "Log out"}
+            </button>
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              style={{
+                width: "100%",
+                background: isDeleting ? "#fca5a5" : "#ef4444",
+                border: "none",
+                borderRadius: 16,
+                padding: "12px 0",
+                fontWeight: 700,
+                marginTop: 10,
+                cursor: isDeleting ? "not-allowed" : "pointer",
+                color: "white",
+                boxShadow: "0 8px 18px rgba(239, 68, 68, 0.35)",
+              }}
+            >
+              {t ? t(lang, "deleteAccount") : "Delete Account"}
+            </button>
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 12,
+                color: "#64748b",
+              }}
+            >
+              {t
+                ? t(lang, "deleteAccountBody")
+                : "This will permanently delete your account and all associated data."}
+            </div>
+            {deleteError ? (
+              <div style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>
+                {deleteError}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </div>
