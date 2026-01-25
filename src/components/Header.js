@@ -48,16 +48,16 @@ function HeartsPill({ hearts, t, lang }) {
         background: "#ffffff",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
-        padding: "3px 6px",
-        height: 30,
+        padding: "2px 6px",
+        height: 32,
         boxShadow: "0 1px 2px rgba(0,0,0,.04)",
       }}
     >
       <div
         style={{
           position: "relative",
-          width: 24,
-          height: 24,
+          width: 26,
+          height: 26,
           borderRadius: 8,
           background: "#fff",
           border: "1px solid #e2e8f0",
@@ -67,7 +67,7 @@ function HeartsPill({ hearts, t, lang }) {
         }}
         title={t && lang ? t(lang, "lives") : "Lives"}
       >
-        <span style={{ fontSize: 16 }} role="img" aria-label="heart">
+        <span style={{ fontSize: 17 }} role="img" aria-label="heart">
           ❤️
         </span>
         <span
@@ -87,10 +87,11 @@ function HeartsPill({ hearts, t, lang }) {
       {showTimer && (
         <span
           style={{
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 800,
             color: "#0f172a",
             fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
           }}
           title={t && lang ? t(lang, "nextLife") : "Next life"}
         >
@@ -126,7 +127,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
     <Wrapper
       onClick={clickable ? onClick : undefined}
       style={{
-        padding: "3px 8px",
+        padding: "2px 8px",
         background: "#f1f5f9",
         border: "1px solid #e2e8f0",
         borderRadius: 999,
@@ -136,7 +137,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
         display: "inline-flex",
         gap: 6,
         alignItems: "center",
-        height: 30,
+        height: 32,
         cursor: clickable ? "pointer" : "default",
         boxShadow: clickable ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
         transition: "transform 0.08s ease, box-shadow 0.08s ease",
@@ -207,7 +208,7 @@ export default function Header({
               className="header-back-button"
               style={{
                 padding: "0 10px",
-                height: 30,
+                height: 32,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
@@ -245,10 +246,11 @@ export default function Header({
               color: "#0f172a",
               border: "1px solid #e2e8f0",
               borderRadius: 999,
-              width: 30,
-              height: 30,
-              lineHeight: "30px",
-              textAlign: "center",
+              width: 32,
+              height: 32,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               fontSize: 16,
               boxShadow: "0 1px 3px rgba(0,0,0,.06)",
               cursor: "pointer",

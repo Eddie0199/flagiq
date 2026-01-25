@@ -569,7 +569,7 @@ export default function HomeScreen({
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
-  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 28px)";
+  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 108px)";
   const footerLinkStyle = {
     background: "none",
     border: "none",
@@ -773,8 +773,9 @@ export default function HomeScreen({
             borderRadius: 999,
             width: 36,
             height: 36,
-            lineHeight: "36px",
-            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             fontSize: 18,
             boxShadow: "0 1px 3px rgba(0,0,0,.06)",
             cursor: "pointer",

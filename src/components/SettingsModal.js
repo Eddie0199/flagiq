@@ -342,34 +342,41 @@ export default function SettingsModal({
         </label>
 
         <div style={{ marginBottom: loggedIn ? 16 : 0 }}>
-          <label
+          <div
             style={{
-              display: "block",
-              fontSize: 13,
-              fontWeight: 500,
-              marginBottom: 6,
-              color: "#0f172a",
-            }}
-          >
-            {t ? t(lang, "language") : "Language"}
-          </label>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            style={{
-              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              padding: "12px 14px",
+              borderRadius: 16,
               border: "1px solid #e2e8f0",
-              borderRadius: 14,
-              padding: "9px 12px",
-              fontSize: 14,
+              background: "#ffffff",
+              boxShadow: "0 6px 16px rgba(15, 23, 42, 0.08)",
             }}
           >
-            {langList.map((l) => (
-              <option key={l.code} value={l.code}>
-                {l.name}
-              </option>
-            ))}
-          </select>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              {t ? t(lang, "language") : "Language"}
+            </div>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value)}
+              style={{
+                minWidth: 160,
+                border: "1px solid #e2e8f0",
+                borderRadius: 12,
+                padding: "6px 10px",
+                fontSize: 13,
+                background: "#fff",
+              }}
+            >
+              {langList.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* DEV / TESTING: reset progress for current user (not for production) */}
