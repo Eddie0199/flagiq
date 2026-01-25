@@ -1039,7 +1039,7 @@ export default function GameScreen({
               style={{
                 fontSize: 26,
                 fontWeight: 700,
-                color: "#166534",
+                color: "#ffffff",
                 marginBottom: 10,
               }}
             >
