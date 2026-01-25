@@ -300,50 +300,53 @@ function DailySpinButton({
 
   return (
     <>
-      {/* top header pill */}
+      {/* top header icon */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 4,
+          gap: 6,
           marginTop: 4,
         }}
       >
         <button
           onClick={handleOpen}
+          aria-label={label}
           style={{
+            position: "relative",
+            width: 46,
+            height: 46,
+            borderRadius: 999,
             background: "rgba(255,255,255,.95)",
             border: canSpin
-              ? "1px solid rgba(245, 158, 11, 0.9)"
-              : "1px solid rgba(0,0,0,0.08)",
-            borderRadius: 999,
-            padding: "4px 10px",
+              ? "2px solid rgba(245, 158, 11, 0.95)"
+              : "1px solid rgba(0,0,0,0.12)",
             display: "flex",
-            gap: 6,
             alignItems: "center",
+            justifyContent: "center",
             cursor: "pointer",
             boxShadow: canSpin
-              ? "0 0 0 2px rgba(245, 158, 11, 0.55)"
-              : "none",
+              ? "0 0 0 3px rgba(245, 158, 11, 0.5)"
+              : "0 6px 16px rgba(15,23,42,0.15)",
           }}
         >
-          <span style={{ fontSize: 15 }}>🎡</span>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "#0f172a" }}>
-            {label}
-          </span>
+          <span style={{ fontSize: 20 }}>🎡</span>
           {canSpin && (
             <span
               style={{
-                fontSize: 10,
-                fontWeight: 700,
+                position: "absolute",
+                bottom: -6,
+                right: -6,
+                fontSize: 9,
+                fontWeight: 800,
                 textTransform: "uppercase",
-                letterSpacing: 0.6,
-                padding: "2px 6px",
+                letterSpacing: 0.4,
+                padding: "3px 6px",
                 borderRadius: 999,
                 background: "#f59e0b",
                 color: "#1f2937",
-                boxShadow: "0 2px 6px rgba(245, 158, 11, 0.45)",
+                boxShadow: "0 2px 8px rgba(245, 158, 11, 0.45)",
               }}
             >
               {claimText}
@@ -352,9 +355,21 @@ function DailySpinButton({
         </button>
         <span
           style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: "white",
+            textShadow: "0 1px 3px rgba(0,0,0,.5)",
+          }}
+        >
+          {label}
+        </span>
+        <span
+          style={{
             fontSize: 10,
             color: "white",
             textShadow: "0 1px 3px rgba(0,0,0,.5)",
+            textAlign: "center",
+            maxWidth: 120,
           }}
         >
           {statusText}
@@ -734,7 +749,7 @@ export default function HomeScreen({
             cursor: "pointer",
             fontSize: 20,
           }}
-          aria-label={text("homeInfoTitle", "About Flaq IQ")}
+          aria-label={text("homeInfoTitle", "About FlagIQ")}
         >
           ❓
         </button>
@@ -802,15 +817,18 @@ export default function HomeScreen({
 
         <button
           onClick={onSettings}
+          aria-label={text("settings", "Settings")}
           style={{
-            width: 34,
-            height: 34,
+            background: "#f1f5f9",
+            color: "#0f172a",
+            border: "1px solid #e2e8f0",
             borderRadius: 999,
-            background: "rgba(255,255,255,.95)",
-            border: "1px solid rgba(0,0,0,0.1)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            width: 36,
+            height: 36,
+            lineHeight: "36px",
+            textAlign: "center",
+            fontSize: 18,
+            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
             cursor: "pointer",
             marginTop: 4,
           }}
@@ -846,7 +864,7 @@ export default function HomeScreen({
         >
           <img
             src="/icon-512.png"
-            alt={text("appTitle", "Flaq IQ")}
+            alt={text("appTitle", "FlagIQ")}
             style={{
               width: 96,
               height: 96,
@@ -855,7 +873,7 @@ export default function HomeScreen({
           />
         </div>
         <div style={{ fontSize: 40, fontWeight: 900, letterSpacing: -1 }}>
-          {text("appTitle", "Flaq IQ")}
+          {text("appTitle", "FlagIQ")}
         </div>
       </div>
 
@@ -887,7 +905,7 @@ export default function HomeScreen({
             }}
           >
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
-              {text("homeInfoTitle", "About Flaq IQ")}
+          {text("homeInfoTitle", "About FlagIQ")}
             </div>
             <div style={{ fontSize: 15, lineHeight: 1.5, color: "#334155" }}>
               {text(
