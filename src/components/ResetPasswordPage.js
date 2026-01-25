@@ -133,7 +133,7 @@ export default function ResetPasswordPage() {
         height: "100dvh",          // ✅ better than 100vh on mobile
         minHeight: "100dvh",
         overflow: "hidden",        // ✅ prevents page scroll
-        background: "linear-gradient(135deg,#0f172a,#1d293b)",
+        background: "#0b74ff",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -288,4 +288,3 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
-

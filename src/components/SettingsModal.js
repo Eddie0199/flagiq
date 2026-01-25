@@ -1,5 +1,5 @@
 // src/components/SettingsModal.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { clearSupabaseSession, supabase } from "../supabaseClient";
 
@@ -16,8 +16,6 @@ export default function SettingsModal({
   onClose,
   soundOn,
   setSoundOn,
-  volume,
-  setVolume,
   lang,
   setLang,
   activeUser,
@@ -30,6 +28,8 @@ export default function SettingsModal({
 }) {
   const loggedIn = !!activeUser;
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
+  const [userEmail, setUserEmail] = useState("");
+  const [userCreatedAt, setUserCreatedAt] = useState("");
   const handleLogout = async () => {
     try {
       if (supabase) {
@@ -49,7 +49,11 @@ export default function SettingsModal({
     let isMounted = true;
     async function loadDisplayName() {
       if (!loggedIn) {
-        if (isMounted) setDisplayName("");
+        if (isMounted) {
+          setDisplayName("");
+          setUserEmail("");
+          setUserCreatedAt("");
+        }
         return;
       }
 
@@ -70,11 +74,15 @@ export default function SettingsModal({
 
         if (isMounted) {
           setDisplayName(label || activeUserLabel || "");
+          setUserEmail(user?.email || "");
+          setUserCreatedAt(user?.created_at || "");
         }
       } catch (err) {
         console.error("Failed to load user for display name", err);
         if (isMounted) {
           setDisplayName(activeUserLabel || "");
+          setUserEmail("");
+          setUserCreatedAt("");
         }
       }
     }
@@ -84,6 +92,24 @@ export default function SettingsModal({
       isMounted = false;
     };
   }, [activeUser, activeUserLabel, loggedIn]);
+
+  const memberSince = useMemo(() => {
+    if (!userCreatedAt) return "";
+    const locale = lang || undefined;
+    try {
+      return new Date(userCreatedAt).toLocaleDateString(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch (error) {
+      return "";
+    }
+  }, [lang, userCreatedAt]);
+
+  const displayLabel = displayName || activeUserLabel || activeUser || "";
+  const avatarLetter =
+    displayLabel.replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
 
   const langList = Array.isArray(LANGS)
     ? LANGS
@@ -165,29 +191,49 @@ export default function SettingsModal({
 
         {loggedIn && (
           <>
-            <div style={{ marginBottom: 14 }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: 13,
-                  fontWeight: 500,
-                  marginBottom: 4,
-                  color: "#0f172a",
-                }}
-              >
-                {t ? t(lang, "username") : "Username"}
-              </label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 14px",
+                borderRadius: 18,
+                border: "1px solid #e2e8f0",
+                background: "#f8fafc",
+                boxShadow: "0 8px 18px rgba(15, 23, 42, 0.08)",
+                marginBottom: 14,
+              }}
+            >
               <div
                 style={{
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 14,
-                  padding: "9px 14px",
-                  fontWeight: 500,
-                  display: "inline-block",
+                  width: 56,
+                  height: 56,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #e0e7ff, #fce7f3)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  color: "#1e293b",
                 }}
               >
-                @{displayName || activeUserLabel}
+                {avatarLetter}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
+                  {displayLabel || (t ? t(lang, "username") : "Username")}
+                </div>
+                {userEmail && (
+                  <div style={{ fontSize: 13, color: "#64748b" }}>
+                    {userEmail}
+                  </div>
+                )}
+                {memberSince && (
+                  <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                    {(t ? t(lang, "memberSince") : "Member since")} {memberSince}
+                  </div>
+                )}
               </div>
             </div>
             <hr
@@ -200,48 +246,71 @@ export default function SettingsModal({
           </>
         )}
 
-        <div style={{ marginBottom: 12 }}>
-          <label
+        <label
+          htmlFor="sound-effects-toggle"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "12px 14px",
+            borderRadius: 16,
+            border: "1px solid #e2e8f0",
+            background: "#ffffff",
+            boxShadow: "0 6px 16px rgba(15, 23, 42, 0.08)",
+            cursor: "pointer",
+            marginBottom: 14,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
+              {t ? t(lang, "soundEffectsTitle") : "Sound Effects"}
+            </div>
+            <div style={{ fontSize: 12, color: "#64748b" }}>
+              {t
+                ? t(lang, "soundEffectsSubtitle")
+                : "Play audio feedback during gameplay"}
+            </div>
+          </div>
+          <div
             style={{
+              width: 50,
+              height: 28,
+              borderRadius: 999,
+              background: soundOn ? "#8b5cf6" : "#cbd5f5",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              cursor: "pointer",
-              fontWeight: 500,
+              padding: 3,
+              boxShadow: soundOn
+                ? "0 6px 12px rgba(139, 92, 246, 0.35)"
+                : "inset 0 1px 3px rgba(15, 23, 42, 0.2)",
+              transition: "all 0.2s ease",
             }}
           >
-            <input
-              type="checkbox"
-              checked={soundOn}
-              onChange={(e) => setSoundOn(e.target.checked)}
-              style={{ width: 16, height: 16 }}
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: "50%",
+                background: "#fff",
+                transform: soundOn ? "translateX(22px)" : "translateX(0)",
+                transition: "transform 0.2s ease",
+                boxShadow: "0 2px 6px rgba(15, 23, 42, 0.2)",
+              }}
             />
-            {t ? t(lang, "sound") : "Sound"}
-          </label>
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <label
-            style={{
-              display: "block",
-              fontSize: 13,
-              fontWeight: 500,
-              marginBottom: 6,
-              color: "#0f172a",
-            }}
-          >
-            {t ? t(lang, "volume") : "Volume"}
-          </label>
+          </div>
           <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            style={{ width: "100%" }}
+            id="sound-effects-toggle"
+            type="checkbox"
+            checked={soundOn}
+            onChange={(e) => setSoundOn(e.target.checked)}
+            style={{
+              position: "absolute",
+              opacity: 0,
+              pointerEvents: "none",
+            }}
           />
-        </div>
+        </label>
 
         <div style={{ marginBottom: loggedIn ? 16 : 0 }}>
           <label

@@ -784,7 +784,7 @@ function ConfigMissingScreen({ missingKeys }) {
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
-        background: "#0f172a",
+        background: "#0b74ff",
         color: "white",
         textAlign: "center",
       }}
@@ -823,10 +823,7 @@ function AuthBootScreen() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundImage:
-          "url(https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?q=80&w=1600&auto=format&fit=crop)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
+        background: "#0b74ff",
       }}
     >
       <div
@@ -878,7 +875,7 @@ export default function App() {
     typeof navigator === "undefined" ? true : navigator.onLine !== false
   );
   const [soundOn, setSoundOn] = useLocalStorage("flagiq:soundOn", true);
-  const [volume, setVolume] = useLocalStorage("flagiq:volume", 0.5);
+  const [volume] = useLocalStorage("flagiq:volume", 0.5);
 
   const [screen, setScreen] = useLocalStorage("flagiq:screen", "home");
   const [mode, setMode] = useLocalStorage("flagiq:mode", "classic");
@@ -2124,7 +2121,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ minHeight: "100vh" }}>
+    <div style={{ minHeight: "100vh", background: "#0b74ff" }}>
       {debugOverlayEnabled && (
         <div
           onClick={handleDebugTap}
@@ -2406,8 +2403,6 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
           soundOn={soundOn}
           setSoundOn={setSoundOn}
-          volume={volume}
-          setVolume={setVolume}
           lang={lang}
           setLang={handleLanguageChange}
           activeUser={activeUser}

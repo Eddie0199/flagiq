@@ -11,9 +11,9 @@ export const LANGS = [
 
 const STRINGS = {
   en: {
-    appTitle: "Flaq IQ",
+    appTitle: "FlagIQ",
     appSubtitle: "Test your world knowledge — one flag at a time",
-    homeInfoTitle: "About Flaq IQ",
+    homeInfoTitle: "About FlagIQ",
     homeInfoBody:
       "Test your flag knowledge across classic and timed modes, earn stars, and return daily for rewards.",
     homeLeaderboardTitle: "Leaderboard",
@@ -171,6 +171,9 @@ const STRINGS = {
 
     profileSettings: "Profile & Settings",
     sound: "Sound",
+    soundEffectsTitle: "Sound Effects",
+    soundEffectsSubtitle: "Play audio feedback during gameplay",
+    memberSince: "Member since",
     volume: "Volume",
     language: "Language",
     logout: "Log out",
@@ -564,10 +567,10 @@ const STRINGS = {
   },
 
   es: {
-    appTitle: "Flaq IQ",
+    appTitle: "FlagIQ",
     appSubtitle:
       "Pon a prueba tu conocimiento del mundo — una bandera a la vez",
-    homeInfoTitle: "Sobre Flaq IQ",
+    homeInfoTitle: "Sobre FlagIQ",
     homeInfoBody:
       "Pon a prueba tus conocimientos de banderas en modos clásico y contrarreloj, gana estrellas y vuelve a diario por recompensas.",
     homeLeaderboardTitle: "Clasificación",
@@ -631,6 +634,9 @@ const STRINGS = {
 
     profileSettings: "Perfil y ajustes",
     sound: "Sonido",
+    soundEffectsTitle: "Efectos de sonido",
+    soundEffectsSubtitle: "Reproducir audio durante la partida",
+    memberSince: "Miembro desde",
     volume: "Volumen",
     language: "Idioma",
     logout: "Cerrar sesión",
@@ -1000,9 +1006,9 @@ const STRINGS = {
   },
 
   pt: {
-    appTitle: "Flaq IQ",
+    appTitle: "FlagIQ",
     appSubtitle: "Teste o seu conhecimento do mundo — uma bandeira de cada vez",
-    homeInfoTitle: "Sobre o Flaq IQ",
+    homeInfoTitle: "Sobre o FlagIQ",
     homeInfoBody:
       "Teste o seu conhecimento de bandeiras nos modos clássico e contra o tempo, ganhe estrelas e volte diariamente para recompensas.",
     homeLeaderboardTitle: "Classificação",
@@ -1040,6 +1046,9 @@ const STRINGS = {
 
     profileSettings: "Perfil e definições",
     sound: "Som",
+    soundEffectsTitle: "Efeitos sonoros",
+    soundEffectsSubtitle: "Reproduzir áudio durante o jogo",
+    memberSince: "Membro desde",
     volume: "Volume",
     language: "Idioma",
     logout: "Terminar sessão",
@@ -1434,9 +1443,9 @@ const STRINGS = {
   },
 
   de: {
-    appTitle: "Flaq IQ",
+    appTitle: "FlagIQ",
     appSubtitle: "Teste dein Weltwissen – Fahne für Fahne",
-    homeInfoTitle: "Über Flaq IQ",
+    homeInfoTitle: "Über FlagIQ",
     homeInfoBody:
       "Teste dein Flaggenwissen in klassischen und Zeitmodi, sammle Sterne und kehre täglich für Belohnungen zurück.",
     homeLeaderboardTitle: "Bestenliste",
@@ -1470,6 +1479,9 @@ const STRINGS = {
 
     profileSettings: "Profil & Einstellungen",
     sound: "Ton",
+    soundEffectsTitle: "Soundeffekte",
+    soundEffectsSubtitle: "Audiofeedback während des Spiels",
+    memberSince: "Mitglied seit",
     volume: "Lautstärke",
     language: "Sprache",
     logout: "Abmelden",
@@ -1870,9 +1882,9 @@ const STRINGS = {
   },
 
   fr: {
-    appTitle: "Flaq IQ",
+    appTitle: "FlagIQ",
     appSubtitle: "Teste tes connaissances du monde — un drapeau à la fois",
-    homeInfoTitle: "À propos de Flaq IQ",
+    homeInfoTitle: "À propos de FlagIQ",
     homeInfoBody:
       "Teste tes connaissances des drapeaux en modes classique et chronométré, gagne des étoiles et reviens chaque jour pour des récompenses.",
     homeLeaderboardTitle: "Classement",
@@ -1910,6 +1922,9 @@ const STRINGS = {
 
     profileSettings: "Profil et réglages",
     sound: "Son",
+    soundEffectsTitle: "Effets sonores",
+    soundEffectsSubtitle: "Activer l’audio pendant la partie",
+    memberSince: "Membre depuis",
     volume: "Volume",
     language: "Langue",
     logout: "Se déconnecter",
@@ -2309,9 +2324,9 @@ const STRINGS = {
   },
 
   nl: {
-    appTitle: "Flaq IQ",
+    appTitle: "FlagIQ",
     appSubtitle: "Test je wereldkennis — vlag voor vlag",
-    homeInfoTitle: "Over Flaq IQ",
+    homeInfoTitle: "Over FlagIQ",
     homeInfoBody:
       "Test je vlagkennis in klassieke en getimede modi, verdien sterren en kom dagelijks terug voor beloningen.",
     homeLeaderboardTitle: "Ranglijst",
@@ -2351,6 +2366,9 @@ const STRINGS = {
 
     profileSettings: "Profiel & instellingen",
     sound: "Geluid",
+    soundEffectsTitle: "Geluidseffecten",
+    soundEffectsSubtitle: "Audio afspelen tijdens het spelen",
+    memberSince: "Lid sinds",
     volume: "Volume",
     language: "Taal",
     logout: "Uitloggen",
