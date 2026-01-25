@@ -564,6 +564,54 @@ export default function HomeScreen({
     return value === key ? fallback : value;
   };
 
+  const leaderboardEntries = useMemo(() => {
+    const seedNames = [
+      "ArgentinianPro",
+      "colincap57",
+      "adfgl",
+      "nntive",
+      "Tillilani",
+      "sirjan",
+      "ZacGoat",
+      "downesy",
+      "TomasAloisi",
+      "VioletQuest",
+      "MapleRush",
+      "PolarFox",
+      "SwiftHarbor",
+      "NovaTrail",
+      "AtlasRider",
+      "GeoPulse",
+      "FlagRunner",
+      "AstraNova",
+      "BrightJet",
+      "PrimeAtlas",
+    ];
+
+    return Array.from({ length: 100 }, (_, index) => {
+      const rank = index + 1;
+      const name = seedNames[index] || `Player ${rank}`;
+      const score = Math.max(180, 920 - index * 7);
+      return { rank, name, score };
+    });
+  }, []);
+
+  const leaderboardModes = useMemo(
+    () => [
+      {
+        id: "timetrial",
+        label: t && lang ? t(lang, "timeTrial") : "Time Trial",
+        icon: "⏱️",
+      },
+    ],
+    [lang, t]
+  );
+  const medalByRank = {
+    1: "🥇",
+    2: "🥈",
+    3: "🥉",
+  };
+
   // per-mode stats derived from the same store logic as App.js
   // compute on every render so newly loaded progress shows immediately
   const classicFromStore = getPerModeStats(progress, "classic");
@@ -948,14 +996,148 @@ export default function HomeScreen({
             >
               ×
             </button>
-            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                fontSize: 22,
+                fontWeight: 800,
+                marginBottom: 14,
+              }}
+            >
+              <span role="img" aria-label="Trophy">
+                🏆
+              </span>
               {text("homeLeaderboardTitle", "Leaderboard")}
             </div>
-            <div style={{ fontSize: 15, lineHeight: 1.5, color: "#334155" }}>
-              {text(
-                "homeLeaderboardBody",
-                "The global leaderboard is on the way. Stay tuned for competitive rankings."
-              )}
+            <div
+              style={{
+                border: "1px solid #e2e8f0",
+                borderRadius: 18,
+                maxHeight: "65vh",
+                overflowY: "auto",
+                background: "#f8fafc",
+              }}
+            >
+              <div
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 2,
+                  background: "white",
+                  padding: "14px 16px 12px",
+                  borderBottom: "1px solid #e2e8f0",
+                  boxShadow: "0 2px 8px rgba(15,23,42,0.08)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  {leaderboardModes.map((mode) => (
+                    <div
+                      key={mode.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "10px 16px",
+                        borderRadius: 16,
+                        background: "#7c3aed",
+                        color: "white",
+                        fontWeight: 700,
+                        boxShadow: "0 6px 14px rgba(124,58,237,0.28)",
+                      }}
+                    >
+                      <span role="img" aria-label={mode.label}>
+                        {mode.icon}
+                      </span>
+                      {mode.label}
+                    </div>
+                  ))}
+                </div>
+                <div
+                  style={{
+                    marginTop: 10,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#64748b",
+                    textAlign: "center",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.8,
+                  }}
+                >
+                  Top 100 Players • Total Score
+                </div>
+              </div>
+              {leaderboardEntries.map((entry) => {
+                const medal = medalByRank[entry.rank];
+                return (
+                  <div
+                    key={entry.rank}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 16px",
+                      background: "white",
+                      borderBottom: "1px solid #e2e8f0",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 28,
+                        textAlign: "center",
+                        fontWeight: 800,
+                        color: medal ? "#f59e0b" : "#94a3b8",
+                        fontSize: medal ? 18 : 14,
+                      }}
+                    >
+                      {medal || entry.rank}
+                    </div>
+                    <div
+                      style={{
+                        width: 38,
+                        height: 38,
+                        borderRadius: "50%",
+                        background: "#60a5fa",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontWeight: 700,
+                        fontSize: 16,
+                      }}
+                    >
+                      {entry.name.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div
+                      style={{
+                        flex: 1,
+                        fontWeight: 700,
+                        color: "#0f172a",
+                        fontSize: 16,
+                      }}
+                    >
+                      {entry.name}
+                    </div>
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        color: "#1f2937",
+                        fontSize: 16,
+                      }}
+                    >
+                      {entry.score}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
