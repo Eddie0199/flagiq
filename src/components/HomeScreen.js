@@ -569,7 +569,7 @@ export default function HomeScreen({
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
-  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 108px)";
+  const topIconOffset = "calc(env(safe-area-inset-top, 0px) + 60px)";
   const footerLinkStyle = {
     background: "none",
     border: "none",
@@ -817,7 +817,7 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: 92,
+          marginTop: 44,
           padding: "18px 26px",
           borderRadius: 20,
           background: "rgba(0,0,0,0.35)",

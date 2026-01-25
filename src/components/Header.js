@@ -49,15 +49,15 @@ function HeartsPill({ hearts, t, lang }) {
         border: "1px solid #e2e8f0",
         borderRadius: 999,
         padding: "2px 6px",
-        height: 32,
+        height: 30,
         boxShadow: "0 1px 2px rgba(0,0,0,.04)",
       }}
     >
       <div
         style={{
           position: "relative",
-          width: 26,
-          height: 26,
+          width: 24,
+          height: 24,
           borderRadius: 8,
           background: "#fff",
           border: "1px solid #e2e8f0",
@@ -67,7 +67,7 @@ function HeartsPill({ hearts, t, lang }) {
         }}
         title={t && lang ? t(lang, "lives") : "Lives"}
       >
-        <span style={{ fontSize: 17 }} role="img" aria-label="heart">
+        <span style={{ fontSize: 16 }} role="img" aria-label="heart">
           ❤️
         </span>
         <span
@@ -137,7 +137,7 @@ function CoinsPill({ username, coinsProp, t, lang, onClick, disableClick }) {
         display: "inline-flex",
         gap: 6,
         alignItems: "center",
-        height: 32,
+        height: 30,
         cursor: clickable ? "pointer" : "default",
         boxShadow: clickable ? "0 2px 6px rgba(15,23,42,0.12)" : "none",
         transition: "transform 0.08s ease, box-shadow 0.08s ease",
@@ -208,7 +208,7 @@ export default function Header({
               className="header-back-button"
               style={{
                 padding: "0 10px",
-                height: 32,
+                height: 30,
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 6,
@@ -246,8 +246,8 @@ export default function Header({
               color: "#0f172a",
               border: "1px solid #e2e8f0",
               borderRadius: 999,
-              width: 32,
-              height: 32,
+              width: 30,
+              height: 30,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
