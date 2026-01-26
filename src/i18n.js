@@ -23,6 +23,7 @@ const STRINGS = {
     leaderboardLoading: "Loading leaderboard...",
     leaderboardError: "Unable to load leaderboard right now.",
     leaderboardEmpty: "No Time Trial scores yet.",
+    leaderboardLoginRequired: "Leaderboard is available for logged in users only.",
 
     classic: "Classic",
     classicDesc: "Learn flags at your pace",
@@ -597,6 +598,8 @@ const STRINGS = {
     leaderboardLoading: "Cargando clasificación...",
     leaderboardError: "No se puede cargar la clasificación ahora.",
     leaderboardEmpty: "Aún no hay puntuaciones de Contrarreloj.",
+    leaderboardLoginRequired:
+      "La clasificación está disponible solo para usuarios con sesión iniciada.",
 
     classic: "Clásico",
     classicDesc: "Aprende banderas a tu ritmo",
@@ -1052,6 +1055,8 @@ const STRINGS = {
     leaderboardLoading: "A carregar classificação...",
     leaderboardError: "Não foi possível carregar a classificação agora.",
     leaderboardEmpty: "Ainda não há pontuações de Contra o tempo.",
+    leaderboardLoginRequired:
+      "A classificação está disponível apenas para utilizadores com sessão iniciada.",
 
     classic: "Clássico",
     classicDesc: "Aprenda bandeiras no seu ritmo",
@@ -1506,6 +1511,8 @@ const STRINGS = {
     leaderboardLoading: "Bestenliste wird geladen...",
     leaderboardError: "Bestenliste kann derzeit nicht geladen werden.",
     leaderboardEmpty: "Noch keine Zeitmodus-Ergebnisse.",
+    leaderboardLoginRequired:
+      "Die Bestenliste ist nur für eingeloggte Nutzer verfügbar.",
 
     classic: "Klassisch",
     classicDesc: "Lerne Flaggen in deinem Tempo",
@@ -1963,6 +1970,8 @@ const STRINGS = {
     leaderboardLoading: "Chargement du classement...",
     leaderboardError: "Impossible de charger le classement pour le moment.",
     leaderboardEmpty: "Pas encore de scores Contre-la-montre.",
+    leaderboardLoginRequired:
+      "Le classement est disponible uniquement pour les utilisateurs connectés.",
 
     classic: "Classique",
     classicDesc: "Apprends les drapeaux à ton rythme",
@@ -2424,6 +2433,8 @@ const STRINGS = {
     leaderboardLoading: "Ranglijst laden...",
     leaderboardError: "Kan de ranglijst momenteel niet laden.",
     leaderboardEmpty: "Nog geen Tijdrit-scores.",
+    leaderboardLoginRequired:
+      "De ranglijst is alleen beschikbaar voor ingelogde gebruikers.",
 
     classic: "Klassiek",
     classicDesc: "Leer vlaggen in je eigen tempo",

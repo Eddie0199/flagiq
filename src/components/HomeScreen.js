@@ -584,13 +584,15 @@ export default function HomeScreen({
     2: "🥈",
     3: "🥉",
   };
-  const emptyLeaderboardLabel = text(
-    "leaderboardEmpty",
-    "No Time Trial scores yet."
-  );
+  const emptyLeaderboardLabel = loggedIn
+    ? text("leaderboardEmpty", "No Time Trial scores yet.")
+    : text(
+        "leaderboardLoginRequired",
+        "Leaderboard is available for logged in users only."
+      );
 
   useEffect(() => {
-    if (!showLeaderboardModal) return;
+    if (!showLeaderboardModal || !loggedIn) return;
     let isActive = true;
 
     const loadLeaderboard = async () => {
