@@ -1387,6 +1387,7 @@ export default function GameScreen({
                   height: "auto",
                   objectFit: "contain",
                   borderRadius: 12,
+                  border: "1px solid rgba(0, 0, 0, 0.12)",
                   display: "block",
                 }}
               />
