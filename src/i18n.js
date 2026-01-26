@@ -19,6 +19,10 @@ const STRINGS = {
     homeLeaderboardTitle: "Leaderboard",
     homeLeaderboardBody:
       "The global leaderboard is on the way. Stay tuned for competitive rankings.",
+    leaderboardTopLabel: "Top 100 Players • Total Points",
+    leaderboardLoading: "Loading leaderboard...",
+    leaderboardError: "Unable to load leaderboard right now.",
+    leaderboardEmpty: "No Time Trial scores yet.",
 
     classic: "Classic",
     classicDesc: "Learn flags at your pace",
@@ -589,6 +593,10 @@ const STRINGS = {
     homeLeaderboardTitle: "Clasificación",
     homeLeaderboardBody:
       "La clasificación global está en camino. Pronto habrá rankings competitivos.",
+    leaderboardTopLabel: "Top 100 jugadores • Puntos totales",
+    leaderboardLoading: "Cargando clasificación...",
+    leaderboardError: "No se puede cargar la clasificación ahora.",
+    leaderboardEmpty: "Aún no hay puntuaciones de Contrarreloj.",
 
     classic: "Clásico",
     classicDesc: "Aprende banderas a tu ritmo",
@@ -1040,6 +1048,10 @@ const STRINGS = {
     homeLeaderboardTitle: "Classificação",
     homeLeaderboardBody:
       "A classificação global está a caminho. Fique atento aos rankings competitivos.",
+    leaderboardTopLabel: "Top 100 jogadores • Pontos totais",
+    leaderboardLoading: "A carregar classificação...",
+    leaderboardError: "Não foi possível carregar a classificação agora.",
+    leaderboardEmpty: "Ainda não há pontuações de Contra o tempo.",
 
     classic: "Clássico",
     classicDesc: "Aprenda bandeiras no seu ritmo",
@@ -1490,6 +1502,10 @@ const STRINGS = {
     homeLeaderboardTitle: "Bestenliste",
     homeLeaderboardBody:
       "Die globale Bestenliste ist unterwegs. Bleib dran für Wettbewerbsrankings.",
+    leaderboardTopLabel: "Top 100 Spieler • Gesamtpunkte",
+    leaderboardLoading: "Bestenliste wird geladen...",
+    leaderboardError: "Bestenliste kann derzeit nicht geladen werden.",
+    leaderboardEmpty: "Noch keine Zeitmodus-Ergebnisse.",
 
     classic: "Klassisch",
     classicDesc: "Lerne Flaggen in deinem Tempo",
@@ -1943,6 +1959,10 @@ const STRINGS = {
     homeLeaderboardTitle: "Classement",
     homeLeaderboardBody:
       "Le classement mondial arrive bientôt. Reste connecté pour les classements compétitifs.",
+    leaderboardTopLabel: "Top 100 joueurs • Total des points",
+    leaderboardLoading: "Chargement du classement...",
+    leaderboardError: "Impossible de charger le classement pour le moment.",
+    leaderboardEmpty: "Pas encore de scores Contre-la-montre.",
 
     classic: "Classique",
     classicDesc: "Apprends les drapeaux à ton rythme",
@@ -2400,6 +2420,10 @@ const STRINGS = {
     homeLeaderboardTitle: "Ranglijst",
     homeLeaderboardBody:
       "De wereldwijde ranglijst komt eraan. Blijf op de hoogte voor competitieve rankings.",
+    leaderboardTopLabel: "Top 100 spelers • Totaal aantal punten",
+    leaderboardLoading: "Ranglijst laden...",
+    leaderboardError: "Kan de ranglijst momenteel niet laden.",
+    leaderboardEmpty: "Nog geen Tijdrit-scores.",
 
     classic: "Klassiek",
     classicDesc: "Leer vlaggen in je eigen tempo",
