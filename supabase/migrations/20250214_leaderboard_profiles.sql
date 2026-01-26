@@ -75,7 +75,7 @@ on conflict (id)
 do update set username = excluded.username;
 
 -- Create/update leaderboard view with profile usernames
-create or replace view public.time_trial_overall_leaderboard as
+create or replace view public.time_trial_overall_leaderboard_view as
 select
   scores.user_id,
   profiles.username,
@@ -89,7 +89,7 @@ order by points desc, plays desc
 limit 100;
 
 -- Public read access for leaderboard view
-grant select on public.time_trial_overall_leaderboard to anon, authenticated;
+grant select on public.time_trial_overall_leaderboard_view to anon, authenticated;
 
 -- Public read access for profiles (RLS still applies)
 grant select on public.profiles to anon, authenticated;

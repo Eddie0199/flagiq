@@ -7,10 +7,9 @@ export async function fetchTimeTrialLeaderboard(limit = 100) {
   }
 
   const { data, error } = await supabase
-    .from("time_trial_overall_leaderboard")
+    .from("time_trial_overall_leaderboard_view")
     .select("user_id, username, points, plays")
     .order("points", { ascending: false })
-    .order("plays", { ascending: false })
     .limit(limit);
 
   if (error) {
