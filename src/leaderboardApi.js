@@ -7,23 +7,27 @@ export async function fetchTimeTrialLeaderboard(limit = 100) {
   }
 
   const { data, error } = await supabase
-    .from("time_trial_overall_leaderboard")
-    .select("user_id, username, total_best_points, total_plays")
-    .order("total_best_points", { ascending: false })
-    .order("total_plays", { ascending: false })
+    .from("time_trial_overall_leaderboard_view")
+    .select("user_id, username, points, plays")
+    .order("points", { ascending: false })
     .limit(limit);
 
   if (error) {
     return { entries: [], error };
   }
 
-  const entries = (data || []).map((row, index) => ({
-    rank: index + 1,
-    name: row?.username || "Anonymous",
-    score: Number(row?.total_best_points ?? 0),
-    attempts: Number(row?.total_plays ?? 0),
-    userId: row?.user_id || null,
-  }));
+  const entries = (data || []).map((row, index) => {
+    const userId = row?.user_id || null;
+    const suffix = userId ? String(userId).slice(-4) : "";
+    const fallbackName = suffix ? `Player ${suffix}` : "Player";
+    return {
+      rank: index + 1,
+      name: row?.username || fallbackName,
+      score: Number(row?.points ?? 0),
+      attempts: Number(row?.plays ?? 0),
+      userId,
+    };
+  });
 
   return { entries, error: null };
 }

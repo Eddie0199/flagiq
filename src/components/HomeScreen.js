@@ -584,10 +584,15 @@ export default function HomeScreen({
     2: "🥈",
     3: "🥉",
   };
-  const emptyLeaderboardLabel = "No Time Trial scores yet.";
+  const emptyLeaderboardLabel = loggedIn
+    ? text("leaderboardEmpty", "No Time Trial scores yet.")
+    : text(
+        "leaderboardLoginRequired",
+        "Leaderboard is available for logged in users only."
+      );
 
   useEffect(() => {
-    if (!showLeaderboardModal) return;
+    if (!showLeaderboardModal || !loggedIn) return;
     let isActive = true;
 
     const loadLeaderboard = async () => {
@@ -597,7 +602,12 @@ export default function HomeScreen({
       if (!isActive) return;
       if (error) {
         console.error("Failed to load leaderboard", error);
-        setLeaderboardError("Unable to load leaderboard right now.");
+        setLeaderboardError(
+          text(
+            "leaderboardError",
+            "Unable to load leaderboard right now."
+          )
+        );
         setLeaderboardEntries([]);
       } else {
         setLeaderboardEntries(entries);
@@ -1072,7 +1082,7 @@ export default function HomeScreen({
                     letterSpacing: 0.8,
                   }}
                 >
-                  Top 100 Players • Total Points
+                  {text("leaderboardTopLabel", "Top 100 Players • Total Points")}
                 </div>
               </div>
               {leaderboardLoading ? (
@@ -1084,7 +1094,7 @@ export default function HomeScreen({
                     color: "#64748b",
                   }}
                 >
-                  Loading leaderboard...
+                  {text("leaderboardLoading", "Loading leaderboard...")}
                 </div>
               ) : leaderboardError ? (
                 <div
