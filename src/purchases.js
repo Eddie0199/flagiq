@@ -88,17 +88,19 @@ function normalizeStoreKitError(error) {
 }
 
 async function purchaseWithStoreKit(productId) {
+  const hasPurchaseMethod = typeof StoreKitPurchase?.purchase === "function";
   const pluginAvailable =
     typeof Capacitor?.isPluginAvailable === "function"
       ? Capacitor.isPluginAvailable("StoreKitPurchase")
-      : Boolean(StoreKitPurchase);
-  if (!pluginAvailable || typeof StoreKitPurchase?.purchase !== "function") {
+      : undefined;
+  if (!hasPurchaseMethod) {
     console.warn("StoreKit plugin unavailable", {
       pluginAvailable,
-      hasPurchaseMethod: Boolean(StoreKitPurchase?.purchase),
-      platform: typeof Capacitor?.getPlatform === "function"
-        ? Capacitor.getPlatform()
-        : "unknown",
+      hasPurchaseMethod,
+      platform:
+        typeof Capacitor?.getPlatform === "function"
+          ? Capacitor.getPlatform()
+          : "unknown",
     });
     return {
       success: false,
