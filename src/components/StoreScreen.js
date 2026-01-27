@@ -139,6 +139,10 @@ export default function StoreScreen({
     "storePurchaseFailedRetry",
     "Purchase failed. Please try again."
   );
+  const purchaseCancelledMessage = text(
+    "storePurchaseCancelled",
+    "Purchase cancelled."
+  );
 
   const ensureHintsShape = (prev) => {
     const base = prev || {};
@@ -214,6 +218,8 @@ export default function StoreScreen({
       const result = await purchaseProduct(pack.id);
       if (result?.success) {
         setMessage(text("storeCoinsAdded", "Purchase successful! Coins added."));
+      } else if (result?.cancelled) {
+        setMessage(purchaseCancelledMessage);
       } else {
         setMessage(
           result?.error || text("storePurchaseFailed", "Purchase failed")
@@ -492,7 +498,7 @@ export default function StoreScreen({
           >
             {text(
               "storeCoinPacksDesc",
-              "Choose a pack to add coins (web prototype)."
+              "Choose a pack to add coins."
             )}
           </p>
 
@@ -620,6 +626,8 @@ export default function StoreScreen({
                             "storePurchaseSuccess",
                             "Purchase successful! Hearts refilled."
                           )
+                        : res?.cancelled
+                        ? purchaseCancelledMessage
                         : res?.error ||
                             text("storePurchaseFailed", "Purchase failed")
                     );
