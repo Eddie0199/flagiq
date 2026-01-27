@@ -204,7 +204,7 @@ const STRINGS = {
     storeBoostersDesc: "Booster hints can be used in any mode.",
     storeCoinPacksTitle: "Get more coins",
     storeCoinPacksDesc:
-      "Prototype mode: tapping a pack simply adds coins to your balance.",
+      "Choose a pack to add coins.",
 
     storeBuyButton: "Buy",
     storePurchasedShort: "Purchased ✓",
@@ -213,7 +213,8 @@ const STRINGS = {
     storeBoughtBundle: "You bought 1 of each hint!",
     storeBoughtSingle: "Purchase successful!",
     storePurchaseFailedRetry: "Purchase failed. Please try again.",
-    storeCoinsAdded: "Dev mode: coins added to your balance.",
+    storePurchaseCancelled: "Purchase cancelled.",
+    storeCoinsAdded: "Purchase successful! Coins added to your balance.",
     storeCoinsLabel: "coins",
 
     storeRemove2Single: "Remove 2 (x1)",
@@ -642,13 +643,14 @@ const STRINGS = {
 
     storeCoinPacksTitle: "Consigue más monedas",
     storeCoinPacksDesc:
-      "Modo prototipo: tocar un paquete simplemente añade monedas a tu saldo.",
+      "Elige un paquete para añadir monedas.",
 
     storeBuyButton: "Comprar",
     storeNotEnoughCoins: "No tienes suficientes monedas.",
     storeBoughtBundle: "¡Has comprado 1 de cada pista!",
     storeBoughtSingle: "¡Compra realizada!",
-    storeCoinsAdded: "Modo desarrollador: monedas añadidas a tu saldo.",
+    storePurchaseCancelled: "Compra cancelada.",
+    storeCoinsAdded: "¡Compra realizada! Monedas añadidas a tu saldo.",
     storeCoinsLabel: "monedas",
 
     storeRemove2Single: "Eliminar 2 (x1)",
@@ -1120,13 +1122,14 @@ const STRINGS = {
     storeBoostersDesc: "As dicas de bónus podem ser usadas em qualquer modo.",
     storeCoinPacksTitle: "Obter mais moedas",
     storeCoinPacksDesc:
-      "Modo protótipo: tocar num pacote apenas adiciona moedas ao saldo.",
+      "Escolha um pacote para adicionar moedas.",
 
     storeBuyButton: "Comprar",
     storeNotEnoughCoins: "Moedas insuficientes.",
     storeBoughtBundle: "Compraste 1 de cada dica!",
     storeBoughtSingle: "Compra concluída!",
-    storeCoinsAdded: "Modo dev: moedas adicionadas ao saldo.",
+    storePurchaseCancelled: "Compra cancelada.",
+    storeCoinsAdded: "Compra concluída! Moedas adicionadas ao saldo.",
     storeCoinsLabel: "moedas",
 
     storeRemove2Single: "Remover 2 (x1)",
@@ -1581,13 +1584,14 @@ const STRINGS = {
     storeBoostersDesc: "Booster-Hinweise funktionieren in jedem Modus.",
     storeCoinPacksTitle: "Mehr Münzen erhalten",
     storeCoinPacksDesc:
-      "Prototype-Modus: Ein Klick auf ein Paket fügt einfach Münzen zu deinem Guthaben hinzu.",
+      "Wähle ein Paket, um Münzen hinzuzufügen.",
 
     storeBuyButton: "Kaufen",
     storeNotEnoughCoins: "Nicht genug Münzen.",
     storeBoughtBundle: "Du hast je einen von allen Hinweisen gekauft!",
     storeBoughtSingle: "Kauf erfolgreich!",
-    storeCoinsAdded: "Dev-Modus: Münzen zu deinem Guthaben hinzugefügt.",
+    storePurchaseCancelled: "Kauf abgebrochen.",
+    storeCoinsAdded: "Kauf erfolgreich! Münzen wurden deinem Guthaben hinzugefügt.",
     storeCoinsLabel: "Münzen",
 
     storeRemove2Single: "Zwei entfernen (x1)",
@@ -2045,13 +2049,14 @@ const STRINGS = {
 
     storeCoinPacksTitle: "Obtenir plus de pièces",
     storeCoinPacksDesc:
-      "Mode prototype : appuyer sur un pack ajoute simplement des pièces à votre solde.",
+      "Choisissez un pack pour ajouter des pièces.",
 
     storeBuyButton: "Acheter",
     storeNotEnoughCoins: "Vous n’avez pas assez de pièces.",
     storeBoughtBundle: "Pack acheté : 1 de chaque bonus !",
     storeBoughtSingle: "Achat effectué !",
-    storeCoinsAdded: "Mode développeur : pièces ajoutées à votre solde.",
+    storePurchaseCancelled: "Achat annulé.",
+    storeCoinsAdded: "Achat réussi ! Pièces ajoutées à votre solde.",
     storeCoinsLabel: "pièces",
 
     storeRemove2Single: "Supprimer 2 (x1)",
@@ -2501,13 +2506,14 @@ const STRINGS = {
     storeBoostersDesc: "Booster-hints werken in elke modus.",
     storeCoinPacksTitle: "Meer munten krijgen",
     storeCoinPacksDesc:
-      "Prototype-modus: op een pakket tikken voegt gewoon munten toe aan je saldo.",
+      "Kies een pakket om munten toe te voegen.",
 
     storeBuyButton: "Kopen",
     storeNotEnoughCoins: "Onvoldoende munten.",
     storeBoughtBundle: "Je hebt 1 van elke hint gekocht!",
     storeBoughtSingle: "Aankoop geslaagd!",
-    storeCoinsAdded: "Dev-modus: munten toegevoegd aan je saldo.",
+    storePurchaseCancelled: "Aankoop geannuleerd.",
+    storeCoinsAdded: "Aankoop geslaagd! Munten toegevoegd aan je saldo.",
     storeCoinsLabel: "munten",
     storeExtraHeartLabel: "Extra hart",
     storeRefillHeartsLabel: "Harten volledig aanvullen",

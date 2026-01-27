@@ -1,11 +1,13 @@
 // src/purchases.js
 // Centralised purchase entrypoint (web mock + native stub)
 
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "./supabaseClient";
 import { getProductDefinition } from "./shopProducts";
 
 let rewardHandler = null;
+const DEV_MODE_ENABLED = process.env.NODE_ENV !== "production";
+const StoreKitPurchase = registerPlugin("StoreKitPurchase");
 
 export function registerPurchaseRewardHandler(handler) {
   rewardHandler = handler;
@@ -54,18 +56,7 @@ async function persistPurchase(product, platform, rewardResult) {
   }
 }
 
-export async function purchaseProduct(productId) {
-  const product = getProductDefinition(productId);
-  if (!product) {
-    return { success: false, error: "Unknown product" };
-  }
-
-  const platform = detectPlatform();
-
-  if (platform !== "web") {
-    return { success: false, error: "Purchases coming soon" };
-  }
-
+async function applyRewards(product, platform) {
   if (typeof rewardHandler !== "function") {
     return { success: false, error: "Purchase system not ready" };
   }
@@ -80,4 +71,60 @@ export async function purchaseProduct(productId) {
 
   await persistPurchase(product, platform, rewardResult);
   return { success: true };
+}
+
+async function purchaseWithStoreKit(productId) {
+  if (!StoreKitPurchase || typeof StoreKitPurchase.purchase !== "function") {
+    return { success: false, error: "StoreKit not available" };
+  }
+
+  try {
+    const result = await StoreKitPurchase.purchase({ productId });
+    if (result?.success) {
+      return { success: true, transactionId: result?.transactionId };
+    }
+    if (result?.cancelled) {
+      return { success: false, cancelled: true, error: "Purchase cancelled" };
+    }
+    return { success: false, error: result?.error || "Purchase failed" };
+  } catch (error) {
+    return { success: false, error: error?.message || "Purchase failed" };
+  }
+}
+
+export async function purchaseProduct(productId) {
+  const product = getProductDefinition(productId);
+  if (!product) {
+    return { success: false, error: "Unknown product" };
+  }
+
+  const platform = detectPlatform();
+
+  if (platform === "ios") {
+    const nativeResult = await purchaseWithStoreKit(product.id);
+    if (!nativeResult.success) {
+      if (nativeResult.cancelled) {
+        return { success: false, cancelled: true, error: nativeResult.error };
+      }
+      if (!DEV_MODE_ENABLED) {
+        return {
+          success: false,
+          cancelled: nativeResult.cancelled,
+          error: nativeResult.error,
+        };
+      }
+      return await applyRewards(product, platform);
+    }
+    return await applyRewards(product, platform);
+  }
+
+  if (platform !== "web") {
+    return { success: false, error: "Purchases coming soon" };
+  }
+
+  if (!DEV_MODE_ENABLED) {
+    return { success: false, error: "Purchases unavailable" };
+  }
+
+  return await applyRewards(product, platform);
 }
