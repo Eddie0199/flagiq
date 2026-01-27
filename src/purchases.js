@@ -73,9 +73,26 @@ async function applyRewards(product, platform) {
   return { success: true };
 }
 
+function normalizeStoreKitError(error) {
+  if (!error) return "Purchase failed";
+  if (typeof error === "string") return error;
+  const message = error?.message || "Purchase failed";
+  if (message.includes("plugin is not implemented")) {
+    return "In-app purchases are unavailable on this device.";
+  }
+  return message;
+}
+
 async function purchaseWithStoreKit(productId) {
-  if (!StoreKitPurchase || typeof StoreKitPurchase.purchase !== "function") {
-    return { success: false, error: "StoreKit not available" };
+  const pluginAvailable =
+    typeof Capacitor?.isPluginAvailable === "function"
+      ? Capacitor.isPluginAvailable("StoreKitPurchase")
+      : Boolean(StoreKitPurchase);
+  if (!pluginAvailable || typeof StoreKitPurchase?.purchase !== "function") {
+    return {
+      success: false,
+      error: "In-app purchases are unavailable on this device.",
+    };
   }
 
   try {
@@ -88,7 +105,7 @@ async function purchaseWithStoreKit(productId) {
     }
     return { success: false, error: result?.error || "Purchase failed" };
   } catch (error) {
-    return { success: false, error: error?.message || "Purchase failed" };
+    return { success: false, error: normalizeStoreKitError(error) };
   }
 }
 
