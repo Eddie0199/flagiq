@@ -74,11 +74,15 @@ async function applyRewards(product, platform) {
 }
 
 function normalizeStoreKitError(error) {
-  if (!error) return "Purchase failed";
+  if (!error) {
+    return "Purchase failed (unknown error). Please contact support with code IAP_UNKNOWN.";
+  }
   if (typeof error === "string") return error;
-  const message = error?.message || "Purchase failed";
+  const message =
+    error?.message ||
+    "Purchase failed (unknown error). Please contact support with code IAP_UNKNOWN.";
   if (message.includes("plugin is not implemented")) {
-    return "In-app purchases are unavailable on this device.";
+    return "StoreKit is not implemented in this build. Please update the app.";
   }
   return message;
 }
@@ -89,9 +93,17 @@ async function purchaseWithStoreKit(productId) {
       ? Capacitor.isPluginAvailable("StoreKitPurchase")
       : Boolean(StoreKitPurchase);
   if (!pluginAvailable || typeof StoreKitPurchase?.purchase !== "function") {
+    console.warn("StoreKit plugin unavailable", {
+      pluginAvailable,
+      hasPurchaseMethod: Boolean(StoreKitPurchase?.purchase),
+      platform: typeof Capacitor?.getPlatform === "function"
+        ? Capacitor.getPlatform()
+        : "unknown",
+    });
     return {
       success: false,
-      error: "In-app purchases are unavailable on this device.",
+      error:
+        "StoreKit is unavailable in this build. Please reinstall or update the app.",
     };
   }
 
@@ -103,7 +115,12 @@ async function purchaseWithStoreKit(productId) {
     if (result?.cancelled) {
       return { success: false, cancelled: true, error: "Purchase cancelled" };
     }
-    return { success: false, error: result?.error || "Purchase failed" };
+    return {
+      success: false,
+      error:
+        result?.error ||
+        "Purchase failed (unknown error). Please contact support with code IAP_UNKNOWN.",
+    };
   } catch (error) {
     return { success: false, error: normalizeStoreKitError(error) };
   }
