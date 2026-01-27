@@ -1,7 +1,7 @@
 import Capacitor
 import StoreKit
 
-@objc(StoreKitPurchasePlugin)
+@objc(StoreKitPurchase)
 public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPaymentTransactionObserver {
     private var pendingCall: CAPPluginCall?
     private var productsRequest: SKProductsRequest?
