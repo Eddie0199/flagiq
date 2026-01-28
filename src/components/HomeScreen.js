@@ -750,6 +750,8 @@ export default function HomeScreen({
     );
   };
 
+  const localDisabled = true;
+
   return (
     <div
       style={{
@@ -967,7 +969,7 @@ export default function HomeScreen({
             >
               {text(
                 "homeInfoBody",
-                "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n\n🎮 Game Modes:\n• Classic Mode: play at your own pace with no timer pressure.\n• Time Trial: race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n• Local Flags: explore regional packs like US states and master local flags.\n\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n\n💡 Hints & Boosters:\n• Remove 2: eliminates two incorrect options.\n• Auto Pass: instantly completes the flag and moves you forward.\n• Pause Timer: freezes the Time Trial clock for 3 seconds.\n\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts."
+                "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n\n🎮 Game Modes:\n• Classic Mode: Play at your own pace with no timer pressure.\n• Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n• Local Flags: Explore regional packs like US states and master local flags.\n\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n\n💡 Hints & Boosters:\n• Remove 2: Eliminates two incorrect options.\n• Auto Pass: Instantly completes the flag and moves you forward.\n• Pause Timer: Freezes the Time Trial clock for 3 seconds.\n\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts."
               )
                 .split("\n\n")
                 .filter(Boolean)
@@ -1304,6 +1306,7 @@ export default function HomeScreen({
             stats={localFromStore}
             onClick={() => onStart && onStart("local")}
             mode="local"
+            disabled={localDisabled}
           />
         </div>
       ) : (
