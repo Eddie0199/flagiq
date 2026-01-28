@@ -97,6 +97,16 @@ export default function LocalPackLevelsScreen({
     >
       <div
         style={{
+          fontSize: 20,
+          fontWeight: 800,
+          color: "#fff",
+          margin: "2px 0 4px",
+        }}
+      >
+        {pack.title}
+      </div>
+      <div
+        style={{
           display: "grid",
           gridTemplateColumns: "1fr auto",
           alignItems: "center",
