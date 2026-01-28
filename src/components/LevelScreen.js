@@ -7,6 +7,7 @@ import {
   STARS_PER_LEVEL_MAX,
   BATCH,
   UNLOCK_THRESHOLD,
+  BLOCK_REQUIRE,
   starsNeededForLevelId, // use App's exact rule for the popup
 } from "../App";
 
@@ -119,7 +120,8 @@ export default function LevelScreen({
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-          gap: "clamp(8px, 2vw, 12px)",
+          columnGap: "clamp(8px, 2vw, 12px)",
+          rowGap: "clamp(4px, 1.4vw, 8px)",
           flex: 1,
           minHeight: 0,
         }}
@@ -128,7 +130,12 @@ export default function LevelScreen({
           const stars = starsByLevelFromStore[id] || 0;
           const locked = id > unlockedLevels;
           const completed = stars > 0;
-          const showBadge = { 6: 12, 11: 24, 16: 36, 21: 48, 26: 60 }[id];
+          const blockEnd = Math.min(
+            Math.ceil(id / BATCH) * BATCH,
+            TOTAL_LEVELS
+          );
+          const showBadge =
+            id % BATCH === 1 ? BLOCK_REQUIRE[blockEnd] ?? 0 : 0;
 
           let border = "1px solid #e2e8f0";
           let shadow = "none";
@@ -188,7 +195,7 @@ export default function LevelScreen({
                   🔒
                 </span>
               )}
-              {locked && showBadge && (
+              {locked && showBadge > 0 && (
                 <div
                   style={{
                     position: "absolute",

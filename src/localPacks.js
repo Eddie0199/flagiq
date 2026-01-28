@@ -177,6 +177,8 @@ const GB_FLAGS = buildPackFlags(
   "#6366f1"
 );
 
+export const READY_LOCAL_PACK_IDS = ["us"];
+
 export const LOCAL_PACKS = [
   {
     packId: "ALL",
@@ -192,6 +194,14 @@ export const LOCAL_PACKS = [
       ...US_FLAGS,
       ...GB_FLAGS,
     ],
+  },
+  {
+    packId: "us",
+    countryCode: "US",
+    title: "United States",
+    type: "country",
+    unlockTier: 1,
+    flags: US_FLAGS,
   },
   {
     packId: "ch",
@@ -216,14 +226,6 @@ export const LOCAL_PACKS = [
     type: "country",
     unlockTier: 1,
     flags: DE_FLAGS,
-  },
-  {
-    packId: "us",
-    countryCode: "US",
-    title: "United States",
-    type: "country",
-    unlockTier: 1,
-    flags: US_FLAGS,
   },
   {
     packId: "gb",

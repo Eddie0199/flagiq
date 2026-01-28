@@ -166,6 +166,13 @@ body {
   gap: clamp(2px, 1vw, 6px);
 }
 
+.mode-progress-value {
+  display: inline-block;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .mode-progress-icon {
   font-size: 14px;
   line-height: 1;
