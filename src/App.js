@@ -21,6 +21,7 @@ import {
   buildLocalPackLevels,
   getLocalLevelStars,
   getLocalPackProgress,
+  READY_LOCAL_PACK_IDS,
 } from "./localPacks";
 
 // 🔹 NEW: Supabase client import
@@ -1809,14 +1810,13 @@ export default function App() {
     () => (activeLocalPack ? buildLocalPackLevels(activeLocalPack) : []),
     [activeLocalPack]
   );
-  const localMaxLevels = useMemo(
-    () =>
-      LOCAL_PACKS.reduce(
-        (total, pack) => total + buildLocalPackLevels(pack).length,
-        0
-      ),
-    []
-  );
+  const localMaxLevels = useMemo(() => {
+    const readyPackIds = new Set(READY_LOCAL_PACK_IDS);
+    return LOCAL_PACKS.filter((pack) => readyPackIds.has(pack.packId)).reduce(
+      (total, pack) => total + buildLocalPackLevels(pack).length,
+      0
+    );
+  }, []);
   const homeMaxLevels = useMemo(
     () => ({
       classic: levels.length,

@@ -83,42 +83,64 @@ export default function LocalPackLevelsScreen({
   }
 
   return (
-    <div style={{ padding: "6px 12px", maxWidth: 960, margin: "0 auto" }}>
+    <div
+      style={{
+        padding: "4px 12px 10px",
+        maxWidth: 960,
+        margin: "0 auto",
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "1fr auto",
           alignItems: "center",
-          margin: "8px 0 10px",
+          margin: "4px 0 8px",
         }}
       >
-        <div style={{ justifySelf: "start", fontSize: 20, fontWeight: 800 }}>
+        <div
+          style={{
+            justifySelf: "start",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#fff",
+          }}
+        >
           {pack.title}
         </div>
         <div style={{ justifySelf: "end" }}>
           <StarsBadge total={packStats?.starsEarned || 0} />
         </div>
       </div>
-      <div style={{ marginBottom: 6, color: "#475569", fontSize: 13 }}>
+      <div style={{ marginBottom: 8, color: "#fff", fontSize: 14 }}>
         {text("selectLevel", "Select level")}
       </div>
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(5, 1fr)",
-          gap: 14,
+          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+          columnGap: "clamp(8px, 2vw, 12px)",
+          rowGap: "clamp(4px, 1.4vw, 8px)",
+          flex: 1,
+          minHeight: 0,
         }}
       >
         {levels.map((level) => {
           const stars = Number(levelsMap[level.id] || 0);
           const locked = level.id > unlockedLevels;
           const completed = stars > 0;
-          const blockEnd = Math.min(level.id + (BATCH - 1), levels.length);
+          const blockEnd = Math.min(
+            Math.ceil(level.id / BATCH) * BATCH,
+            levels.length
+          );
           const showBadge =
-            (level.id - 1) % BATCH === 0 && level.id > 1
-              ? BLOCK_REQUIRE[blockEnd]
-              : null;
+            level.id % BATCH === 1 ? BLOCK_REQUIRE[blockEnd] ?? 0 : 0;
           let border = "1px solid #e2e8f0";
           let shadow = "none";
           if (completed && !locked) {
@@ -175,7 +197,7 @@ export default function LocalPackLevelsScreen({
                   🔒
                 </span>
               ) : null}
-              {locked && showBadge ? (
+              {locked && showBadge > 0 ? (
                 <div
                   style={{
                     position: "absolute",

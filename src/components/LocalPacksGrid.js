@@ -3,6 +3,7 @@ import {
   buildLocalPackLevels,
   getLocalPackProgress,
   isLocalPackUnlocked,
+  READY_LOCAL_PACK_IDS,
 } from "../localPacks";
 
 export default function LocalPacksGrid({
@@ -68,7 +69,7 @@ export default function LocalPacksGrid({
       >
         {enrichedPacks.map(({ pack, levels, stats, unlocked }) => {
           const packId = String(pack.packId || "").toLowerCase();
-          const isReady = packId === "us";
+          const isReady = READY_LOCAL_PACK_IDS.includes(packId);
           const locked = !unlocked || !isReady;
           const packName = text(
             `localFlags.packs.${packId}.name`,

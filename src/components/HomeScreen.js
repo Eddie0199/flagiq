@@ -1,6 +1,7 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
+import { READY_LOCAL_PACK_IDS } from "../localPacks";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -35,18 +36,21 @@ function getPerModeStats(progress, mode) {
 
 function getLocalStats(progress) {
   const packs = progress?.localFlags?.packs || {};
-  return Object.values(packs).reduce(
-    (acc, pack) => {
-      const starsMap = pack?.starsByLevel || {};
-      Object.values(starsMap).forEach((stars) => {
-        const starValue = Number(stars) || 0;
-        acc.stars += starValue;
-        if (starValue > 0) acc.completedLevels += 1;
-      });
-      return acc;
-    },
-    { completedLevels: 0, stars: 0 }
-  );
+  const readyPackIds = new Set(READY_LOCAL_PACK_IDS);
+  return Object.entries(packs)
+    .filter(([packId]) => readyPackIds.has(packId))
+    .reduce(
+      (acc, [, pack]) => {
+        const starsMap = pack?.starsByLevel || {};
+        Object.values(starsMap).forEach((stars) => {
+          const starValue = Number(stars) || 0;
+          acc.stars += starValue;
+          if (starValue > 0) acc.completedLevels += 1;
+        });
+        return acc;
+      },
+      { completedLevels: 0, stars: 0 }
+    );
 }
 
 // grid layout
