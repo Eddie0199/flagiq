@@ -15,7 +15,7 @@ const STRINGS = {
     appSubtitle: "Test your world knowledge — one flag at a time",
     homeInfoTitle: "How to Play",
     homeInfoBody:
-      "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters.",
+      "🎯 Goal: Identify the country for each flag from four options.\n🎮 Modes: Classic lets you play untimed; Time Trial scores speed and accuracy.\n❤️ Lives: Misses or time-outs cost one life; lives refill over time.\n💡 Hints: Remove 2 removes two wrong answers, Auto Pass picks the correct flag, Pause freezes the Time Trial timer for 3 seconds.\n⭐ Stars & Unlocks: Earn up to 3 stars per level to unlock more levels and packs.\n🪙 Coins: First-time level clears award coins to spend on hints in the shop.\n🎁 Daily Booster: Open one box every 24 hours for free hint boosts.",
     homeLeaderboardTitle: "Leaderboard",
     homeLeaderboardBody:
       "The global leaderboard is on the way. Stay tuned for competitive rankings.",
@@ -591,7 +591,7 @@ const STRINGS = {
       "Pon a prueba tu conocimiento del mundo — una bandera a la vez",
     homeInfoTitle: "Cómo jugar",
     homeInfoBody:
-      "🎮 Modos: Clásico para aprender a tu ritmo, Contrarreloj para competir con el tiempo.\n💡 Pistas: Usa potenciadores como Quitar 2, Pase automático y Pausar.\n🎁 Potenciador diario: Elige una caja cada 24 horas para pistas gratis.\n⭐ Estrellas y monedas: Gana estrellas para desbloquear niveles y monedas para comprar potenciadores.",
+      "🎯 Objetivo: Identifica el país de cada bandera entre cuatro opciones.\n🎮 Modos: Clásico te permite jugar sin tiempo; Contrarreloj puntúa velocidad y precisión.\n❤️ Vidas: Los fallos o el tiempo agotado cuestan una vida; las vidas se recargan con el tiempo.\n💡 Pistas: Quitar 2 elimina dos respuestas incorrectas, Pase automático elige la bandera correcta y Pausar detiene el temporizador del Contrarreloj durante 3 segundos.\n⭐ Estrellas y desbloqueos: Gana hasta 3 estrellas por nivel para desbloquear más niveles y packs.\n🪙 Monedas: Las primeras victorias de nivel otorgan monedas para gastar en pistas en la tienda.\n🎁 Potenciador diario: Abre una caja cada 24 horas para obtener potenciadores de pistas gratis.",
     homeLeaderboardTitle: "Clasificación",
     homeLeaderboardBody:
       "La clasificación global está en camino. Pronto habrá rankings competitivos.",
@@ -1049,7 +1049,7 @@ const STRINGS = {
     appSubtitle: "Teste o seu conhecimento do mundo — uma bandeira de cada vez",
     homeInfoTitle: "Como jogar",
     homeInfoBody:
-      "🎮 Modos: Clássico para aprender no seu ritmo, Contra o tempo para correr contra o relógio.\n💡 Dicas: Use bónus como Remover 2, Passar automático e Pausar.\n🎁 Bónus diário: Escolha uma caixa a cada 24 horas para dicas grátis.\n⭐ Estrelas e moedas: Ganhe estrelas para desbloquear níveis e moedas para comprar bónus.",
+      "🎯 Objetivo: Identifique o país de cada bandeira entre quatro opções.\n🎮 Modos: Clássico permite jogar sem tempo; Contra o tempo pontua velocidade e precisão.\n❤️ Vidas: Erros ou tempo esgotado custam uma vida; as vidas recarregam com o tempo.\n💡 Dicas: Remover 2 elimina duas respostas erradas, Passar automático escolhe a bandeira correta e Pausar congela o cronômetro do Contra o tempo por 3 segundos.\n⭐ Estrelas e desbloqueios: Ganhe até 3 estrelas por nível para desbloquear mais níveis e pacotes.\n🪙 Moedas: As primeiras conclusões de nível dão moedas para gastar em dicas na loja.\n🎁 Bónus diário: Abra uma caixa a cada 24 horas para ganhar bónus de dicas grátis.",
     homeLeaderboardTitle: "Classificação",
     homeLeaderboardBody:
       "A classificação global está a caminho. Fique atento aos rankings competitivos.",
@@ -1506,7 +1506,7 @@ const STRINGS = {
     appSubtitle: "Teste dein Weltwissen – Fahne für Fahne",
     homeInfoTitle: "So spielst du",
     homeInfoBody:
-      "🎮 Modi: Klassisch zum Lernen in deinem Tempo, Zeitmodus gegen die Uhr.\n💡 Hinweise: Nutze Booster wie 2 entfernen, Auto-Pass und Pause.\n🎁 Täglicher Booster: Wähle alle 24 Stunden eine Box für kostenlose Hinweis-Boosts.\n⭐ Sterne & Münzen: Sammle Sterne zum Freischalten und Münzen für Booster.",
+      "🎯 Ziel: Wähle für jede Flagge das richtige Land aus vier Optionen.\n🎮 Modi: Klassisch spielt ohne Timer; Zeitmodus bewertet Tempo und Genauigkeit.\n❤️ Leben: Fehler oder Zeitablauf kosten ein Leben; Leben füllen sich mit der Zeit wieder auf.\n💡 Hinweise: 2 entfernen entfernt zwei falsche Antworten, Auto-Lösen wählt die richtige Flagge, Pause stoppt den Zeitmodus-Timer für 3 Sekunden.\n⭐ Sterne & Freischaltungen: Verdiene bis zu 3 Sterne pro Level, um weitere Level und Packs freizuschalten.\n🪙 Münzen: Erste Levelabschlüsse geben Münzen, die du im Shop für Hinweise ausgibst.\n🎁 Täglicher Booster: Öffne alle 24 Stunden eine Box für kostenlose Hinweis-Boosts.",
     homeLeaderboardTitle: "Bestenliste",
     homeLeaderboardBody:
       "Die globale Bestenliste ist unterwegs. Bleib dran für Wettbewerbsrankings.",
@@ -1966,7 +1966,7 @@ const STRINGS = {
     appSubtitle: "Teste tes connaissances du monde — un drapeau à la fois",
     homeInfoTitle: "Comment jouer",
     homeInfoBody:
-      "🎮 Modes : Classique pour apprendre à ton rythme, Contre-la-montre pour battre le chrono.\n💡 Indices : Utilise des boosters comme Retirer 2, Passe auto et Pause.\n🎁 Booster quotidien : Choisis une boîte toutes les 24 heures pour des boosts d’indices gratuits.\n⭐ Étoiles et pièces : Gagne des étoiles pour débloquer des niveaux et des pièces pour acheter des boosters.",
+      "🎯 Objectif : Identifie le pays de chaque drapeau parmi quatre options.\n🎮 Modes : Classique se joue sans minuteur ; Contre-la-montre récompense la vitesse et la précision.\n❤️ Vies : Les erreurs ou le temps écoulé coûtent une vie ; les vies se rechargent avec le temps.\n💡 Indices : Retirer 2 enlève deux mauvaises réponses, Passage auto choisit le bon drapeau, Pause fige le minuteur du Contre-la-montre pendant 3 secondes.\n⭐ Étoiles et déblocages : Gagne jusqu'à 3 étoiles par niveau pour débloquer plus de niveaux et de packs.\n🪙 Pièces : Les premiers niveaux terminés donnent des pièces à dépenser dans la boutique d’indices.\n🎁 Booster quotidien : Ouvre une boîte toutes les 24 heures pour des boosts d’indices gratuits.",
     homeLeaderboardTitle: "Classement",
     homeLeaderboardBody:
       "Le classement mondial arrive bientôt. Reste connecté pour les classements compétitifs.",
@@ -2430,7 +2430,7 @@ const STRINGS = {
     appSubtitle: "Test je wereldkennis — vlag voor vlag",
     homeInfoTitle: "Zo speel je",
     homeInfoBody:
-      "🎮 Modi: Klassiek om op je tempo te leren, Tijdrit om tegen de klok te racen.\n💡 Hints: Gebruik boosters zoals Verwijder 2, Auto-pass en Pauze.\n🎁 Dagelijkse booster: Kies elke 24 uur een doosje voor gratis hint-boosts.\n⭐ Sterren & munten: Verdien sterren om levels te ontgrendelen en munten om boosters te kopen.",
+      "🎯 Doel: Kies het juiste land bij elke vlag uit vier opties.\n🎮 Modi: Klassiek speel je zonder timer; Tijdrit beoordeelt snelheid en nauwkeurigheid.\n❤️ Levens: Fouten of een verlopen timer kosten één leven; levens vullen na verloop van tijd weer aan.\n💡 Hints: Verwijder 2 verwijdert twee foute antwoorden, Auto-pass kiest de juiste vlag, Pauze bevriest de Tijdrit-timer voor 3 seconden.\n⭐ Sterren en ontgrendelingen: Verdien tot 3 sterren per level om meer levels en packs te ontgrendelen.\n🪙 Munten: Eerste levelafwerkingen leveren munten op om uit te geven aan hints in de winkel.\n🎁 Dagelijkse booster: Open elke 24 uur één doosje voor gratis hint-boosts.",
     homeLeaderboardTitle: "Ranglijst",
     homeLeaderboardBody:
       "De wereldwijde ranglijst komt eraan. Blijf op de hoogte voor competitieve rankings.",

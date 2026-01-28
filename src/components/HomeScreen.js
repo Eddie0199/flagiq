@@ -956,7 +956,6 @@ export default function HomeScreen({
                 fontSize: 15,
                 lineHeight: 1.5,
                 color: "#334155",
-                whiteSpace: "pre-line",
                 maxHeight: "55vh",
                 overflowY: "auto",
                 paddingRight: 6,
@@ -964,8 +963,48 @@ export default function HomeScreen({
             >
               {text(
                 "homeInfoBody",
-                "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters."
-              )}
+                "🎯 Goal: Identify the country for each flag from four options.\n🎮 Modes: Classic lets you play untimed; Time Trial scores speed and accuracy.\n❤️ Lives: Misses or time-outs cost one life; lives refill over time.\n💡 Hints: Remove 2 removes two wrong answers, Auto Pass picks the correct flag, Pause freezes the Time Trial timer for 3 seconds.\n⭐ Stars & Unlocks: Earn up to 3 stars per level to unlock more levels and packs.\n🪙 Coins: First-time level clears award coins to spend on hints in the shop.\n🎁 Daily Booster: Open one box every 24 hours for free hint boosts."
+              )
+                .split("\n")
+                .filter(Boolean)
+                .map((line, index, arr) => {
+                  const match = line.match(/^([^\s]+)\s*([^:]+):\s*(.*)$/);
+                  if (!match) {
+                    return (
+                      <div
+                        key={`${line}-${index}`}
+                        style={{ marginBottom: index === arr.length - 1 ? 0 : 12 }}
+                      >
+                        {line}
+                      </div>
+                    );
+                  }
+                  const [, emoji, title, body] = match;
+                  return (
+                    <div
+                      key={`${title}-${index}`}
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        alignItems: "flex-start",
+                        marginBottom: index === arr.length - 1 ? 0 : 12,
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{ fontSize: 18, lineHeight: "20px" }}
+                      >
+                        {emoji}
+                      </span>
+                      <span>
+                        <strong style={{ color: "#0f172a" }}>
+                          {title.trim()}:
+                        </strong>{" "}
+                        {body.trim()}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
