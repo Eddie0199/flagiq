@@ -111,14 +111,11 @@ export default function LocalPackLevelsScreen({
             color: "#fff",
           }}
         >
-          {pack.title}
+          {text("selectLevel", "Select level")}
         </div>
         <div style={{ justifySelf: "end" }}>
           <StarsBadge total={packStats?.starsEarned || 0} />
         </div>
-      </div>
-      <div style={{ marginBottom: 8, color: "#fff", fontSize: 14 }}>
-        {text("selectLevel", "Select level")}
       </div>
 
       <div
