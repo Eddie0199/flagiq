@@ -2256,7 +2256,7 @@ export default function App() {
                 style={{
                   fontSize: 22,
                   fontWeight: 800,
-                  color: "#0f172a",
+                  color: "#fff",
                 }}
               >
                 {localFlagsLabel}
