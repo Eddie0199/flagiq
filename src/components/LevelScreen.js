@@ -7,27 +7,8 @@ import {
   STARS_PER_LEVEL_MAX,
   BATCH,
   UNLOCK_THRESHOLD,
-  BLOCK_REQUIRE,
-  starsNeededForLevelId, // use App's exact rule for the popup
 } from "../App";
-
-function StarsBadge({ total }) {
-  return (
-    <div
-      style={{
-        padding: "6px 10px",
-        borderRadius: 999,
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        fontWeight: 800,
-        fontSize: 13,
-        color: "#0f172a",
-      }}
-    >
-      {total} ★
-    </div>
-  );
-}
+import LevelGrid, { StarsBadge } from "./LevelGrid";
 
 // compute unlocks from a stars-by-level map (best-ever)
 function computeUnlockedFromStars(starsMap) {
@@ -116,107 +97,13 @@ export default function LevelScreen({
         </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-          columnGap: "clamp(8px, 2vw, 12px)",
-          rowGap: "clamp(4px, 1.4vw, 8px)",
-          flex: 1,
-          minHeight: 0,
-        }}
-      >
-        {Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1).map((id) => {
-          const stars = starsByLevelFromStore[id] || 0;
-          const locked = id > unlockedLevels;
-          const completed = stars > 0;
-          const blockEnd = Math.min(
-            Math.ceil(id / BATCH) * BATCH,
-            TOTAL_LEVELS
-          );
-          const showBadge =
-            id % BATCH === 1 ? BLOCK_REQUIRE[blockEnd] ?? 0 : 0;
-
-          let border = "1px solid #e2e8f0";
-          let shadow = "none";
-          if (completed && !locked) {
-            border = "3px solid #f59e0b";
-            shadow = "0 2px 10px rgba(245, 158, 11, 0.25)";
-          }
-
-          const handleClick = () => {
-            if (!locked) {
-              onLevelClick && onLevelClick(id);
-              return;
-            }
-            // If locked, notify parent so it can show the Locked modal with exact requirement
-            const info = starsNeededForLevelId(id, starsByLevelFromStore);
-            if (onLockedAttempt) onLockedAttempt(info);
-          };
-
-          return (
-            <button
-              key={id}
-              onClick={handleClick}
-              // we keep it clickable even when locked so we can show the “need X★” popup
-              style={{
-                aspectRatio: "1 / 1",
-                borderRadius: 16,
-                border,
-                boxShadow: shadow,
-                background: locked ? "#f8fafc" : "#fff",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
-                opacity: locked ? 0.6 : 1,
-                cursor: "pointer",
-                transition: "box-shadow .15s ease, border-color .15s ease",
-              }}
-            >
-              <div style={{ fontSize: 18, fontWeight: 800 }}>{id}</div>
-              <div style={{ marginTop: 4, fontSize: 12 }}>
-                <span style={{ color: "#f59e0b" }}>{"★".repeat(stars)}</span>
-                <span style={{ color: "#cbd5e1" }}>
-                  {"★".repeat(3 - stars)}
-                </span>
-              </div>
-              {locked && (
-                <span
-                  aria-hidden
-                  style={{
-                    position: "absolute",
-                    top: 8,
-                    right: 10,
-                    color: "#94a3b8",
-                  }}
-                >
-                  🔒
-                </span>
-              )}
-              {locked && showBadge > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 6,
-                    right: 6,
-                    background: "#facc15",
-                    color: "#1e293b",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: "2px 6px",
-                    borderRadius: 8,
-                    boxShadow: "0 1px 3px rgba(0,0,0,.2)",
-                  }}
-                >
-                  {showBadge}★
-                </div>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <LevelGrid
+        levels={Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1)}
+        starsByLevel={starsByLevelFromStore}
+        unlockedLevels={unlockedLevels}
+        onLevelClick={onLevelClick}
+        onLockedAttempt={onLockedAttempt}
+      />
     </div>
   );
 }
