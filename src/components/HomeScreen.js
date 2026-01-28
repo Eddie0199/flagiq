@@ -750,6 +750,8 @@ export default function HomeScreen({
     );
   };
 
+  const localDisabled = true;
+
   return (
     <div
       style={{
@@ -1304,6 +1306,7 @@ export default function HomeScreen({
             stats={localFromStore}
             onClick={() => onStart && onStart("local")}
             mode="local"
+            disabled={localDisabled}
           />
         </div>
       ) : (
