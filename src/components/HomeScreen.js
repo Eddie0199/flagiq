@@ -963,12 +963,12 @@ export default function HomeScreen({
             >
               {text(
                 "homeInfoBody",
-                "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n🎮 Game Modes: Classic Mode — play at your own pace with no timer pressure. Time Trial — race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n💡 Hints & Boosters: Use coins to activate boosts like Remove 2 (eliminates two incorrect options), Auto Pass (instantly completes the flag), and Pause Timer (freezes the Time Trial clock for 3 seconds).\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts."
+                "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n\n🎮 Game Modes:\n• Classic Mode — play at your own pace with no timer pressure.\n• Time Trial — race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n\n💡 Hints & Boosters:\n• Remove 2 — eliminates two incorrect options.\n• Auto Pass — instantly completes the flag and moves you forward.\n• Pause Timer — freezes the Time Trial clock for 3 seconds.\n\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts."
               )
-                .split("\n")
+                .split("\n\n")
                 .filter(Boolean)
                 .map((line, index, arr) => {
-                  const match = line.match(/^([^\s]+)\s*([^:]+):\s*(.*)$/);
+                  const match = line.match(/^(\S+)\s*([^:]+):\s*([\s\S]*)$/);
                   if (!match) {
                     return (
                       <div
@@ -980,6 +980,16 @@ export default function HomeScreen({
                     );
                   }
                   const [, emoji, title, body] = match;
+                  const bodyLines = body
+                    .split("\n")
+                    .map((bodyLine) => bodyLine.trim())
+                    .filter(Boolean);
+                  const bulletItems = bodyLines.filter((bodyLine) =>
+                    /^[-•]\s+/.test(bodyLine)
+                  );
+                  const plainLines = bodyLines.filter(
+                    (bodyLine) => !/^[-•]\s+/.test(bodyLine)
+                  );
                   return (
                     <div
                       key={`${title}-${index}`}
@@ -1000,7 +1010,25 @@ export default function HomeScreen({
                         <strong style={{ color: "#0f172a" }}>
                           {title.trim()}:
                         </strong>{" "}
-                        {body.trim()}
+                        {plainLines.length > 0 ? (
+                          <span>{plainLines.join(" ")}</span>
+                        ) : null}
+                        {bulletItems.length > 0 ? (
+                          <ul
+                            style={{
+                              margin: "8px 0 0",
+                              paddingLeft: 20,
+                              display: "grid",
+                              gap: 6,
+                            }}
+                          >
+                            {bulletItems.map((item) => (
+                              <li key={item}>
+                                {item.replace(/^[-•]\s+/, "")}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
                       </span>
                     </div>
                   );
