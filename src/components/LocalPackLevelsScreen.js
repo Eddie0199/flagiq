@@ -123,14 +123,16 @@ export default function LocalPackLevelsScreen({
         </div>
       </div>
 
-      <LevelTilesGrid
-        levels={levels}
-        totalLevels={levels.length}
-        starsByLevel={levelsMap}
-        unlockedLevels={unlockedLevels}
-        onLevelClick={onLevelClick}
-        onLockedAttempt={onLockedAttempt}
-      />
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <LevelTilesGrid
+          levels={levels}
+          totalLevels={levels.length}
+          starsByLevel={levelsMap}
+          unlockedLevels={unlockedLevels}
+          onLevelClick={onLevelClick}
+          onLockedAttempt={onLockedAttempt}
+        />
+      </div>
     </div>
   );
 }

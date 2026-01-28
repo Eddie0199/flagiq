@@ -115,14 +115,16 @@ export default function LevelScreen({
         </div>
       </div>
 
-      <LevelTilesGrid
-        levels={Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1)}
-        totalLevels={TOTAL_LEVELS}
-        starsByLevel={starsByLevelFromStore}
-        unlockedLevels={unlockedLevels}
-        onLevelClick={(levelId) => onLevelClick && onLevelClick(levelId)}
-        onLockedAttempt={onLockedAttempt}
-      />
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <LevelTilesGrid
+          levels={Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1)}
+          totalLevels={TOTAL_LEVELS}
+          starsByLevel={starsByLevelFromStore}
+          unlockedLevels={unlockedLevels}
+          onLevelClick={(levelId) => onLevelClick && onLevelClick(levelId)}
+          onLockedAttempt={onLockedAttempt}
+        />
+      </div>
     </div>
   );
 }
