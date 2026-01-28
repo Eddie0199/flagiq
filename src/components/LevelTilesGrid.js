@@ -15,9 +15,8 @@ export default function LevelTilesGrid({
         display: "grid",
         gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
         columnGap: "clamp(8px, 2vw, 12px)",
-        rowGap: "clamp(4px, 1.4vw, 8px)",
-        flex: 1,
-        minHeight: 0,
+        rowGap: "clamp(4px, 1vw, 6px)",
+        alignContent: "start",
       }}
     >
       {levels.map((level) => {
