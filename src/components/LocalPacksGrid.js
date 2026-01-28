@@ -31,7 +31,9 @@ export default function LocalPacksGrid({
 
   const enrichedPacks = useMemo(
     () =>
-      (packs || []).map((pack) => {
+      (packs || [])
+        .filter((pack) => String(pack.packId || "").toLowerCase() !== "all")
+        .map((pack) => {
         const levels = buildLocalPackLevels(pack);
         const stats = getLocalPackProgress(pack, progress);
         const unlocked = isLocalPackUnlocked(pack);
@@ -65,8 +67,9 @@ export default function LocalPacksGrid({
         }}
       >
         {enrichedPacks.map(({ pack, levels, stats, unlocked }) => {
-          const locked = !unlocked;
           const packId = String(pack.packId || "").toLowerCase();
+          const isReady = packId === "us";
+          const locked = !unlocked || !isReady;
           const packName = text(
             `localFlags.packs.${packId}.name`,
             pack.title
@@ -77,6 +80,10 @@ export default function LocalPacksGrid({
               key={pack.packId}
               onClick={() => {
                 if (locked) {
+                  if (!isReady) {
+                    setLockMessage(text("comingSoon", "Coming soon"));
+                    return;
+                  }
                   setLockMessage(
                     text(
                       "localPackLocked",
@@ -100,7 +107,7 @@ export default function LocalPacksGrid({
                 minHeight: 120,
                 position: "relative",
                 opacity: locked ? 0.6 : 1,
-                cursor: "pointer",
+                cursor: locked ? "not-allowed" : "pointer",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -161,12 +168,18 @@ export default function LocalPacksGrid({
                   color: "#0f172a",
                 }}
               >
-                <span>
-                  {stats.completedLevels}/{levels.length} levels
-                </span>
-                <span>
-                  Stars: {stats.starsEarned}/{stats.maxStars}
-                </span>
+                {isReady ? (
+                  <>
+                    <span>
+                      {stats.completedLevels}/{levels.length} levels
+                    </span>
+                    <span>
+                      Stars: {stats.starsEarned}/{stats.maxStars}
+                    </span>
+                  </>
+                ) : (
+                  <span>{text("comingSoon", "Coming soon")}</span>
+                )}
               </div>
               {locked ? (
                 <div
@@ -174,7 +187,7 @@ export default function LocalPacksGrid({
                     position: "absolute",
                     top: 10,
                     right: 10,
-                    background: "#0f172a",
+                    background: isReady ? "#0f172a" : "#f59e0b",
                     color: "white",
                     fontSize: 11,
                     fontWeight: 700,
@@ -182,7 +195,9 @@ export default function LocalPacksGrid({
                     borderRadius: 999,
                   }}
                 >
-                  {text("locked", "Locked")}
+                  {isReady
+                    ? text("locked", "Locked")
+                    : text("comingSoon", "Coming soon")}
                 </div>
               ) : null}
             </button>

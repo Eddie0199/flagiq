@@ -113,11 +113,22 @@ function formatLogValue(value) {
 }
 
 // ----- constants -----
-export const TOTAL_LEVELS = 30;
+export const TOTAL_LEVELS = 50;
 export const STARS_PER_LEVEL_MAX = 3;
 export const BATCH = 5;
 export const UNLOCK_THRESHOLD = 0.8;
-export const BLOCK_REQUIRE = { 5: 0, 10: 12, 15: 24, 20: 36, 25: 48, 30: 60 };
+export const BLOCK_REQUIRE = {
+  5: 0,
+  10: 12,
+  15: 24,
+  20: 36,
+  25: 48,
+  30: 60,
+  35: 72,
+  40: 84,
+  45: 96,
+  50: 108,
+};
 
 export const MAX_HEARTS = 5;
 export const REGEN_MS = 10 * 60 * 1000;
@@ -324,7 +335,13 @@ function minDiffForLevel(i) {
   // 21–25
   if (i <= 25) return 5;
   // 26–30: only pretty hard stuff
-  return 6;
+  if (i <= 30) return 6;
+  // 31–35: harder pool
+  if (i <= 35) return 7;
+  // 36–40: toughest pool
+  if (i <= 40) return 8;
+  // 41–50: elite pool
+  return 9;
 }
 
 function capForLevel(i) {
@@ -334,7 +351,9 @@ function capForLevel(i) {
   if (i <= 15) return 6.5;
   if (i <= 20) return 7.5;
   if (i <= 25) return 8.5;
-  return 9.5;
+  if (i <= 30) return 9.5;
+  if (i <= 40) return 9.8;
+  return 10.0;
 }
 
 export function buildLevels(flags) {
