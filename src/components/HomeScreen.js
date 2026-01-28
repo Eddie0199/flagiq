@@ -956,7 +956,6 @@ export default function HomeScreen({
                 fontSize: 15,
                 lineHeight: 1.5,
                 color: "#334155",
-                whiteSpace: "pre-line",
                 maxHeight: "55vh",
                 overflowY: "auto",
                 paddingRight: 6,
@@ -964,8 +963,76 @@ export default function HomeScreen({
             >
               {text(
                 "homeInfoBody",
-                "🎮 Modes: Classic to learn at your pace, Time Trial to race the clock.\n💡 Hints: Use boosters like Remove 2, Auto Pass, and Pause.\n🎁 Daily Booster: Pick a box every 24 hours for free hint boosts.\n⭐ Stars & Coins: Earn stars to unlock levels and coins to buy boosters."
-              )}
+                "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n\n🎮 Game Modes:\n• Classic Mode — play at your own pace with no timer pressure.\n• Time Trial — race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n\n💡 Hints & Boosters:\n• Remove 2 — eliminates two incorrect options.\n• Auto Pass — instantly completes the flag and moves you forward.\n• Pause Timer — freezes the Time Trial clock for 3 seconds.\n\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts."
+              )
+                .split("\n\n")
+                .filter(Boolean)
+                .map((line, index, arr) => {
+                  const match = line.match(/^(\S+)\s*([^:]+):\s*([\s\S]*)$/);
+                  if (!match) {
+                    return (
+                      <div
+                        key={`${line}-${index}`}
+                        style={{ marginBottom: index === arr.length - 1 ? 0 : 12 }}
+                      >
+                        {line}
+                      </div>
+                    );
+                  }
+                  const [, emoji, title, body] = match;
+                  const bodyLines = body
+                    .split("\n")
+                    .map((bodyLine) => bodyLine.trim())
+                    .filter(Boolean);
+                  const bulletItems = bodyLines.filter((bodyLine) =>
+                    /^[-•]\s+/.test(bodyLine)
+                  );
+                  const plainLines = bodyLines.filter(
+                    (bodyLine) => !/^[-•]\s+/.test(bodyLine)
+                  );
+                  return (
+                    <div
+                      key={`${title}-${index}`}
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        alignItems: "flex-start",
+                        marginBottom: index === arr.length - 1 ? 0 : 12,
+                      }}
+                    >
+                      <span
+                        aria-hidden="true"
+                        style={{ fontSize: 18, lineHeight: "20px" }}
+                      >
+                        {emoji}
+                      </span>
+                      <span>
+                        <strong style={{ color: "#0f172a" }}>
+                          {title.trim()}:
+                        </strong>{" "}
+                        {plainLines.length > 0 ? (
+                          <span>{plainLines.join(" ")}</span>
+                        ) : null}
+                        {bulletItems.length > 0 ? (
+                          <ul
+                            style={{
+                              margin: "8px 0 0",
+                              paddingLeft: 20,
+                              display: "grid",
+                              gap: 6,
+                            }}
+                          >
+                            {bulletItems.map((item) => (
+                              <li key={item}>
+                                {item.replace(/^[-•]\s+/, "")}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </span>
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
