@@ -127,6 +127,7 @@ export default function StoreScreen({
   const [message, setMessage] = useState("");
   const [storeStatus, setStoreStatus] = useState("loading");
   const [storeProductsById, setStoreProductsById] = useState({});
+  const loadRequestIdRef = useRef(0);
   const ctaState = useCtaStateMachine(1200);
 
   const text = (key, fallback) => {
@@ -148,24 +149,44 @@ export default function StoreScreen({
   const storeUnavailableMessage = "Store unavailable, please try again.";
 
   const loadStoreProducts = async () => {
+    const requestId = ++loadRequestIdRef.current;
     setStoreStatus("loading");
-    const result = await fetchStoreProducts();
 
-    if (!result?.success) {
+    try {
+      const result = await fetchStoreProducts();
+      if (requestId !== loadRequestIdRef.current) return;
+
+      if (!result?.success) {
+        setStoreStatus("unavailable");
+        setStoreProductsById({});
+        setMessage(storeUnavailableMessage);
+        return;
+      }
+
+      const validProductIds = new Set(SHOP_PRODUCTS.map((p) => p.id));
+      const mappedProducts = (result?.products || []).reduce((acc, product) => {
+        if (product?.productId && validProductIds.has(product.productId)) {
+          acc[product.productId] = product;
+        }
+        return acc;
+      }, {});
+
+      if (Object.keys(mappedProducts).length === 0) {
+        setStoreStatus("unavailable");
+        setStoreProductsById({});
+        setMessage(storeUnavailableMessage);
+        return;
+      }
+
+      setStoreProductsById(mappedProducts);
+      setStoreStatus("loaded");
+      setMessage("");
+    } catch (e) {
+      if (requestId !== loadRequestIdRef.current) return;
       setStoreStatus("unavailable");
       setStoreProductsById({});
       setMessage(storeUnavailableMessage);
-      return;
     }
-
-    const mappedProducts = (result?.products || []).reduce((acc, product) => {
-      if (product?.productId) acc[product.productId] = product;
-      return acc;
-    }, {});
-
-    setStoreProductsById(mappedProducts);
-    setStoreStatus("loaded");
-    setMessage("");
   };
 
   useEffect(() => {
@@ -267,6 +288,9 @@ export default function StoreScreen({
   const storeUnavailable = storeStatus === "unavailable";
   const storeLoading = storeStatus === "loading";
   const storeReady = storeStatus === "loaded";
+  const storeProducts = Object.values(storeProductsById);
+  const showStoreUnavailableBanner =
+    storeProducts.length === 0 && storeUnavailable;
   const canBuyHeartWithCoins =
     !heartsFull && typeof coins === "number" && coins >= HEART_COIN_COST;
   const heartsProduct = SHOP_PRODUCTS.find(
@@ -539,7 +563,7 @@ export default function StoreScreen({
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {(storeUnavailable || storeLoading) && (
+            {(showStoreUnavailableBanner || storeLoading) && (
               <div
                 style={{
                   borderRadius: 12,
