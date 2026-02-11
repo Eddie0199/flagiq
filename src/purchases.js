@@ -3,11 +3,19 @@
 
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "./supabaseClient";
-import { getProductDefinition } from "./shopProducts";
+import { getProductDefinition, SHOP_PRODUCTS } from "./shopProducts";
 
 let rewardHandler = null;
 const DEV_MODE_ENABLED = process.env.NODE_ENV !== "production";
 const StoreKitPurchase = registerPlugin("StoreKitPurchase");
+
+function iapLog(event, payload = {}) {
+  console.info(`[IAP] ${event}`, payload);
+}
+
+function iapWarn(event, payload = {}) {
+  console.warn(`[IAP] ${event}`, payload);
+}
 
 export function registerPurchaseRewardHandler(handler) {
   rewardHandler = handler;
@@ -58,10 +66,16 @@ async function persistPurchase(product, platform, rewardResult) {
 
 async function applyRewards(product, platform) {
   if (typeof rewardHandler !== "function") {
+    iapWarn("entitlement handler missing", { productId: product?.id, platform });
     return { success: false, error: "Purchase system not ready" };
   }
 
   const rewardResult = await rewardHandler(product);
+  iapLog("entitlements granted", {
+    productId: product?.id,
+    platform,
+    rewardResult,
+  });
   if (!rewardResult?.success) {
     return {
       success: false,
@@ -94,7 +108,7 @@ async function purchaseWithStoreKit(productId) {
       ? Capacitor.isPluginAvailable("StoreKitPurchase")
       : undefined;
   if (!hasPurchaseMethod) {
-    console.warn("StoreKit plugin unavailable", {
+    iapWarn("StoreKit plugin unavailable", {
       pluginAvailable,
       hasPurchaseMethod,
       platform:
@@ -110,31 +124,111 @@ async function purchaseWithStoreKit(productId) {
   }
 
   try {
+    iapLog("purchase start", { productId, platform: "ios" });
     const result = await StoreKitPurchase.purchase({ productId });
     if (result?.success) {
+      iapLog("purchase completion", {
+        productId,
+        platform: "ios",
+        transactionId: result?.transactionId,
+      });
       return { success: true, transactionId: result?.transactionId };
     }
     if (result?.cancelled) {
+      iapLog("purchase cancelled", { productId, platform: "ios" });
       return { success: false, cancelled: true, error: "Purchase cancelled" };
     }
+    iapWarn("purchase failure", {
+      productId,
+      platform: "ios",
+      errorCode: result?.errorCode,
+      errorMessage: result?.error,
+    });
     return {
       success: false,
+      errorCode: result?.errorCode,
       error:
         result?.error ||
         "Purchase failed (unknown error). Please contact support with code IAP_UNKNOWN.",
     };
   } catch (error) {
+    iapWarn("purchase exception", { productId, platform: "ios", error });
     return { success: false, error: normalizeStoreKitError(error) };
+  }
+}
+
+export async function fetchStoreProducts() {
+  const platform = detectPlatform();
+  const productIds = SHOP_PRODUCTS.map((product) => product.id);
+  iapLog("product fetch start", { platform, requestedProductIds: productIds });
+
+  if (platform !== "ios") {
+    const products = SHOP_PRODUCTS.map((product) => ({
+      productId: product.id,
+      price: product.priceLabel,
+      localizedPrice: product.priceLabel,
+    }));
+    iapLog("product fetch response", {
+      platform,
+      validProducts: products,
+      invalidProductIds: [],
+    });
+    return { success: true, products, invalidProductIds: [] };
+  }
+
+  const hasFetchProductsMethod =
+    typeof StoreKitPurchase?.fetchProducts === "function";
+  if (!hasFetchProductsMethod) {
+    iapWarn("product fetch unavailable", {
+      platform,
+      reason: "StoreKitPurchase.fetchProducts not implemented",
+    });
+    return {
+      success: false,
+      error: "Store unavailable, please try again.",
+      products: [],
+      invalidProductIds: productIds,
+    };
+  }
+
+  try {
+    const result = await StoreKitPurchase.fetchProducts({ productIds });
+    const products = Array.isArray(result?.products) ? result.products : [];
+    const invalidProductIds = Array.isArray(result?.invalidProductIds)
+      ? result.invalidProductIds
+      : [];
+    iapLog("product fetch response", {
+      platform,
+      validProducts: products,
+      invalidProductIds,
+    });
+
+    return {
+      success: Boolean(result?.success),
+      products,
+      invalidProductIds,
+      error: result?.error,
+    };
+  } catch (error) {
+    iapWarn("product fetch exception", { platform, error });
+    return {
+      success: false,
+      error: "Store unavailable, please try again.",
+      products: [],
+      invalidProductIds: productIds,
+    };
   }
 }
 
 export async function purchaseProduct(productId) {
   const product = getProductDefinition(productId);
   if (!product) {
+    iapWarn("purchase blocked unknown product", { productId });
     return { success: false, error: "Unknown product" };
   }
 
   const platform = detectPlatform();
+  iapLog("purchase requested", { productId: product.id, platform });
 
   if (platform === "ios") {
     const nativeResult = await purchaseWithStoreKit(product.id);

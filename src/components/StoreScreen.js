@@ -2,7 +2,7 @@
 // Booster shop: spend coins on hints & (dev) get more coins.
 
 import React, { useEffect, useRef, useState } from "react";
-import { purchaseProduct } from "../purchases";
+import { fetchStoreProducts, purchaseProduct } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 
 const BOOSTER_ITEMS = [
@@ -125,6 +125,8 @@ export default function StoreScreen({
   onBuyHeartWithCoins,
 }) {
   const [message, setMessage] = useState("");
+  const [storeStatus, setStoreStatus] = useState("loading");
+  const [storeProductsById, setStoreProductsById] = useState({});
   const ctaState = useCtaStateMachine(1200);
 
   const text = (key, fallback) => {
@@ -143,6 +145,32 @@ export default function StoreScreen({
     "storePurchaseCancelled",
     "Purchase cancelled."
   );
+  const storeUnavailableMessage = "Store unavailable, please try again.";
+
+  const loadStoreProducts = async () => {
+    setStoreStatus("loading");
+    const result = await fetchStoreProducts();
+
+    if (!result?.success) {
+      setStoreStatus("unavailable");
+      setStoreProductsById({});
+      setMessage(storeUnavailableMessage);
+      return;
+    }
+
+    const mappedProducts = (result?.products || []).reduce((acc, product) => {
+      if (product?.productId) acc[product.productId] = product;
+      return acc;
+    }, {});
+
+    setStoreProductsById(mappedProducts);
+    setStoreStatus("loaded");
+    setMessage("");
+  };
+
+  useEffect(() => {
+    loadStoreProducts();
+  }, []);
 
   const ensureHintsShape = (prev) => {
     const base = prev || {};
@@ -214,6 +242,11 @@ export default function StoreScreen({
   }
 
   async function buyCoins(pack) {
+    if (storeStatus !== "loaded") {
+      setMessage(storeUnavailableMessage);
+      return;
+    }
+
     try {
       const result = await purchaseProduct(pack.id);
       if (result?.success) {
@@ -231,6 +264,9 @@ export default function StoreScreen({
   }
 
   const heartsFull = typeof hearts === "number" && hearts >= maxHearts;
+  const storeUnavailable = storeStatus === "unavailable";
+  const storeLoading = storeStatus === "loading";
+  const storeReady = storeStatus === "loaded";
   const canBuyHeartWithCoins =
     !heartsFull && typeof coins === "number" && coins >= HEART_COIN_COST;
   const heartsProduct = SHOP_PRODUCTS.find(
@@ -503,11 +539,57 @@ export default function StoreScreen({
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {(storeUnavailable || storeLoading) && (
+              <div
+                style={{
+                  borderRadius: 12,
+                  border: "1px solid #cbd5e1",
+                  background: "#f8fafc",
+                  padding: "10px 12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: "#0f172a",
+                  }}
+                >
+                  {storeLoading
+                    ? text("storeLoading", "Connecting to store…")
+                    : storeUnavailableMessage}
+                </div>
+                <button
+                  onClick={loadStoreProducts}
+                  disabled={storeLoading}
+                  style={{
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "6px 12px",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: storeLoading ? "not-allowed" : "pointer",
+                    background: storeLoading ? "#94a3b8" : "#0f172a",
+                    color: "#fff",
+                  }}
+                >
+                  {text("storeRetry", "Retry")}
+                </button>
+              </div>
+            )}
+
             {COIN_PACKS.map((pack) => {
               const coinsAmount =
                 pack.reward?.coins ??
                 pack.coins ??
                 (pack.label ? parseInt(pack.label, 10) : 0);
+              const storeProduct = storeProductsById[pack.id];
+              const displayPrice =
+                storeProduct?.localizedPrice || storeProduct?.price || pack.priceLabel;
               return (
                 <div
                   key={pack.id}
@@ -554,20 +636,21 @@ export default function StoreScreen({
 
                 <button
                   onClick={() => buyCoins(pack)}
+                  disabled={!storeReady}
                   style={{
                     border: "none",
                     borderRadius: 999,
                     padding: "6px 14px",
                     fontSize: 12,
                     fontWeight: 700,
-                    cursor: "pointer",
-                    background: "#0f172a",
+                    cursor: storeReady ? "pointer" : "not-allowed",
+                    background: storeReady ? "#0f172a" : "#94a3b8",
                     color: "#fff",
                     minWidth: 80,
                     textAlign: "center",
                   }}
                 >
-                  {pack.priceLabel}
+                  {displayPrice}
                 </button>
               </div>
               );
@@ -619,6 +702,11 @@ export default function StoreScreen({
               <button
                 onClick={async () => {
                   try {
+                    if (!storeReady) {
+                      setMessage(storeUnavailableMessage);
+                      return;
+                    }
+
                     const res = await purchaseProduct(PRODUCT_IDS.HEARTS_REFILL);
                     setMessage(
                       res?.success
@@ -635,15 +723,15 @@ export default function StoreScreen({
                     setMessage(text("storePurchaseFailed", "Purchase failed"));
                   }
                 }}
-                disabled={heartsFull}
+                disabled={heartsFull || !storeReady}
                 style={{
                   border: "none",
                   borderRadius: 999,
                   padding: "6px 14px",
                   fontSize: 12,
                   fontWeight: 700,
-                  cursor: heartsFull ? "not-allowed" : "pointer",
-                  background: heartsFull ? "#cbd5e1" : "#0f172a",
+                  cursor: heartsFull || !storeReady ? "not-allowed" : "pointer",
+                  background: heartsFull || !storeReady ? "#cbd5e1" : "#0f172a",
                   color: "#fff",
                   minWidth: 80,
                   textAlign: "center",
@@ -651,7 +739,9 @@ export default function StoreScreen({
               >
                 {heartsFull
                   ? text("storeHeartsFull", "Full")
-                  : heartsProduct?.priceLabel || "€0.99"}
+                  : storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPrice ||
+                    heartsProduct?.priceLabel ||
+                    "€0.99"}
               </button>
             </div>
           </div>

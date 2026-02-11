@@ -2,11 +2,11 @@
 // Shared definitions for store products and rewards.
 
 export const PRODUCT_IDS = {
-  COINS_250: "coins_250",
-  COINS_600: "coins_600",
-  COINS_1500: "coins_1500",
-  COINS_5000: "coins_5000",
-  HEARTS_REFILL: "hearts_refill",
+  COINS_250: "com.wildmoustachegames.flagiq.coins.250",
+  COINS_600: "com.wildmoustachegames.flagiq.coins.600",
+  COINS_1500: "com.wildmoustachegames.flagiq.coins.1500",
+  COINS_5000: "com.wildmoustachegames.flagiq.coins.5000",
+  HEARTS_REFILL: "com.wildmoustachegames.flagiq.heart.refill",
 };
 
 export const SHOP_PRODUCTS = [
