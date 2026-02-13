@@ -8,13 +8,107 @@ import { getProductDefinition, SHOP_PRODUCTS } from "./shopProducts";
 let rewardHandler = null;
 const DEV_MODE_ENABLED = process.env.NODE_ENV !== "production";
 const StoreKitPurchase = registerPlugin("StoreKitPurchase");
+const IAP_LOG_MAX = 50;
+
+let iapLogBuffer = [];
+let iapLastFailure = null;
+
+function appendIapLog(level, event, payload = {}) {
+  const entry = {
+    id: `${Date.now()}-${Math.random()}`,
+    timestamp: new Date().toISOString(),
+    level,
+    event,
+    payload,
+  };
+  iapLogBuffer = [entry, ...iapLogBuffer].slice(0, IAP_LOG_MAX);
+  return entry;
+}
 
 function iapLog(event, payload = {}) {
+  appendIapLog("info", event, payload);
   console.info(`[IAP] ${event}`, payload);
 }
 
 function iapWarn(event, payload = {}) {
+  appendIapLog("warn", event, payload);
   console.warn(`[IAP] ${event}`, payload);
+}
+
+function recordIapFailure({ productId, errorDomain, errorCode, message, raw }) {
+  iapLastFailure = {
+    timestamp: new Date().toISOString(),
+    productId: productId || "",
+    errorDomain: errorDomain || "",
+    errorCode: Number.isFinite(Number(errorCode)) ? Number(errorCode) : null,
+    message: message || "",
+    raw,
+  };
+  appendIapLog("error", "failure-captured", iapLastFailure);
+}
+
+export function getIapDiagnosticsLogs() {
+  return [...iapLogBuffer];
+}
+
+export function getIapLastFailure() {
+  return iapLastFailure ? { ...iapLastFailure } : null;
+}
+
+export async function clearIapDiagnostics() {
+  iapLogBuffer = [];
+  iapLastFailure = null;
+  if (typeof StoreKitPurchase?.iapDiagnosticsClear === "function") {
+    try {
+      await StoreKitPurchase.iapDiagnosticsClear();
+    } catch (error) {
+      iapWarn("native diagnostics clear failed", { error });
+    }
+  }
+}
+
+export async function getIapDiagnosticsState() {
+  const base = {
+    canMakePayments: null,
+    requestedProductIds: SHOP_PRODUCTS.map((product) => product.id),
+    products: [],
+    invalidProductIdentifiers: [],
+    lastPurchaseAttempt: null,
+    nativeEvents: [],
+    jsLogs: getIapDiagnosticsLogs(),
+    jsLastFailure: getIapLastFailure(),
+  };
+
+  if (detectPlatform() !== "ios") return base;
+
+  if (typeof StoreKitPurchase?.iapDiagnosticsGetState === "function") {
+    try {
+      const nativeState = await StoreKitPurchase.iapDiagnosticsGetState();
+      return {
+        ...base,
+        ...nativeState,
+        jsLogs: getIapDiagnosticsLogs(),
+        jsLastFailure: getIapLastFailure(),
+      };
+    } catch (error) {
+      iapWarn("native diagnostics fetch failed", { error });
+      return {
+        ...base,
+        nativeFetchError: normalizeStoreKitError(error),
+      };
+    }
+  }
+
+  if (typeof StoreKitPurchase?.iapCanMakePayments === "function") {
+    try {
+      const result = await StoreKitPurchase.iapCanMakePayments();
+      base.canMakePayments = result?.canMakePayments;
+    } catch (error) {
+      iapWarn("native canMakePayments failed", { error });
+    }
+  }
+
+  return base;
 }
 
 export function registerPurchaseRewardHandler(handler) {
@@ -116,10 +210,15 @@ async function purchaseWithStoreKit(productId) {
           ? Capacitor.getPlatform()
           : "unknown",
     });
+    const unavailableError = "StoreKit is unavailable in this build. Please reinstall or update the app.";
+    recordIapFailure({
+      productId,
+      message: unavailableError,
+      raw: { pluginAvailable, hasPurchaseMethod },
+    });
     return {
       success: false,
-      error:
-        "StoreKit is unavailable in this build. Please reinstall or update the app.",
+      error: unavailableError,
     };
   }
 
@@ -142,17 +241,31 @@ async function purchaseWithStoreKit(productId) {
       productId,
       platform: "ios",
       errorCode: result?.errorCode,
+      errorDomain: result?.errorDomain,
       errorMessage: result?.error,
+    });
+    recordIapFailure({
+      productId,
+      errorDomain: result?.errorDomain,
+      errorCode: result?.errorCode,
+      message: result?.error || result?.errorLocalizedDescription,
+      raw: result,
     });
     return {
       success: false,
       errorCode: result?.errorCode,
+      errorDomain: result?.errorDomain,
       error:
         result?.error ||
         "Purchase failed (unknown error). Please contact support with code IAP_UNKNOWN.",
     };
   } catch (error) {
     iapWarn("purchase exception", { productId, platform: "ios", error });
+    recordIapFailure({
+      productId,
+      message: normalizeStoreKitError(error),
+      raw: error,
+    });
     return { success: false, error: normalizeStoreKitError(error) };
   }
 }
@@ -183,9 +296,15 @@ export async function fetchStoreProducts() {
       platform,
       reason: "StoreKitPurchase.fetchProducts not implemented",
     });
+    const unavailableError = "Store unavailable, please try again.";
+    recordIapFailure({
+      productId: "fetchProducts",
+      message: unavailableError,
+      raw: { reason: "StoreKitPurchase.fetchProducts not implemented" },
+    });
     return {
       success: false,
-      error: "Store unavailable, please try again.",
+      error: unavailableError,
       products: [],
       invalidProductIds: productIds,
     };
@@ -211,6 +330,11 @@ export async function fetchStoreProducts() {
     };
   } catch (error) {
     iapWarn("product fetch exception", { platform, error });
+    recordIapFailure({
+      productId: "fetchProducts",
+      message: "Store unavailable, please try again.",
+      raw: error,
+    });
     return {
       success: false,
       error: "Store unavailable, please try again.",

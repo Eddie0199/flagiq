@@ -16,6 +16,7 @@ import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import { registerPurchaseRewardHandler } from "./purchases";
+import IapDiagnosticsPanel from "./components/IapDiagnosticsPanel";
 import {
   LOCAL_PACKS,
   buildLocalPackLevels,
@@ -2575,6 +2576,7 @@ export default function App() {
                 Close
               </button>
             </div>
+            <IapDiagnosticsPanel visible={showDebugScreen} />
             {debugLogs.length === 0 && (
               <div style={{ color: "#cbd5f5" }}>
                 No stored logs yet.
