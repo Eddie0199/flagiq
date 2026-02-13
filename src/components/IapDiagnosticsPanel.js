@@ -63,6 +63,7 @@ export default function IapDiagnosticsPanel({ visible }) {
       `App Version: ${String(state.appVersion || "unknown")}`,
       `Build: ${String(state.buildNumber || "unknown")}`,
       `echo: ${String(state.pluginEchoStatus || "")}${state.pluginEchoError ? ` (error: ${state.pluginEchoError})` : ""}`,
+      `loadedPlugins: ${toPretty(state.loadedPlugins || [])}`,
       `canMakePayments: ${String(state.canMakePayments)}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,

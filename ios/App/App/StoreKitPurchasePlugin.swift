@@ -291,10 +291,13 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     @objc func iapDiagnosticsGetState(_ call: CAPPluginCall) {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let loadedPlugins = loadedPluginNames()
+
         call.resolve([
             "canMakePayments": SKPaymentQueue.canMakePayments(),
             "appVersion": appVersion,
             "buildNumber": buildNumber,
+            "loadedPlugins": loadedPlugins,
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
@@ -390,5 +393,10 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         fetchProductsRequest = nil
     }
 
-
+    private func loadedPluginNames() -> [String] {
+        guard let plugins = bridge?.value(forKey: "plugins") as? [String: Any] else {
+            return []
+        }
+        return Array(plugins.keys).sorted()
+    }
 }
