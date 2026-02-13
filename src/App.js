@@ -15,7 +15,7 @@ import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
-import { registerPurchaseRewardHandler } from "./purchases";
+import { registerPurchaseRewardHandler, runIapStartupDiagnostics } from "./purchases";
 import IapDiagnosticsPanel from "./components/IapDiagnosticsPanel";
 import {
   LOCAL_PACKS,
@@ -987,6 +987,10 @@ export default function App() {
     },
     [debugOverlayEnabled, getDebugRoute]
   );
+
+  useEffect(() => {
+    runIapStartupDiagnostics();
+  }, []);
 
   useEffect(() => {
     let mounted = true;

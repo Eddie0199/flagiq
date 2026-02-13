@@ -12,6 +12,8 @@ const IAP_LOG_MAX = 50;
 
 let iapLogBuffer = [];
 let iapLastFailure = null;
+let iapPluginEcho = null;
+let iapPluginEchoError = null;
 
 function appendIapLog(level, event, payload = {}) {
   const entry = {
@@ -47,6 +49,29 @@ function recordIapFailure({ productId, errorDomain, errorCode, message, raw }) {
   appendIapLog("error", "failure-captured", iapLastFailure);
 }
 
+export async function runIapStartupDiagnostics() {
+  if (detectPlatform() !== "ios") {
+    iapPluginEcho = null;
+    iapPluginEchoError = null;
+    return;
+  }
+
+  if (typeof StoreKitPurchase?.echo !== "function") {
+    iapPluginEcho = null;
+    iapPluginEchoError = "StoreKitPurchase.echo not implemented";
+    return;
+  }
+
+  try {
+    const result = await StoreKitPurchase.echo();
+    iapPluginEcho = result?.status || null;
+    iapPluginEchoError = null;
+  } catch (error) {
+    iapPluginEcho = null;
+    iapPluginEchoError = normalizeStoreKitError(error);
+  }
+}
+
 export function getIapDiagnosticsLogs() {
   return [...iapLogBuffer];
 }
@@ -77,6 +102,8 @@ export async function getIapDiagnosticsState() {
     nativeEvents: [],
     jsLogs: getIapDiagnosticsLogs(),
     jsLastFailure: getIapLastFailure(),
+    pluginEchoStatus: iapPluginEcho,
+    pluginEchoError: iapPluginEchoError,
   };
 
   if (detectPlatform() !== "ios") return base;
@@ -89,6 +116,8 @@ export async function getIapDiagnosticsState() {
         ...nativeState,
         jsLogs: getIapDiagnosticsLogs(),
         jsLastFailure: getIapLastFailure(),
+        pluginEchoStatus: iapPluginEcho,
+        pluginEchoError: iapPluginEchoError,
       };
     } catch (error) {
       iapWarn("native diagnostics fetch failed", { error });
