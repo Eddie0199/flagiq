@@ -60,6 +60,9 @@ export default function IapDiagnosticsPanel({ visible }) {
   const diagnosticsText = useMemo(() => {
     if (!state) return "IAP diagnostics unavailable";
     return [
+      `App Version: ${String(state.appVersion || "unknown")}`,
+      `Build: ${String(state.buildNumber || "unknown")}`,
+      `echo: ${String(state.pluginEchoStatus || "")}${state.pluginEchoError ? ` (error: ${state.pluginEchoError})` : ""}`,
       `canMakePayments: ${String(state.canMakePayments)}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
@@ -99,7 +102,19 @@ export default function IapDiagnosticsPanel({ visible }) {
         IAP Diagnostics
       </div>
       <div style={{ fontSize: 12, color: "#cbd5f5", marginBottom: 8 }}>
-        canMakePayments: <strong>{String(state?.canMakePayments)}</strong>
+        <div>
+          App Version: <strong>{String(state?.appVersion || "unknown")}</strong>
+        </div>
+        <div>
+          Build: <strong>{String(state?.buildNumber || "unknown")}</strong>
+        </div>
+        <div>
+          Echo: <strong>{String(state?.pluginEchoStatus || "") || "n/a"}</strong>
+          {state?.pluginEchoError ? ` (error: ${state.pluginEchoError})` : ""}
+        </div>
+        <div>
+          canMakePayments: <strong>{String(state?.canMakePayments)}</strong>
+        </div>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
         <button onClick={() => runAction("retry", fetchStoreProducts)} disabled={!!busyAction}>

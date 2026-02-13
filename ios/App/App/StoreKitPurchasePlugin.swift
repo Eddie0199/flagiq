@@ -284,9 +284,17 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         call.resolve(["canMakePayments": SKPaymentQueue.canMakePayments()])
     }
 
+    @objc func echo(_ call: CAPPluginCall) {
+        call.resolve(["status": "plugin_alive"])
+    }
+
     @objc func iapDiagnosticsGetState(_ call: CAPPluginCall) {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
         call.resolve([
             "canMakePayments": SKPaymentQueue.canMakePayments(),
+            "appVersion": appVersion,
+            "buildNumber": buildNumber,
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
@@ -381,4 +389,6 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         fetchProductsCall = nil
         fetchProductsRequest = nil
     }
+
+
 }
