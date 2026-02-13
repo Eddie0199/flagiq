@@ -394,9 +394,19 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     }
 
     private func loadedPluginNames() -> [String] {
-        guard let plugins = bridge?.value(forKey: "plugins") as? [String: Any] else {
+        guard let bridge else {
             return []
         }
-        return Array(plugins.keys).sorted()
+
+        // CAPBridgeProtocol doesn't expose the plugins collection publicly.
+        // Read it defensively via reflection for diagnostics only.
+        for child in Mirror(reflecting: bridge).children {
+            guard child.label == "plugins", let plugins = child.value as? [String: Any] else {
+                continue
+            }
+            return Array(plugins.keys).sorted()
+        }
+
+        return []
     }
 }
