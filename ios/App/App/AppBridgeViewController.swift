@@ -18,8 +18,6 @@ class AppBridgeViewController: CAPBridgeViewController {
         bridge?.webView?.evaluateJavaScript(injection, completionHandler: nil)
         CAPLog.print("[Startup] Injected native build info marker: \(nativeMarker)")
 
-        if let capBridge = bridge as? CAPBridge {
-            print("REGISTERED PLUGINS:", capBridge.plugins.keys)
-        }
+        CAPLog.print("[Startup] Bridge ready: \(bridge != nil)")
     }
 }
