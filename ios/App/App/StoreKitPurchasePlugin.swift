@@ -300,7 +300,12 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     @objc func iapDiagnosticsGetState(_ call: CAPPluginCall) {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
-        let registeredPlugins = (bridge as? CAPBridge).map { Array($0.plugins.keys).sorted() } ?? []
+        let registeredPlugins: [String]
+        if let capBridge = bridge as? CAPBridge {
+            registeredPlugins = Array(capBridge.plugins.keys).sorted()
+        } else {
+            registeredPlugins = []
+        }
 
         call.resolve([
             "canMakePayments": SKPaymentQueue.canMakePayments(),
