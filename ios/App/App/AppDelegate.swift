@@ -7,7 +7,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let buildVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        CAPLog.print("[Startup] CFBundleShortVersionString: \(shortVersion)")
+        CAPLog.print("[Startup] CFBundleVersion: \(buildVersion)")
+        CAPLog.print("[Startup] StoreKitPurchasePlugin loaded")
         return true
     }
 
