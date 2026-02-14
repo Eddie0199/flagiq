@@ -18,6 +18,15 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     public override func load() {
         SKPaymentQueue.default().add(self)
         CAPLog.print("[IAP] StoreKitPurchase plugin loaded")
+        if let capBridge = bridge as? CAPBridge {
+            let registeredPluginKeys = Array(capBridge.plugins.keys).sorted()
+            print("REGISTERED PLUGINS:", registeredPluginKeys)
+            appendNativeEvent([
+                "event": "plugins:registered",
+                "plugins": registeredPluginKeys,
+                "storeKitPurchaseRegistered": registeredPluginKeys.contains("StoreKitPurchase")
+            ])
+        }
     }
 
     deinit {
@@ -291,11 +300,14 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     @objc func iapDiagnosticsGetState(_ call: CAPPluginCall) {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        let registeredPlugins = (bridge as? CAPBridge).map { Array($0.plugins.keys).sorted() } ?? []
 
         call.resolve([
             "canMakePayments": SKPaymentQueue.canMakePayments(),
             "appVersion": appVersion,
             "buildNumber": buildNumber,
+            "registeredPlugins": registeredPlugins,
+            "storeKitPurchaseRegistered": registeredPlugins.contains("StoreKitPurchase"),
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
