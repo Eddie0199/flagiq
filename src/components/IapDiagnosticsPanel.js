@@ -7,6 +7,8 @@ import {
 } from "../purchases";
 import { PRODUCT_IDS } from "../shopProducts";
 
+const JS_BUILD_MARKER = "2026-02-14-A";
+
 function toPretty(value) {
   try {
     return JSON.stringify(value, null, 2);
@@ -34,6 +36,10 @@ function copyText(value) {
 export default function IapDiagnosticsPanel({ visible }) {
   const [state, setState] = useState(null);
   const [busyAction, setBusyAction] = useState("");
+  const nativeBuildInfo = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return window.__NATIVE_BUILD_INFO__ || window.NATIVE_BUILD_INFO || null;
+  }, [visible]);
 
   const refresh = useCallback(async () => {
     const next = await getIapDiagnosticsState();
@@ -66,8 +72,16 @@ export default function IapDiagnosticsPanel({ visible }) {
       .includes("plugin is not implemented");
 
   const diagnosticsText = useMemo(() => {
-    if (!state) return "IAP diagnostics unavailable";
+    if (!state) {
+      return [
+        `JS Build Marker: ${JS_BUILD_MARKER}`,
+        `Native Build Info: ${toPretty(nativeBuildInfo || "missing")}`,
+        "IAP diagnostics unavailable",
+      ].join("\n\n");
+    }
     return [
+      `JS Build Marker: ${JS_BUILD_MARKER}`,
+      `Native Build Info: ${toPretty(nativeBuildInfo || "missing")}`,
       `App Version: ${String(state.appVersion || "unknown")}`,
       `Build: ${String(state.buildNumber || "unknown")}`,
       `Echo status: ${String(state.pluginEchoStatus || "n/a")}`,
@@ -81,7 +95,7 @@ export default function IapDiagnosticsPanel({ visible }) {
       `jsLastFailure: ${toPretty(state.jsLastFailure || null)}`,
       `logs(last50): ${toPretty(combinedLogs)}`,
     ].join("\n\n");
-  }, [combinedLogs, state]);
+  }, [combinedLogs, nativeBuildInfo, state]);
 
   const runAction = useCallback(
     async (name, fn) => {
@@ -127,6 +141,12 @@ export default function IapDiagnosticsPanel({ visible }) {
         </div>
       )}
       <div style={{ fontSize: 12, color: "#cbd5f5", marginBottom: 8 }}>
+        <div>
+          JS Build Marker: <strong>{JS_BUILD_MARKER}</strong>
+        </div>
+        <div>
+          Native Build Info: <strong>{toPretty(nativeBuildInfo || "missing")}</strong>
+        </div>
         <div>
           App Version: <strong>{String(state?.appVersion || "unknown")}</strong>
         </div>

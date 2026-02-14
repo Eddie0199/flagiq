@@ -11,7 +11,7 @@ workflows:
         BUNDLE_IDENTIFIER: com.wildmoustachegames.flagiq
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
-        IOS_BUILD_NUMBER: 33
+        IOS_BUILD_NUMBER: 34
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.wildmoustachegames.flagiq
@@ -25,8 +25,17 @@ workflows:
             exit 1
           fi
           npx cross-env ESLINT_NO_DEV_ERRORS=true npm run build
-      - name: Sync Capacitor iOS
-        script: npx cap sync ios
+      - name: Copy Capacitor web assets to iOS (without native project regeneration)
+        script: npx cap copy ios
+      - name: Verify native build marker injection after Capacitor copy
+        script: |
+          set -euo pipefail
+          MARKER="NATIVE_MARKER_2026-02-14-A"
+          if ! grep -n "$MARKER" ios/App/App/AppBridgeViewController.swift; then
+            echo "❌ Native marker $MARKER missing from AppBridgeViewController.swift"
+            exit 1
+          fi
+          echo "✅ Native marker $MARKER present after Capacitor copy"
       - name: Verify iOS plugin shim file exists in repo
         script: |
           set -euo pipefail
