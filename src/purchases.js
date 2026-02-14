@@ -13,6 +13,7 @@ const IAP_LOG_MAX = 50;
 let iapLogBuffer = [];
 let iapLastFailure = null;
 let iapPluginEcho = null;
+let iapPluginEchoResult = null;
 let iapPluginEchoError = null;
 
 function appendIapLog(level, event, payload = {}) {
@@ -52,23 +53,27 @@ function recordIapFailure({ productId, errorDomain, errorCode, message, raw }) {
 export async function runIapStartupDiagnostics() {
   if (detectPlatform() !== "ios") {
     iapPluginEcho = null;
+    iapPluginEchoResult = null;
     iapPluginEchoError = null;
     return;
   }
 
   if (typeof StoreKitPurchase?.echo !== "function") {
     iapPluginEcho = null;
-    iapPluginEchoError = "StoreKitPurchase.echo not implemented";
+    iapPluginEchoResult = null;
+    iapPluginEchoError = { message: "StoreKitPurchase.echo not implemented" };
     return;
   }
 
   try {
     const result = await StoreKitPurchase.echo();
     iapPluginEcho = result?.status || null;
+    iapPluginEchoResult = result ?? null;
     iapPluginEchoError = null;
   } catch (error) {
     iapPluginEcho = null;
-    iapPluginEchoError = normalizeStoreKitError(error);
+    iapPluginEchoResult = null;
+    iapPluginEchoError = toSerializableError(error);
   }
 }
 
@@ -103,6 +108,7 @@ export async function getIapDiagnosticsState() {
     jsLogs: getIapDiagnosticsLogs(),
     jsLastFailure: getIapLastFailure(),
     pluginEchoStatus: iapPluginEcho,
+    pluginEchoResult: iapPluginEchoResult,
     pluginEchoError: iapPluginEchoError,
   };
 
@@ -117,6 +123,7 @@ export async function getIapDiagnosticsState() {
         jsLogs: getIapDiagnosticsLogs(),
         jsLastFailure: getIapLastFailure(),
         pluginEchoStatus: iapPluginEcho,
+        pluginEchoResult: iapPluginEchoResult,
         pluginEchoError: iapPluginEchoError,
       };
     } catch (error) {
@@ -222,6 +229,27 @@ function normalizeStoreKitError(error) {
     return "StoreKit is not implemented in this build. Please update the app.";
   }
   return message;
+}
+
+function toSerializableError(error) {
+  if (error == null) {
+    return { message: "Unknown error" };
+  }
+  if (typeof error === "string") {
+    return { message: error };
+  }
+
+  const serialized = {
+    name: error?.name,
+    code: error?.code,
+    message: error?.message,
+    stack: error?.stack,
+    ...(error && typeof error === "object" ? error : {}),
+  };
+
+  return Object.fromEntries(
+    Object.entries(serialized).filter(([, value]) => value !== undefined)
+  );
 }
 
 async function purchaseWithStoreKit(productId) {
