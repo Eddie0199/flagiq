@@ -40,11 +40,11 @@ workflows:
         script: |
           set -euo pipefail
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
-          if ! rg -n "StoreKitPurchasePlugin\\.m in Sources" "$PBXPROJ"; then
+          if ! grep -nE "StoreKitPurchasePlugin\\.m in Sources" "$PBXPROJ"; then
             echo "❌ StoreKitPurchasePlugin.m is not in App target Sources build phase"
             exit 1
           fi
-          if ! rg -n "path = StoreKitPurchasePlugin\\.m;" "$PBXPROJ"; then
+          if ! grep -nE "path = StoreKitPurchasePlugin\\.m;" "$PBXPROJ"; then
             echo "❌ StoreKitPurchasePlugin.m file reference missing from Xcode project"
             exit 1
           fi
@@ -110,7 +110,7 @@ workflows:
           set -euo pipefail
           LATEST_LOG="$(ls -t /tmp/xcodebuild_logs/*.log | head -n 1)"
           echo "Inspecting xcodebuild log: $LATEST_LOG"
-          if ! rg -n "CompileC.*StoreKitPurchasePlugin\\.m" "$LATEST_LOG"; then
+          if ! grep -nE "CompileC.*StoreKitPurchasePlugin\\.m" "$LATEST_LOG"; then
             echo "❌ StoreKitPurchasePlugin.m was not compiled into the archive target"
             exit 1
           fi
@@ -123,7 +123,7 @@ workflows:
           echo "Commit: $(git rev-parse --short HEAD)"
           echo "Scheme: $XCODE_SCHEME"
           echo "Shim compile lines:"
-          rg -n "CompileC.*StoreKitPurchasePlugin\\.m" "$LATEST_LOG"
+          grep -nE "CompileC.*StoreKitPurchasePlugin\\.m" "$LATEST_LOG"
           echo "-----------------------------------"
     artifacts:
       - build/ios/ipa/*.ipa
