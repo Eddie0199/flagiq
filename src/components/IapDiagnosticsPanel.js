@@ -57,13 +57,22 @@ export default function IapDiagnosticsPanel({ visible }) {
       .slice(0, 50);
   }, [state]);
 
+
+  const isEchoUnimplemented =
+    state?.pluginEchoStatus === "UNIMPLEMENTED" ||
+    state?.pluginEchoError?.code === "UNIMPLEMENTED" ||
+    String(state?.pluginEchoError?.message || "")
+      .toLowerCase()
+      .includes("plugin is not implemented");
+
   const diagnosticsText = useMemo(() => {
     if (!state) return "IAP diagnostics unavailable";
     return [
       `App Version: ${String(state.appVersion || "unknown")}`,
       `Build: ${String(state.buildNumber || "unknown")}`,
-      `echo: ${String(state.pluginEchoStatus || "")}${state.pluginEchoError ? ` (error: ${state.pluginEchoError})` : ""}`,
-      `loadedPlugins: ${toPretty(state.loadedPlugins || [])}`,
+      `Echo status: ${String(state.pluginEchoStatus || "n/a")}`,
+      `Echo result: ${toPretty(state.pluginEchoResult || null)}`,
+      `Echo error: ${toPretty(state.pluginEchoError || null)}`,
       `canMakePayments: ${String(state.canMakePayments)}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
@@ -102,6 +111,21 @@ export default function IapDiagnosticsPanel({ visible }) {
       <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>
         IAP Diagnostics
       </div>
+      {isEchoUnimplemented && (
+        <div
+          style={{
+            marginBottom: 10,
+            padding: "10px 12px",
+            borderRadius: 10,
+            background: "#dc2626",
+            color: "#fff",
+            fontSize: 14,
+            fontWeight: 700,
+          }}
+        >
+          Native StoreKitPurchase plugin missing in this build (UNIMPLEMENTED).
+        </div>
+      )}
       <div style={{ fontSize: 12, color: "#cbd5f5", marginBottom: 8 }}>
         <div>
           App Version: <strong>{String(state?.appVersion || "unknown")}</strong>
@@ -110,8 +134,13 @@ export default function IapDiagnosticsPanel({ visible }) {
           Build: <strong>{String(state?.buildNumber || "unknown")}</strong>
         </div>
         <div>
-          Echo: <strong>{String(state?.pluginEchoStatus || "") || "n/a"}</strong>
-          {state?.pluginEchoError ? ` (error: ${state.pluginEchoError})` : ""}
+          Echo status: <strong>{String(state?.pluginEchoStatus || "") || "n/a"}</strong>
+        </div>
+        <div>
+          Echo result: <strong>{toPretty(state?.pluginEchoResult || null)}</strong>
+        </div>
+        <div>
+          Echo error: <strong>{toPretty(state?.pluginEchoError || null)}</strong>
         </div>
         <div>
           canMakePayments: <strong>{String(state?.canMakePayments)}</strong>

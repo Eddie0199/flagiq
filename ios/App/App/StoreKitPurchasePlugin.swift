@@ -291,13 +291,11 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     @objc func iapDiagnosticsGetState(_ call: CAPPluginCall) {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
-        let loadedPlugins = loadedPluginNames()
 
         call.resolve([
             "canMakePayments": SKPaymentQueue.canMakePayments(),
             "appVersion": appVersion,
             "buildNumber": buildNumber,
-            "loadedPlugins": loadedPlugins,
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
@@ -391,22 +389,5 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     private func resetPendingFetch() {
         fetchProductsCall = nil
         fetchProductsRequest = nil
-    }
-
-    private func loadedPluginNames() -> [String] {
-        guard let bridge else {
-            return []
-        }
-
-        // CAPBridgeProtocol doesn't expose the plugins collection publicly.
-        // Read it defensively via reflection for diagnostics only.
-        for child in Mirror(reflecting: bridge).children {
-            guard child.label == "plugins", let plugins = child.value as? [String: Any] else {
-                continue
-            }
-            return Array(plugins.keys).sorted()
-        }
-
-        return []
     }
 }
