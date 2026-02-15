@@ -7,7 +7,7 @@ class AppBridgeViewController: CAPBridgeViewController {
 
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
         let buildVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
-        let nativeMarker = "NATIVE_MARKER_2026-02-14-A"
+        let nativeMarker = "NATIVE_MARKER_2026-02-15-B36"
         let escapedVersion = shortVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let escapedBuild = buildVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let escapedMarker = nativeMarker.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -18,6 +18,12 @@ class AppBridgeViewController: CAPBridgeViewController {
         bridge?.webView?.evaluateJavaScript(injection, completionHandler: nil)
         CAPLog.print("[Startup] Injected native build info marker: \(nativeMarker)")
 
+        let preRegistered = bridge?.plugin(withName: "StoreKitPurchase") != nil
+        if !preRegistered {
+            bridge?.registerPluginInstance(StoreKitPurchasePlugin())
+        }
+        let postRegistered = bridge?.plugin(withName: "StoreKitPurchase") != nil
+        CAPLog.print("[Startup] StoreKitPurchase preRegistered=\(preRegistered) postRegistered=\(postRegistered)")
         CAPLog.print("[Startup] Bridge ready: \(bridge != nil)")
     }
 }

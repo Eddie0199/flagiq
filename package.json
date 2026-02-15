@@ -27,12 +27,13 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "ESLINT_NO_DEV_ERRORS=true react-scripts build",
-    "cap:sync": "npm run build && npx cap sync",
+    "cap:sync": "npm run build && npx cap sync && npm run capacitor:versions",
     "cap:open:android": "npx cap open android",
     "cap:open:ios": "npx cap open ios",
     "validate:local-flags": "node scripts/validateLocalFlags.mjs",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "capacitor:versions": "node scripts/reportCapacitorVersions.mjs"
   },
   "browserslist": [
     ">0.2%",
