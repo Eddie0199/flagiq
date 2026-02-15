@@ -11,7 +11,7 @@ workflows:
         BUNDLE_IDENTIFIER: com.wildmoustachegames.flagiq
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
-        IOS_BUILD_NUMBER: 36
+        IOS_BUILD_NUMBER: 37
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.wildmoustachegames.flagiq
@@ -35,7 +35,7 @@ workflows:
       - name: Verify native build marker injection after Capacitor copy
         script: |
           set -euo pipefail
-          MARKER="NATIVE_MARKER_2026-02-15-B36"
+          MARKER="NATIVE_MARKER_2026-02-15-B37"
           if ! grep -n "$MARKER" ios/App/App/AppBridgeViewController.swift; then
             echo "❌ Native marker $MARKER missing from AppBridgeViewController.swift"
             exit 1

@@ -104,11 +104,17 @@ function useCtaStateMachine(successDurationMs = 1200) {
 
   const getState = (id) => states[id] || CTA_STATES.idle;
 
+  const resetAll = () => {
+    Object.keys(timersRef.current).forEach((id) => clearTimer(id));
+    setStates({});
+  };
+
   return {
     getState,
     beginPurchase,
     markSuccess,
     resetState,
+    resetAll,
   };
 }
 
@@ -151,6 +157,7 @@ export default function StoreScreen({
   const loadStoreProducts = async () => {
     const requestId = ++loadRequestIdRef.current;
     setStoreStatus("loading");
+    ctaState.resetAll();
 
     try {
       const result = await fetchStoreProducts();
@@ -268,18 +275,24 @@ export default function StoreScreen({
       return;
     }
 
+    ctaState.beginPurchase(pack.id);
+
     try {
       const result = await purchaseProduct(pack.id);
       if (result?.success) {
         setMessage(text("storeCoinsAdded", "Purchase successful! Coins added."));
+        ctaState.markSuccess(pack.id);
       } else if (result?.cancelled) {
+        ctaState.resetState(pack.id);
         setMessage(purchaseCancelledMessage);
       } else {
+        ctaState.resetState(pack.id);
         setMessage(
           result?.error || text("storePurchaseFailed", "Purchase failed")
         );
       }
     } catch (e) {
+      ctaState.resetState(pack.id);
       setMessage(text("storePurchaseFailed", "Purchase failed"));
     }
   }
@@ -613,7 +626,14 @@ export default function StoreScreen({
                 (pack.label ? parseInt(pack.label, 10) : 0);
               const storeProduct = storeProductsById[pack.id];
               const displayPrice =
-                storeProduct?.localizedPrice || storeProduct?.price || pack.priceLabel;
+                storeProduct?.localizedPriceString ||
+                storeProduct?.localizedPrice ||
+                storeProduct?.price ||
+                pack.priceLabel;
+              const state = ctaState.getState(pack.id);
+              const isSuccess = state === CTA_STATES.success;
+              const isPurchasing = state === CTA_STATES.purchasing;
+              const disabled = !storeReady || isPurchasing || isSuccess;
               return (
                 <div
                   key={pack.id}
@@ -660,21 +680,22 @@ export default function StoreScreen({
 
                 <button
                   onClick={() => buyCoins(pack)}
-                  disabled={!storeReady}
+                  disabled={disabled}
                   style={{
                     border: "none",
                     borderRadius: 999,
                     padding: "6px 14px",
                     fontSize: 12,
                     fontWeight: 700,
-                    cursor: storeReady ? "pointer" : "not-allowed",
-                    background: storeReady ? "#0f172a" : "#94a3b8",
+                    cursor: disabled ? "not-allowed" : "pointer",
+                    background: isSuccess ? "#16a34a" : storeReady ? "#0f172a" : "#94a3b8",
+                    border: isSuccess ? "1px dashed #15803d" : "none",
                     color: "#fff",
                     minWidth: 80,
                     textAlign: "center",
                   }}
                 >
-                  {displayPrice}
+                  {isSuccess ? "✓" : displayPrice}
                 </button>
               </div>
               );
@@ -725,37 +746,63 @@ export default function StoreScreen({
 
               <button
                 onClick={async () => {
+                  const id = PRODUCT_IDS.HEARTS_REFILL;
                   try {
                     if (!storeReady) {
                       setMessage(storeUnavailableMessage);
                       return;
                     }
 
+                    ctaState.beginPurchase(id);
                     const res = await purchaseProduct(PRODUCT_IDS.HEARTS_REFILL);
-                    setMessage(
-                      res?.success
-                        ? text(
-                            "storePurchaseSuccess",
-                            "Purchase successful! Hearts refilled."
-                          )
-                        : res?.cancelled
-                        ? purchaseCancelledMessage
-                        : res?.error ||
-                            text("storePurchaseFailed", "Purchase failed")
-                    );
+                    if (res?.success) {
+                      ctaState.markSuccess(id);
+                      setMessage(
+                        text("storePurchaseSuccess", "Purchase successful! Hearts refilled.")
+                      );
+                    } else if (res?.cancelled) {
+                      ctaState.resetState(id);
+                      setMessage(purchaseCancelledMessage);
+                    } else {
+                      ctaState.resetState(id);
+                      setMessage(
+                        res?.error || text("storePurchaseFailed", "Purchase failed")
+                      );
+                    }
                   } catch (e) {
+                    ctaState.resetState(id);
                     setMessage(text("storePurchaseFailed", "Purchase failed"));
                   }
                 }}
-                disabled={heartsFull || !storeReady}
+                disabled={
+                  heartsFull ||
+                  !storeReady ||
+                  ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.purchasing ||
+                  ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                }
                 style={{
                   border: "none",
                   borderRadius: 999,
                   padding: "6px 14px",
                   fontSize: 12,
                   fontWeight: 700,
-                  cursor: heartsFull || !storeReady ? "not-allowed" : "pointer",
-                  background: heartsFull || !storeReady ? "#cbd5e1" : "#0f172a",
+                  cursor:
+                    heartsFull ||
+                    !storeReady ||
+                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.purchasing ||
+                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                      ? "not-allowed"
+                      : "pointer",
+                  background:
+                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                      ? "#16a34a"
+                      : heartsFull || !storeReady
+                      ? "#cbd5e1"
+                      : "#0f172a",
+                  border:
+                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                      ? "1px dashed #15803d"
+                      : "none",
                   color: "#fff",
                   minWidth: 80,
                   textAlign: "center",
@@ -763,7 +810,10 @@ export default function StoreScreen({
               >
                 {heartsFull
                   ? text("storeHeartsFull", "Full")
-                  : storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPrice ||
+                  : ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                  ? "✓"
+                  : storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPriceString ||
+                    storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPrice ||
                     heartsProduct?.priceLabel ||
                     "€0.99"}
               </button>
