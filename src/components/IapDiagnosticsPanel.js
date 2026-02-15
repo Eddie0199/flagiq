@@ -87,6 +87,10 @@ export default function IapDiagnosticsPanel({ visible }) {
       `Echo status: ${String(state.pluginEchoStatus || "n/a")}`,
       `Echo result: ${toPretty(state.pluginEchoResult || null)}`,
       `Echo error: ${toPretty(state.pluginEchoError || null)}`,
+      `Capacitor version: ${String(state.capacitorVersion || "unknown")}`,
+      `Bridge registration snapshot: ${toPretty(state.registrationSnapshot || null)}`,
+      `packageClassList: ${toPretty(state.packageClassList || [])}`,
+      `resolvedPluginClasses: ${toPretty(state.resolvedPluginClasses || [])}`,
       `canMakePayments: ${String(state.canMakePayments)}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
@@ -161,6 +165,15 @@ export default function IapDiagnosticsPanel({ visible }) {
         </div>
         <div>
           Echo error: <strong>{toPretty(state?.pluginEchoError || null)}</strong>
+        </div>
+        <div>
+          Capacitor version: <strong>{String(state?.capacitorVersion || "unknown")}</strong>
+        </div>
+        <div>
+          packageClassList: <strong>{toPretty(state?.packageClassList || [])}</strong>
+        </div>
+        <div>
+          resolvedPluginClasses: <strong>{toPretty(state?.resolvedPluginClasses || [])}</strong>
         </div>
         <div>
           canMakePayments: <strong>{String(state?.canMakePayments)}</strong>

@@ -18,11 +18,7 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     public override func load() {
         SKPaymentQueue.default().add(self)
         CAPLog.print("[IAP] StoreKitPurchase plugin loaded")
-        appendNativeEvent([
-            "event": "plugins:registered",
-            "plugins": [],
-            "storeKitPurchaseRegistered": bridge != nil
-        ])
+        appendNativeEvent(buildRegistrationSnapshot(event: "plugins:registered"))
     }
 
     deinit {
@@ -296,14 +292,17 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     @objc func iapDiagnosticsGetState(_ call: CAPPluginCall) {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
-        let registeredPlugins: [String] = []
+        let registrationSnapshot = buildRegistrationSnapshot(event: "diagnostics:get-state")
 
         call.resolve([
             "canMakePayments": SKPaymentQueue.canMakePayments(),
             "appVersion": appVersion,
             "buildNumber": buildNumber,
-            "registeredPlugins": registeredPlugins,
-            "storeKitPurchaseRegistered": registeredPlugins.contains("StoreKitPurchase"),
+            "capacitorVersion": capacitorVersionString(),
+            "registrationSnapshot": registrationSnapshot,
+            "packageClassList": registrationSnapshot["packageClassList"] as? [String] ?? [],
+            "resolvedPluginClasses": registrationSnapshot["resolvedPluginClasses"] as? [String] ?? [],
+            "storeKitPurchaseRegistered": registrationSnapshot["bridgeHasStoreKitPurchase"] as? Bool ?? false,
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
@@ -319,6 +318,46 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         diagnosticsLastPurchaseAttempt = [:]
         diagnosticsNativeEvents = []
         call.resolve(["cleared": true])
+    }
+
+
+    private func capacitorVersionString() -> String {
+        if let version = Bundle(for: CAPBridge.self).infoDictionary?["CFBundleShortVersionString"] as? String, !version.isEmpty {
+            return version
+        }
+        return "unknown"
+    }
+
+    private func buildRegistrationSnapshot(event: String) -> [String: Any] {
+        let packageClassList = loadPackageClassListFromBundleConfig()
+        let classCandidates = ["StoreKitPurchasePlugin", "App.StoreKitPurchasePlugin"]
+        var resolvedPluginClasses = packageClassList.filter { NSClassFromString($0) != nil }
+        for candidate in classCandidates where NSClassFromString(candidate) != nil {
+            if !resolvedPluginClasses.contains(candidate) {
+                resolvedPluginClasses.append(candidate)
+            }
+        }
+
+        return [
+            "event": event,
+            "capacitorVersion": capacitorVersionString(),
+            "bridgeHasStoreKitPurchase": bridge?.plugin(withName: "StoreKitPurchase") != nil,
+            "packageClassList": packageClassList,
+            "resolvedPluginClasses": resolvedPluginClasses,
+            "storeKitPurchaseClassCandidates": classCandidates,
+            "bundleHasCapacitorConfig": Bundle.main.url(forResource: "capacitor.config", withExtension: "json") != nil
+        ]
+    }
+
+    private func loadPackageClassListFromBundleConfig() -> [String] {
+        guard let configURL = Bundle.main.url(forResource: "capacitor.config", withExtension: "json"),
+              let configData = try? Data(contentsOf: configURL),
+              let object = try? JSONSerialization.jsonObject(with: configData) as? [String: Any],
+              let packageClassList = object["packageClassList"] as? [String] else {
+            return []
+        }
+
+        return packageClassList
     }
 
     private func format(price: NSDecimalNumber, locale: Locale) -> String {
