@@ -11,7 +11,7 @@ workflows:
         BUNDLE_IDENTIFIER: com.wildmoustachegames.flagiq
         XCODE_WORKSPACE: ios/App/App.xcworkspace
         XCODE_SCHEME: App
-        IOS_BUILD_NUMBER: 35
+        IOS_BUILD_NUMBER: 36
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.wildmoustachegames.flagiq
