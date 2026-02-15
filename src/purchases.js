@@ -172,7 +172,7 @@ function detectPlatform() {
   return "web";
 }
 
-async function persistPurchase(product, platform, rewardResult) {
+async function persistPurchase(product, platform, rewardResult, purchaseMeta = {}) {
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error) throw error;
@@ -193,12 +193,29 @@ async function persistPurchase(product, platform, rewardResult) {
         platform,
       },
     ]);
+
+    if (platform === "ios") {
+      const payload = {
+        user_id: userId,
+        product_id: product.id,
+        transaction_id: purchaseMeta?.transactionId || null,
+        purchased_at: purchaseMeta?.purchasedAt || new Date().toISOString(),
+        environment: purchaseMeta?.environment || null,
+        raw_payload: purchaseMeta?.rawPayload || null,
+      };
+      const response = await supabase.functions.invoke("log-iap-purchase", {
+        body: payload,
+      });
+      if (response?.error) {
+        throw response.error;
+      }
+    }
   } catch (e) {
     console.warn("Failed to persist purchase", e);
   }
 }
 
-async function applyRewards(product, platform) {
+async function applyRewards(product, platform, purchaseMeta = {}) {
   if (typeof rewardHandler !== "function") {
     iapWarn("entitlement handler missing", { productId: product?.id, platform });
     return { success: false, error: "Purchase system not ready" };
@@ -217,7 +234,7 @@ async function applyRewards(product, platform) {
     };
   }
 
-  await persistPurchase(product, platform, rewardResult);
+  await persistPurchase(product, platform, rewardResult, purchaseMeta);
   return { success: true };
 }
 
@@ -292,7 +309,13 @@ async function purchaseWithStoreKit(productId) {
         platform: "ios",
         transactionId: result?.transactionId,
       });
-      return { success: true, transactionId: result?.transactionId };
+      return {
+        success: true,
+        transactionId: result?.transactionId,
+        purchasedAt: result?.purchasedAt,
+        environment: result?.environment,
+        rawPayload: result?.rawPayload || result,
+      };
     }
     if (result?.cancelled) {
       iapLog("purchase cancelled", { productId, platform: "ios" });
@@ -341,6 +364,7 @@ export async function fetchStoreProducts() {
       productId: product.id,
       price: product.priceLabel,
       localizedPrice: product.priceLabel,
+      localizedPriceString: product.priceLabel,
     }));
     iapLog("product fetch response", {
       platform,
@@ -428,9 +452,9 @@ export async function purchaseProduct(productId) {
           error: nativeResult.error,
         };
       }
-      return await applyRewards(product, platform);
+      return await applyRewards(product, platform, nativeResult);
     }
-    return await applyRewards(product, platform);
+    return await applyRewards(product, platform, nativeResult);
   }
 
   if (platform !== "web") {

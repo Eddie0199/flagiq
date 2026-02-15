@@ -156,6 +156,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
             switch transaction.transactionState {
             case .purchased:
                 let transactionId = transaction.transactionIdentifier ?? ""
+                let purchasedAt = transaction.transactionDate.map { ISO8601DateFormatter().string(from: $0) } ?? ISO8601DateFormatter().string(from: Date())
+                let environment = currentStoreEnvironment()
                 CAPLog.print("[IAP] purchase completion productId=\(productId) transactionId=\(transactionId)")
                 CAPLog.print("[IAP] transaction finish start productId=\(productId) state=purchased")
                 appendNativeEvent([
@@ -171,9 +173,20 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
                 ])
                 CAPLog.print("[IAP] transaction finish complete productId=\(productId) state=purchased")
                 resetPendingPurchase()
+                let rawPayload: [String: Any] = [
+                    "productId": productId,
+                    "transactionId": transactionId,
+                    "originalTransactionId": transaction.original?.transactionIdentifier ?? "",
+                    "purchasedAt": purchasedAt,
+                    "environment": environment
+                ]
                 let payload: [String: Any] = [
                     "success": true,
-                    "transactionId": transactionId
+                    "productId": productId,
+                    "transactionId": transactionId,
+                    "purchasedAt": purchasedAt,
+                    "environment": environment,
+                    "rawPayload": rawPayload
                 ]
                 diagnosticsLastPurchaseAttempt = payload
                 call.resolve(payload)
@@ -368,18 +381,27 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     }
 
     private func mapProduct(_ product: SKProduct) -> [String: Any] {
-        [
+        let localizedPrice = format(price: product.price, locale: product.priceLocale)
+        return [
             "productId": product.productIdentifier,
             "title": product.localizedTitle,
             "description": product.localizedDescription,
             "price": product.price.stringValue,
-            "localizedPrice": format(price: product.price, locale: product.priceLocale),
+            "localizedPrice": localizedPrice,
+            "localizedPriceString": localizedPrice,
             "priceLocale": [
                 "identifier": product.priceLocale.identifier,
                 "currencyCode": product.priceLocale.currencyCode ?? "",
                 "currencySymbol": product.priceLocale.currencySymbol ?? ""
             ]
         ]
+    }
+
+    private func currentStoreEnvironment() -> String {
+        guard let receiptURL = Bundle.main.appStoreReceiptURL else {
+            return "production"
+        }
+        return receiptURL.lastPathComponent.lowercased().contains("sandbox") ? "sandbox" : "production"
     }
 
     private func appendTransactionEvent(_ transaction: SKPaymentTransaction, event: String) {

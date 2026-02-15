@@ -7,7 +7,7 @@ class AppBridgeViewController: CAPBridgeViewController {
 
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
         let buildVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
-        let nativeMarker = "NATIVE_MARKER_2026-02-15-B36"
+        let nativeMarker = "NATIVE_MARKER_2026-02-15-B37"
         let escapedVersion = shortVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let escapedBuild = buildVersion.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
         let escapedMarker = nativeMarker.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
