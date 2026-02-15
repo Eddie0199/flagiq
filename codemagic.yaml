@@ -35,7 +35,7 @@ workflows:
       - name: Verify native build marker injection after Capacitor copy
         script: |
           set -euo pipefail
-          MARKER="NATIVE_MARKER_2026-02-14-A"
+          MARKER="NATIVE_MARKER_2026-02-15-B36"
           if ! grep -n "$MARKER" ios/App/App/AppBridgeViewController.swift; then
             echo "❌ Native marker $MARKER missing from AppBridgeViewController.swift"
             exit 1
