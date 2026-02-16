@@ -92,6 +92,11 @@ export default function IapDiagnosticsPanel({ visible }) {
       `packageClassList: ${toPretty(state.packageClassList || [])}`,
       `resolvedPluginClasses: ${toPretty(state.resolvedPluginClasses || [])}`,
       `canMakePayments: ${String(state.canMakePayments)}`,
+      `deviceLocaleCurrentIdentifier: ${String(state.deviceLocaleCurrentIdentifier || "unknown")}`,
+      `currencySourceNote: ${String(
+        state.currencySourceNote ||
+          "Currency must match StoreKit priceLocale/storefront, not device locale."
+      )}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
       `invalidProductIdentifiers: ${toPretty(state.invalidProductIdentifiers || [])}`,
@@ -178,6 +183,54 @@ export default function IapDiagnosticsPanel({ visible }) {
         <div>
           canMakePayments: <strong>{String(state?.canMakePayments)}</strong>
         </div>
+        <div>
+          device Locale.current.identifier:{" "}
+          <strong>{String(state?.deviceLocaleCurrentIdentifier || "unknown")}</strong>
+        </div>
+        <div>
+          Currency source:{" "}
+          <strong>
+            {String(
+              state?.currencySourceNote ||
+                "Currency must match StoreKit priceLocale/storefront, not device locale."
+            )}
+          </strong>
+        </div>
+      </div>
+
+      <div style={{ fontSize: 12, color: "#cbd5f5", marginBottom: 8 }}>
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Product currency diagnostics</div>
+        {(Array.isArray(state?.products) ? state.products : []).map((product, index) => (
+          <div key={product?.productId || `product-${index}`} style={{ marginBottom: 6 }}>
+            <strong>{String(product?.productId || "unknown")}</strong>
+            {" — "}
+            price={String(product?.price || "n/a")}, priceLocale.identifier=
+            {String(
+              product?.priceLocaleIdentifier || product?.priceLocale?.identifier || "n/a"
+            )}
+            , priceLocale.currencyCode=
+            {String(product?.currencyCode || product?.priceLocale?.currencyCode || "n/a")}
+            , localizedPriceString(displayed)=
+            {String(product?.localizedPriceString || "n/a")}
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          fontSize: 12,
+          color: "#fef9c3",
+          marginBottom: 10,
+          border: "1px solid rgba(250, 204, 21, 0.35)",
+          borderRadius: 10,
+          padding: "8px 10px",
+          background: "rgba(113, 63, 18, 0.2)",
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Troubleshooting (currency mismatch)</div>
+        <div>• Delete app, reboot device, reinstall app.</div>
+        <div>• Ensure Sandbox Apple Account storefront is correct (UK for GBP).</div>
+        <div>• Re-fetch products from diagnostics (Retry fetch products).</div>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
         <button onClick={() => runAction("retry", fetchStoreProducts)} disabled={!!busyAction}>
