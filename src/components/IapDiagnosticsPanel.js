@@ -5,7 +5,8 @@ import {
   getIapDiagnosticsState,
   purchaseProduct,
 } from "../purchases";
-import { PRODUCT_IDS } from "../shopProducts";
+import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
+import { getStoreUiPriceData } from "../storePriceDisplay";
 
 const JS_BUILD_MARKER = "2026-02-14-A";
 
@@ -63,6 +64,33 @@ export default function IapDiagnosticsPanel({ visible }) {
       .slice(0, 50);
   }, [state]);
 
+
+
+  const productsById = useMemo(() => {
+    const products = Array.isArray(state?.products) ? state.products : [];
+    return products.reduce((acc, product) => {
+      if (product?.productId) acc[product.productId] = product;
+      return acc;
+    }, {});
+  }, [state]);
+
+  const productUiDiagnostics = useMemo(() => {
+    return SHOP_PRODUCTS.map((shopProduct) => {
+      const storeProduct = productsById[shopProduct.id];
+      const uiPrice = getStoreUiPriceData(storeProduct);
+      return {
+        productId: shopProduct.id,
+        uiDisplayedPrice: uiPrice.uiDisplayedPrice,
+        uiPriceSource: uiPrice.uiPriceSource,
+        storekitLocalizedPriceString: storeProduct?.localizedPriceString || null,
+        storekitCurrencyCode: storeProduct?.currencyCode || null,
+        storekitPriceLocaleIdentifier:
+          storeProduct?.priceLocaleIdentifier ||
+          storeProduct?.priceLocale?.identifier ||
+          null,
+      };
+    });
+  }, [productsById]);
 
   const isEchoUnimplemented =
     state?.pluginEchoStatus === "UNIMPLEMENTED" ||
@@ -200,18 +228,15 @@ export default function IapDiagnosticsPanel({ visible }) {
 
       <div style={{ fontSize: 12, color: "#cbd5f5", marginBottom: 8 }}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>Product currency diagnostics</div>
-        {(Array.isArray(state?.products) ? state.products : []).map((product, index) => (
-          <div key={product?.productId || `product-${index}`} style={{ marginBottom: 6 }}>
-            <strong>{String(product?.productId || "unknown")}</strong>
+        {productUiDiagnostics.map((product) => (
+          <div key={product.productId} style={{ marginBottom: 6 }}>
+            <strong>{String(product.productId || "unknown")}</strong>
             {" — "}
-            price={String(product?.price || "n/a")}, priceLocale.identifier=
-            {String(
-              product?.priceLocaleIdentifier || product?.priceLocale?.identifier || "n/a"
-            )}
-            , priceLocale.currencyCode=
-            {String(product?.currencyCode || product?.priceLocale?.currencyCode || "n/a")}
-            , localizedPriceString(displayed)=
-            {String(product?.localizedPriceString || "n/a")}
+            uiDisplayedPrice={String(product.uiDisplayedPrice || "n/a")}, uiPriceSource=
+            {String(product.uiPriceSource || "n/a")}, storekit.localizedPriceString=
+            {String(product.storekitLocalizedPriceString || "n/a")}, storekit.currencyCode=
+            {String(product.storekitCurrencyCode || "n/a")}, storekit.priceLocaleIdentifier=
+            {String(product.storekitPriceLocaleIdentifier || "n/a")}
           </div>
         ))}
       </div>

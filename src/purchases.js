@@ -365,14 +365,17 @@ export async function fetchStoreProducts() {
   if (platform !== "ios") {
     const products = SHOP_PRODUCTS.map((product) => ({
       productId: product.id,
-      price: product.priceLabel,
-      localizedPrice: product.priceLabel,
-      localizedPriceString: product.priceLabel,
+      price: null,
+      localizedPrice: null,
+      localizedPriceString: null,
+      currencyCode: null,
+      priceLocaleIdentifier: null,
     }));
     iapLog("product fetch response", {
       platform,
       validProducts: products,
       invalidProductIds: [],
+      note: "StoreKit localized prices unavailable on non-iOS platforms.",
     });
     return { success: true, products, invalidProductIds: [] };
   }
