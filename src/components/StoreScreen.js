@@ -4,6 +4,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fetchStoreProducts, purchaseProduct } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
+import { getStoreUiPriceData } from "../storePriceDisplay";
 
 const BOOSTER_ITEMS = [
   {
@@ -312,6 +313,15 @@ export default function StoreScreen({
     heartCtaState === CTA_STATES.purchasing ||
     heartCtaState === CTA_STATES.success ||
     heartCtaState === CTA_STATES.owned;
+  const heartsRefillProduct = storeProductsById[PRODUCT_IDS.HEARTS_REFILL];
+  const heartsRefillPriceData = getStoreUiPriceData(heartsRefillProduct);
+  const heartsRefillState = ctaState.getState(PRODUCT_IDS.HEARTS_REFILL);
+  const heartsRefillDisabled =
+    heartsFull ||
+    !storeReady ||
+    !heartsRefillPriceData.hasStoreKitProduct ||
+    heartsRefillState === CTA_STATES.purchasing ||
+    heartsRefillState === CTA_STATES.success;
 
   return (
     <div style={{ padding: "10px 16px 24px", maxWidth: 900, margin: "0 auto" }}>
@@ -622,11 +632,15 @@ export default function StoreScreen({
                 pack.coins ??
                 (pack.label ? parseInt(pack.label, 10) : 0);
               const storeProduct = storeProductsById[pack.id];
-              const displayPrice = storeProduct?.localizedPriceString || "…";
+              const priceData = getStoreUiPriceData(storeProduct);
               const state = ctaState.getState(pack.id);
               const isSuccess = state === CTA_STATES.success;
               const isPurchasing = state === CTA_STATES.purchasing;
-              const disabled = !storeReady || isPurchasing || isSuccess;
+              const disabled =
+                !storeReady ||
+                !priceData.hasStoreKitProduct ||
+                isPurchasing ||
+                isSuccess;
               return (
                 <div
                   key={pack.id}
@@ -688,7 +702,7 @@ export default function StoreScreen({
                     textAlign: "center",
                   }}
                 >
-                  {isSuccess ? "✓" : displayPrice}
+                  {isSuccess ? "✓" : priceData.uiDisplayedPrice}
                 </button>
               </div>
               );
@@ -741,7 +755,7 @@ export default function StoreScreen({
                 onClick={async () => {
                   const id = PRODUCT_IDS.HEARTS_REFILL;
                   try {
-                    if (!storeReady) {
+                    if (!storeReady || !heartsRefillPriceData.hasStoreKitProduct) {
                       setMessage(storeUnavailableMessage);
                       return;
                     }
@@ -767,33 +781,22 @@ export default function StoreScreen({
                     setMessage(text("storePurchaseFailed", "Purchase failed"));
                   }
                 }}
-                disabled={
-                  heartsFull ||
-                  !storeReady ||
-                  ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.purchasing ||
-                  ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
-                }
+                disabled={heartsRefillDisabled}
                 style={{
                   border: "none",
                   borderRadius: 999,
                   padding: "6px 14px",
                   fontSize: 12,
                   fontWeight: 700,
-                  cursor:
-                    heartsFull ||
-                    !storeReady ||
-                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.purchasing ||
-                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
-                      ? "not-allowed"
-                      : "pointer",
+                  cursor: heartsRefillDisabled ? "not-allowed" : "pointer",
                   background:
-                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                    heartsRefillState === CTA_STATES.success
                       ? "#16a34a"
-                      : heartsFull || !storeReady
+                      : heartsRefillDisabled
                       ? "#cbd5e1"
                       : "#0f172a",
                   border:
-                    ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                    heartsRefillState === CTA_STATES.success
                       ? "1px dashed #15803d"
                       : "none",
                   color: "#fff",
@@ -803,9 +806,9 @@ export default function StoreScreen({
               >
                 {heartsFull
                   ? text("storeHeartsFull", "Full")
-                  : ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
+                  : heartsRefillState === CTA_STATES.success
                   ? "✓"
-                  : storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPriceString || "…"}
+                  : heartsRefillPriceData.uiDisplayedPrice}
               </button>
             </div>
           </div>
