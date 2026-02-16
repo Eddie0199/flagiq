@@ -306,9 +306,6 @@ export default function StoreScreen({
     storeProducts.length === 0 && storeUnavailable;
   const canBuyHeartWithCoins =
     !heartsFull && typeof coins === "number" && coins >= HEART_COIN_COST;
-  const heartsProduct = SHOP_PRODUCTS.find(
-    (p) => p.id === PRODUCT_IDS.HEARTS_REFILL
-  );
   const heartCtaState = ctaState.getState("heart_coin");
   const heartCtaDisabled =
     !canBuyHeartWithCoins ||
@@ -625,11 +622,7 @@ export default function StoreScreen({
                 pack.coins ??
                 (pack.label ? parseInt(pack.label, 10) : 0);
               const storeProduct = storeProductsById[pack.id];
-              const displayPrice =
-                storeProduct?.localizedPriceString ||
-                storeProduct?.localizedPrice ||
-                storeProduct?.price ||
-                pack.priceLabel;
+              const displayPrice = storeProduct?.localizedPriceString || "…";
               const state = ctaState.getState(pack.id);
               const isSuccess = state === CTA_STATES.success;
               const isPurchasing = state === CTA_STATES.purchasing;
@@ -812,10 +805,7 @@ export default function StoreScreen({
                   ? text("storeHeartsFull", "Full")
                   : ctaState.getState(PRODUCT_IDS.HEARTS_REFILL) === CTA_STATES.success
                   ? "✓"
-                  : storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPriceString ||
-                    storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPrice ||
-                    heartsProduct?.priceLabel ||
-                    "€0.99"}
+                  : storeProductsById[PRODUCT_IDS.HEARTS_REFILL]?.localizedPriceString || "…"}
               </button>
             </div>
           </div>

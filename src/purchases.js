@@ -100,6 +100,9 @@ export async function clearIapDiagnostics() {
 export async function getIapDiagnosticsState() {
   const base = {
     canMakePayments: null,
+    deviceLocaleCurrentIdentifier: null,
+    currencySourceNote:
+      "Currency must match StoreKit priceLocale/storefront, not device locale.",
     requestedProductIds: SHOP_PRODUCTS.map((product) => product.id),
     products: [],
     invalidProductIdentifiers: [],

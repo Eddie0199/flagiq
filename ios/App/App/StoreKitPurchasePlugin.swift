@@ -14,6 +14,7 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     private var diagnosticsInvalidProductIdentifiers: [String] = []
     private var diagnosticsLastPurchaseAttempt: [String: Any] = [:]
     private var diagnosticsNativeEvents: [[String: Any]] = []
+    private var diagnosticsDeviceLocaleIdentifier: String = Locale.current.identifier
 
     public override func load() {
         SKPaymentQueue.default().add(self)
@@ -38,6 +39,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         }
 
         diagnosticsRequestedProductIds = productIds
+        diagnosticsDeviceLocaleIdentifier = Locale.current.identifier
+        CAPLog.print("[IAP] device locale current=\(diagnosticsDeviceLocaleIdentifier)")
         CAPLog.print("[IAP] product fetch start: \(productIds)")
         appendNativeEvent([
             "event": "fetchProducts:start",
@@ -316,6 +319,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
             "packageClassList": registrationSnapshot["packageClassList"] as? [String] ?? [],
             "resolvedPluginClasses": registrationSnapshot["resolvedPluginClasses"] as? [String] ?? [],
             "storeKitPurchaseRegistered": registrationSnapshot["bridgeHasStoreKitPurchase"] as? Bool ?? false,
+            "deviceLocaleCurrentIdentifier": diagnosticsDeviceLocaleIdentifier,
+            "currencySourceNote": "Currency must match StoreKit priceLocale/storefront, not device locale.",
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
@@ -381,17 +386,22 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     }
 
     private func mapProduct(_ product: SKProduct) -> [String: Any] {
-        let localizedPrice = format(price: product.price, locale: product.priceLocale)
+        let localizedPriceString = format(price: product.price, locale: product.priceLocale)
+        let priceLocaleIdentifier = product.priceLocale.identifier
+        let currencyCode = product.priceLocale.currencyCode ?? ""
+        CAPLog.print("[IAP] product details productId=\(product.productIdentifier) price=\(product.price.stringValue) priceLocaleIdentifier=\(priceLocaleIdentifier) currencyCode=\(currencyCode) localizedPriceString=\(localizedPriceString)")
         return [
             "productId": product.productIdentifier,
             "title": product.localizedTitle,
             "description": product.localizedDescription,
             "price": product.price.stringValue,
-            "localizedPrice": localizedPrice,
-            "localizedPriceString": localizedPrice,
+            "localizedPrice": localizedPriceString,
+            "localizedPriceString": localizedPriceString,
+            "priceLocaleIdentifier": priceLocaleIdentifier,
+            "currencyCode": currencyCode,
             "priceLocale": [
-                "identifier": product.priceLocale.identifier,
-                "currencyCode": product.priceLocale.currencyCode ?? "",
+                "identifier": priceLocaleIdentifier,
+                "currencyCode": currencyCode,
                 "currencySymbol": product.priceLocale.currencySymbol ?? ""
             ]
         ]
