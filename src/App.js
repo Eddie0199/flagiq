@@ -2158,6 +2158,10 @@ export default function App() {
     setScreen("levels");
   };
 
+
+  const handleGameplayDiagnostics = useCallback((stats) => {
+    setGameplayDiagnostics(stats);
+  }, []);
   const handleNextLevel = () => {
     if (mode === "local") {
       const idx = localPackLevels.findIndex((lvl) => lvl.id === levelId);
@@ -2426,7 +2430,7 @@ export default function App() {
                 return next;
               })
             }
-            onGameplayDiagnostics={(stats) => setGameplayDiagnostics(stats)}
+            onGameplayDiagnostics={handleGameplayDiagnostics}
           />
         </>
       )}

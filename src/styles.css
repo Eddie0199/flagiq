@@ -118,6 +118,24 @@ body {
   word-break: break-word;
 }
 
+.game-preload-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: game-preload-spin 0.8s linear infinite;
+}
+
+@keyframes game-preload-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .home-card-title {
   font-weight: 800;
   font-size: 20px;

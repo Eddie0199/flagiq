@@ -29,6 +29,8 @@ const CORRECT_ANSWER_HOLD_MS = 150;
 const PAUSE_HINT_MS = 1500;
 const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
 const NEXT_FLAG_WARMUP_COUNT = 4;
+const PRELOAD_MAX_WAIT_MS = 1800;
+const PRELOAD_ASSET_TIMEOUT_MS = 700;
 
 const afterCorrectHighlight = (fn) => {
   nextFrame(() => {
@@ -110,6 +112,7 @@ export default function GameScreen({
     gameplayNetworkCalls: 0,
   });
   const firstQuestionMarkedRef = useRef(false);
+  const gameplayDiagnosticsCallbackRef = useRef(onGameplayDiagnostics);
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
@@ -117,14 +120,18 @@ export default function GameScreen({
   const lifeLostRef = useRef(false);
   const submittedTimeTrialResultRef = useRef(false);
 
+  useEffect(() => {
+    gameplayDiagnosticsCallbackRef.current = onGameplayDiagnostics;
+  }, [onGameplayDiagnostics]);
+
   const noteGameplayDiagnostic = useCallback(() => {
     const snapshot = { ...preloadStatsRef.current };
     if (process.env.NODE_ENV !== "production") {
       console.debug("[gameplay-diag]", snapshot);
     }
-    if (!onGameplayDiagnostics) return;
-    onGameplayDiagnostics(snapshot);
-  }, [onGameplayDiagnostics]);
+    if (!gameplayDiagnosticsCallbackRef.current) return;
+    gameplayDiagnosticsCallbackRef.current(snapshot);
+  }, []);
 
   // show hint popup once per user per device
   useEffect(() => {
@@ -440,6 +447,16 @@ export default function GameScreen({
     return normalised;
   }, []);
 
+  const withTimeout = useCallback(async (promise, timeoutMs) => {
+    let timeoutId = null;
+    const timeoutPromise = new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve(null), timeoutMs);
+    });
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timeoutId) clearTimeout(timeoutId);
+    return result;
+  }, []);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -472,28 +489,48 @@ export default function GameScreen({
         });
 
         const localResolved = {};
+        const deadline = performance.now() + PRELOAD_MAX_WAIT_MS;
+        let timedOut = false;
+
         const localEntries = Array.from(flagsToResolve.values()).filter(isLocalFlag);
         for (const flag of localEntries) {
           if (cancelled) return;
           if (!flag?.code) continue;
-          const resolved = await loadLocalFlagImage(flag);
+          if (performance.now() > deadline) {
+            timedOut = true;
+            break;
+          }
+          const resolved = await withTimeout(
+            loadLocalFlagImage(flag),
+            PRELOAD_ASSET_TIMEOUT_MS
+          );
           if (resolved) localResolved[flag.code] = resolved;
         }
 
         const urlMap = {};
         for (const flag of flagsToResolve.values()) {
           if (cancelled) return;
+          if (performance.now() > deadline) {
+            timedOut = true;
+            break;
+          }
           const localSrc = isLocalFlag(flag)
             ? localResolved[flag.code] || flag.image || flag.img || flag.fallbackImg || ""
             : "";
           const baseSrc = localSrc || flagSrc(flag, 320);
-          const cachedSrc = await cacheAndDecodeImage(baseSrc);
+          const cachedSrc = await withTimeout(
+            cacheAndDecodeImage(baseSrc),
+            PRELOAD_ASSET_TIMEOUT_MS
+          );
           if (cachedSrc && flag?.code) {
             urlMap[flag.code] = cachedSrc;
           }
         }
 
         if (cancelled || !mountedRef.current) return;
+        if (timedOut && process.env.NODE_ENV !== "production") {
+          console.warn("[gameplay-diag] Preload timed out; continuing with fallback assets.");
+        }
         setLocalFlagImages((prev) => ({ ...prev, ...localResolved }));
         setFlagImageCache(urlMap);
         preloadStatsRef.current.completedAt = performance.now();
@@ -512,7 +549,7 @@ export default function GameScreen({
     return () => {
       cancelled = true;
     };
-  }, [questions, cacheAndDecodeImage, levelId, mode, noteGameplayDiagnostic]);
+  }, [questions, cacheAndDecodeImage, withTimeout, levelId, mode, noteGameplayDiagnostic]);
 
   useEffect(() => {
     if (!preloadReady || !current || firstQuestionMarkedRef.current) return;
@@ -1174,8 +1211,16 @@ export default function GameScreen({
 
       {/* STATES */}
       {!preloadReady ? (
-        <div style={{ textAlign: "center", color: "#ffffff", marginTop: 40 }}>
-          {t && lang ? t(lang, "loading") : "Loading…"}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            marginTop: 40,
+          }}
+          aria-label="Loading"
+        >
+          <div className="game-preload-spinner" />
         </div>
       ) : done ? (
         mode === "timetrial" ? (
@@ -1530,7 +1575,7 @@ export default function GameScreen({
                 }}
               />
             ) : (
-              <div>{t && lang ? t(lang, "loading") : "Loading…"}</div>
+              <div className="game-preload-spinner" aria-label="Loading" />
             )}
           </div>
 
