@@ -631,8 +631,8 @@ export default function HomeScreen({
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
-  const headerOffsetPx = 76;
-  const topIconOffset = `calc(env(safe-area-inset-top, 0px) + 12px + ${headerOffsetPx}px)`;
+  const headerContentOffset = "calc(var(--header-top-padding) + 42px)";
+  const topIconOffset = `calc(${headerContentOffset} + 12px)`;
   const footerLinkStyle = {
     background: "none",
     border: "none",
@@ -882,7 +882,7 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: `calc(32px + ${headerOffsetPx}px)`,
+          marginTop: `calc(${headerContentOffset} + 20px)`,
           padding: "18px 26px",
           borderRadius: 20,
           background: "transparent",

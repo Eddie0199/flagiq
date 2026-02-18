@@ -37,6 +37,11 @@ function copyText(value) {
 export default function IapDiagnosticsPanel({ visible }) {
   const [state, setState] = useState(null);
   const [busyAction, setBusyAction] = useState("");
+  const [safeAreaInfo, setSafeAreaInfo] = useState({
+    safeAreaInsetTop: "unknown",
+    configuredHeaderTopPadding: "unknown",
+    currentHeaderTopPadding: "unknown",
+  });
   const nativeBuildInfo = useMemo(() => {
     if (typeof window === "undefined") return null;
     return window.__NATIVE_BUILD_INFO__ || window.NATIVE_BUILD_INFO || null;
@@ -51,6 +56,44 @@ export default function IapDiagnosticsPanel({ visible }) {
     if (!visible) return;
     refresh();
   }, [refresh, visible]);
+
+
+  useEffect(() => {
+    if (!visible || typeof window === "undefined" || typeof document === "undefined") return;
+
+    const updateSafeAreaInfo = () => {
+      const probe = document.createElement("div");
+      probe.style.position = "fixed";
+      probe.style.left = "-9999px";
+      probe.style.top = "-9999px";
+      probe.style.paddingTop = "env(safe-area-inset-top, 0px)";
+      probe.style.margin = "0";
+
+      document.body.appendChild(probe);
+      const probeStyles = window.getComputedStyle(probe);
+      const safeAreaInsetTop = probeStyles.paddingTop || "unknown";
+      document.body.removeChild(probe);
+
+      const rootStyles = window.getComputedStyle(document.documentElement);
+      const configuredHeaderTopPadding =
+        rootStyles.getPropertyValue("--header-top-padding")?.trim() || "unknown";
+
+      const headerEl = document.querySelector(".header-wrapper");
+      const currentHeaderTopPadding = headerEl
+        ? window.getComputedStyle(headerEl).paddingTop || "unknown"
+        : "n/a (header hidden)";
+
+      setSafeAreaInfo({
+        safeAreaInsetTop,
+        configuredHeaderTopPadding,
+        currentHeaderTopPadding,
+      });
+    };
+
+    updateSafeAreaInfo();
+    window.addEventListener("resize", updateSafeAreaInfo);
+    return () => window.removeEventListener("resize", updateSafeAreaInfo);
+  }, [visible]);
 
   const combinedLogs = useMemo(() => {
     const js = Array.isArray(state?.jsLogs)
@@ -112,6 +155,13 @@ export default function IapDiagnosticsPanel({ visible }) {
       `Native Build Info: ${toPretty(nativeBuildInfo || "missing")}`,
       `App Version: ${String(state.appVersion || "unknown")}`,
       `Build: ${String(state.buildNumber || "unknown")}`,
+      `safeAreaInsetTop: ${String(safeAreaInfo.safeAreaInsetTop || "unknown")}`,
+      `configuredHeaderTopPadding(--header-top-padding): ${String(
+        safeAreaInfo.configuredHeaderTopPadding || "unknown"
+      )}`,
+      `currentHeaderTopPadding(.header-wrapper): ${String(
+        safeAreaInfo.currentHeaderTopPadding || "unknown"
+      )}`,
       `Echo status: ${String(state.pluginEchoStatus || "n/a")}`,
       `Echo result: ${toPretty(state.pluginEchoResult || null)}`,
       `Echo error: ${toPretty(state.pluginEchoError || null)}`,
@@ -132,7 +182,7 @@ export default function IapDiagnosticsPanel({ visible }) {
       `jsLastFailure: ${toPretty(state.jsLastFailure || null)}`,
       `logs(last50): ${toPretty(combinedLogs)}`,
     ].join("\n\n");
-  }, [combinedLogs, nativeBuildInfo, state]);
+  }, [combinedLogs, nativeBuildInfo, safeAreaInfo, state]);
 
   const runAction = useCallback(
     async (name, fn) => {
@@ -189,6 +239,17 @@ export default function IapDiagnosticsPanel({ visible }) {
         </div>
         <div>
           Build: <strong>{String(state?.buildNumber || "unknown")}</strong>
+        </div>
+        <div>
+          safe-area-inset-top: <strong>{String(safeAreaInfo.safeAreaInsetTop || "unknown")}</strong>
+        </div>
+        <div>
+          Header top padding (configured):{" "}
+          <strong>{String(safeAreaInfo.configuredHeaderTopPadding || "unknown")}</strong>
+        </div>
+        <div>
+          Header top padding (current):{" "}
+          <strong>{String(safeAreaInfo.currentHeaderTopPadding || "unknown")}</strong>
         </div>
         <div>
           Echo status: <strong>{String(state?.pluginEchoStatus || "") || "n/a"}</strong>
