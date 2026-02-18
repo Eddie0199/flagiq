@@ -2337,8 +2337,7 @@ export default function App() {
       {loggedIn && screen === "levels" && (
         <div
           style={{
-            height:
-              "calc(100vh - var(--safe-area-top) - var(--safe-area-bottom))",
+            minHeight: "100vh",
             display: "flex",
             flexDirection: "column",
           }}
