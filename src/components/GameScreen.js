@@ -1,5 +1,5 @@
 // src/components/GameScreen.js
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
 
@@ -27,6 +27,10 @@ const nextFrame = (fn) => {
 const WRONG_ANSWER_RESET_MS = 120;
 const CORRECT_ANSWER_HOLD_MS = 150;
 const PAUSE_HINT_MS = 1500;
+const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
+const NEXT_FLAG_WARMUP_COUNT = 4;
+const PRELOAD_MAX_WAIT_MS = 1800;
+const PRELOAD_ASSET_TIMEOUT_MS = 700;
 
 const afterCorrectHighlight = (fn) => {
   nextFrame(() => {
@@ -76,6 +80,7 @@ export default function GameScreen({
   // coins
   activeUser,
   onCoinsChange,
+  onGameplayDiagnostics,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -94,13 +99,39 @@ export default function GameScreen({
   const hintKey = getHintSeenKey(playerId);
   const [showHintInfo, setShowHintInfo] = useState(false);
   const [localFlagImages, setLocalFlagImages] = useState({});
-  const localFlagPreloadRef = useRef(new Set());
+  const mountedRef = useRef(true);
+  const [preloadReady, setPreloadReady] = useState(false);
+  const [preloadError, setPreloadError] = useState("");
+  const [flagImageCache, setFlagImageCache] = useState({});
+  const preloadStatsRef = useRef({
+    startedAt: 0,
+    completedAt: 0,
+    preloadMs: 0,
+    firstQuestionMs: null,
+    preloadNetworkCalls: 0,
+    gameplayNetworkCalls: 0,
+  });
+  const firstQuestionMarkedRef = useRef(false);
+  const gameplayDiagnosticsCallbackRef = useRef(onGameplayDiagnostics);
 
   // refs to know if run started / finished / already lost a life
   const runStartedRef = useRef(false);
   const runEndedRef = useRef(false);
   const lifeLostRef = useRef(false);
   const submittedTimeTrialResultRef = useRef(false);
+
+  useEffect(() => {
+    gameplayDiagnosticsCallbackRef.current = onGameplayDiagnostics;
+  }, [onGameplayDiagnostics]);
+
+  const noteGameplayDiagnostic = useCallback(() => {
+    const snapshot = { ...preloadStatsRef.current };
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[gameplay-diag]", snapshot);
+    }
+    if (!gameplayDiagnosticsCallbackRef.current) return;
+    gameplayDiagnosticsCallbackRef.current(snapshot);
+  }, []);
 
   // show hint popup once per user per device
   useEffect(() => {
@@ -305,6 +336,7 @@ export default function GameScreen({
   // ---------- TIME TRIAL TICKER ----------
   useEffect(() => {
     if (mode !== "timetrial") return;
+    if (!preloadReady) return;
     if (done || fail) return;
     if (ttPaused) return;
 
@@ -325,7 +357,7 @@ export default function GameScreen({
 
     return () => clearInterval(timer);
     
-  }, [mode, done, fail, ttPaused]);
+  }, [mode, preloadReady, done, fail, ttPaused]);
 
   const current = questions[qIndex];
   const isLocalFlag = (flag) =>
@@ -343,6 +375,7 @@ export default function GameScreen({
       srlimit: "1",
       origin: "*",
     }).toString();
+    preloadStatsRef.current.preloadNetworkCalls += 1;
     const searchResponse = await fetch(searchUrl.toString());
     if (!searchResponse.ok) return null;
     const searchData = await searchResponse.json();
@@ -357,6 +390,7 @@ export default function GameScreen({
       pithumbsize: "640",
       origin: "*",
     }).toString();
+    preloadStatsRef.current.preloadNetworkCalls += 1;
     const imageResponse = await fetch(imageUrl.toString());
     if (!imageResponse.ok) return null;
     const imageData = await imageResponse.json();
@@ -368,34 +402,176 @@ export default function GameScreen({
     setLocalFlagImages((prev) => ({ ...prev, [code]: src }));
     return src;
   };
-  useEffect(() => {
-    if (!current?.correct || !isLocalFlag(current.correct)) return;
-    const code = current.correct.code;
-    if (code && localFlagImages[code]) return;
-    void loadLocalFlagImage(current.correct);
-  }, [current?.correct, localFlagImages]);
-  useEffect(() => {
-    if (mode !== "local") return;
-    const pool = levelDef?.pool || [];
-    const localFlags = pool.filter(isLocalFlag);
-    if (!localFlags.length) return;
 
-    const queue = localFlags.filter(
-      (flag) =>
-        flag?.code &&
-        !localFlagImages[flag.code] &&
-        !localFlagPreloadRef.current.has(flag.code)
-    );
-    if (!queue.length) return;
-    queue.forEach((flag) => localFlagPreloadRef.current.add(flag.code));
+  const cacheAndDecodeImage = useCallback(async (src) => {
+    if (!src) return null;
+    const normalised = String(src);
 
-    const preloadNext = async (index) => {
-      if (index >= queue.length) return;
-      await loadLocalFlagImage(queue[index]);
-      await preloadNext(index + 1);
+    if (normalised.startsWith("data:") || normalised.startsWith("blob:")) {
+      return normalised;
+    }
+
+    try {
+      if (typeof window !== "undefined" && window.caches) {
+        const cache = await window.caches.open(FLAG_PRELOAD_CACHE);
+        let response = await cache.match(normalised);
+        if (!response) {
+          preloadStatsRef.current.preloadNetworkCalls += 1;
+          response = await fetch(normalised, { mode: "cors" });
+          if (response.ok) {
+            await cache.put(normalised, response.clone());
+          }
+        }
+        if (response && response.ok) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          await new Promise((resolve) => {
+            const img = new Image();
+            img.onload = resolve;
+            img.onerror = resolve;
+            img.src = objectUrl;
+          });
+          return objectUrl;
+        }
+      }
+    } catch (e) {
+      // fall back to direct URL decode
+    }
+
+    await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = resolve;
+      img.onerror = resolve;
+      img.src = normalised;
+    });
+    return normalised;
+  }, []);
+
+  const withTimeout = useCallback(async (promise, timeoutMs) => {
+    let timeoutId = null;
+    const timeoutPromise = new Promise((resolve) => {
+      timeoutId = setTimeout(() => resolve(null), timeoutMs);
+    });
+    const result = await Promise.race([promise, timeoutPromise]);
+    if (timeoutId) clearTimeout(timeoutId);
+    return result;
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
     };
-    void preloadNext(0);
-  }, [levelDef, localFlagImages, mode]);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreloadReady(false);
+    setPreloadError("");
+    setFlagImageCache({});
+    firstQuestionMarkedRef.current = false;
+    preloadStatsRef.current = {
+      startedAt: performance.now(),
+      completedAt: 0,
+      preloadMs: 0,
+      firstQuestionMs: null,
+      preloadNetworkCalls: 0,
+      gameplayNetworkCalls: 0,
+    };
+
+    const run = async () => {
+      try {
+        const flagsToResolve = new Map();
+        questions.forEach((q) => {
+          if (q?.correct?.code) {
+            flagsToResolve.set(q.correct.code, q.correct);
+          }
+        });
+
+        const localResolved = {};
+        const deadline = performance.now() + PRELOAD_MAX_WAIT_MS;
+        let timedOut = false;
+
+        const localEntries = Array.from(flagsToResolve.values()).filter(isLocalFlag);
+        for (const flag of localEntries) {
+          if (cancelled) return;
+          if (!flag?.code) continue;
+          if (performance.now() > deadline) {
+            timedOut = true;
+            break;
+          }
+          const resolved = await withTimeout(
+            loadLocalFlagImage(flag),
+            PRELOAD_ASSET_TIMEOUT_MS
+          );
+          if (resolved) localResolved[flag.code] = resolved;
+        }
+
+        const urlMap = {};
+        for (const flag of flagsToResolve.values()) {
+          if (cancelled) return;
+          if (performance.now() > deadline) {
+            timedOut = true;
+            break;
+          }
+          const localSrc = isLocalFlag(flag)
+            ? localResolved[flag.code] || flag.image || flag.img || flag.fallbackImg || ""
+            : "";
+          const baseSrc = localSrc || flagSrc(flag, 320);
+          const cachedSrc = await withTimeout(
+            cacheAndDecodeImage(baseSrc),
+            PRELOAD_ASSET_TIMEOUT_MS
+          );
+          if (cachedSrc && flag?.code) {
+            urlMap[flag.code] = cachedSrc;
+          }
+        }
+
+        if (cancelled || !mountedRef.current) return;
+        if (timedOut && process.env.NODE_ENV !== "production") {
+          console.warn("[gameplay-diag] Preload timed out; continuing with fallback assets.");
+        }
+        setLocalFlagImages((prev) => ({ ...prev, ...localResolved }));
+        setFlagImageCache(urlMap);
+        preloadStatsRef.current.completedAt = performance.now();
+        preloadStatsRef.current.preloadMs =
+          preloadStatsRef.current.completedAt - preloadStatsRef.current.startedAt;
+        noteGameplayDiagnostic();
+        setPreloadReady(true);
+      } catch (error) {
+        if (cancelled || !mountedRef.current) return;
+        setPreloadError("Unable to preload this level. Please retry.");
+        setPreloadReady(true);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [questions, cacheAndDecodeImage, withTimeout, levelId, mode, noteGameplayDiagnostic]);
+
+  useEffect(() => {
+    if (!preloadReady || !current || firstQuestionMarkedRef.current) return;
+    firstQuestionMarkedRef.current = true;
+    preloadStatsRef.current.firstQuestionMs =
+      performance.now() - preloadStatsRef.current.startedAt;
+    noteGameplayDiagnostic();
+  }, [preloadReady, current, noteGameplayDiagnostic]);
+
+  useEffect(() => {
+    if (!preloadReady || !current) return;
+    const upcoming = questions
+      .slice(qIndex + 1, qIndex + 1 + NEXT_FLAG_WARMUP_COUNT)
+      .map((q) => q?.correct)
+      .filter(Boolean);
+    upcoming.forEach((flag) => {
+      const src = flagImageCache[flag.code];
+      if (!src) return;
+      const img = new Image();
+      img.src = src;
+    });
+  }, [preloadReady, questions, qIndex, current, flagImageCache]);
   const optionNameKeys = useMemo(() => {
     const map = new Map();
     (levelDef?.pool || []).forEach((flag) => {
@@ -453,17 +629,19 @@ export default function GameScreen({
       : "Classic";
   const currentFlagSrc =
     current?.correct && isLocalFlag(current.correct)
-      ? localFlagImages[current.correct.code] ||
+      ? flagImageCache[current.correct.code] ||
+        localFlagImages[current.correct.code] ||
         current.correct.image ||
         current.correct.img ||
         flagSrc(current.correct, 320)
       : current?.correct
-      ? flagSrc(current.correct, 320)
+      ? flagImageCache[current.correct.code] || flagSrc(current.correct, 320)
       : null;
   const isLocalCurrent = current?.correct && isLocalFlag(current.correct);
   const localFallbackSrc = current?.correct?.fallbackImg || "";
   const displayFlagSrc = isLocalCurrent
     ? localFlagImages[current.correct.code] ||
+      flagImageCache[current.correct.code] ||
       currentFlagSrc ||
       localFallbackSrc
     : currentFlagSrc;
@@ -547,7 +725,7 @@ export default function GameScreen({
 
   // ---------- ANSWER HANDLER ----------
   function handleAnswer(answer, { fromHint = false } = {}) {
-    if (!current || done || fail) return;
+    if (!preloadReady || !current || done || fail) return;
     // normal clicks shouldn't work while we show colours
     if (!fromHint && selectedAnswer !== null) return;
 
@@ -859,7 +1037,7 @@ export default function GameScreen({
               </li>
             </ul>
             <button
-              onClick={() => {
+              onPointerDown={() => {
                 localStorage.setItem(hintKey, "1");
                 setShowHintInfo(false);
               }}
@@ -1032,7 +1210,19 @@ export default function GameScreen({
       </div>
 
       {/* STATES */}
-      {done ? (
+      {!preloadReady ? (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            marginTop: 40,
+          }}
+          aria-label="Loading"
+        >
+          <div className="game-preload-spinner" />
+        </div>
+      ) : done ? (
         mode === "timetrial" ? (
           <div style={{ textAlign: "center", marginTop: 40 }}>
             <h2
@@ -1361,15 +1551,8 @@ export default function GameScreen({
               <img
                 src={displayFlagSrc || flagSrc(current.correct, 320)}
                 alt={current.correct.name}
-                onError={async (event) => {
+                onError={(event) => {
                   const fallback = current?.correct?.fallbackImg;
-                  if (current?.correct && isLocalFlag(current.correct)) {
-                    const resolved = await loadLocalFlagImage(current.correct);
-                    if (resolved && event.currentTarget.src !== resolved) {
-                      event.currentTarget.src = resolved;
-                      return;
-                    }
-                  }
                   if (process.env.NODE_ENV !== "production") {
                     console.warn(
                       "Missing local flag image; using fallback.",
@@ -1392,7 +1575,7 @@ export default function GameScreen({
                 }}
               />
             ) : (
-              <div>{t && lang ? t(lang, "loading") : "Loading…"}</div>
+              <div className="game-preload-spinner" aria-label="Loading" />
             )}
           </div>
 
@@ -1431,7 +1614,7 @@ export default function GameScreen({
                   return (
                     <button
                       key={opt}
-                      onClick={() => handleAnswer(opt)}
+                      onPointerDown={() => handleAnswer(opt)}
                       disabled={isWrong || selectedAnswer !== null}
                       style={{
                         background: bg,
@@ -1458,6 +1641,12 @@ export default function GameScreen({
               : "Loading choices…"}
           </div>
         </>
+      )}
+
+      {preloadError && (
+        <div style={{ textAlign: "center", color: "#ef4444", marginTop: 10 }}>
+          {preloadError}
+        </div>
       )}
     </div>
   );
