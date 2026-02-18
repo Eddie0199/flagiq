@@ -929,6 +929,7 @@ export default function App() {
   const [showDebugScreen, setShowDebugScreen] = useState(false);
   const debugTapRef = useRef({ count: 0, timer: null });
   const [appInfo, setAppInfo] = useState({ version: "", build: "" });
+  const [gameplayDiagnostics, setGameplayDiagnostics] = useState(null);
 
   // preferences
   const [lang, setLang] = useState(() => readLanguageFromStorage());
@@ -2425,6 +2426,7 @@ export default function App() {
                 return next;
               })
             }
+            onGameplayDiagnostics={(stats) => setGameplayDiagnostics(stats)}
           />
         </>
       )}
@@ -2580,6 +2582,27 @@ export default function App() {
               </button>
             </div>
             <IapDiagnosticsPanel visible={showDebugScreen} />
+            <div
+              style={{
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                background: "rgba(15, 23, 42, 0.65)",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Gameplay diagnostics</div>
+              {gameplayDiagnostics ? (
+                <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
+                  <div>Level preload: {Math.round(gameplayDiagnostics.preloadMs || 0)} ms</div>
+                  <div>Time to first question: {Math.round(gameplayDiagnostics.firstQuestionMs || 0)} ms</div>
+                  <div>Network calls during preload: {Number(gameplayDiagnostics.preloadNetworkCalls) || 0}</div>
+                  <div>Network calls during level: {Number(gameplayDiagnostics.gameplayNetworkCalls) || 0}</div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "#cbd5f5" }}>No gameplay run recorded yet.</div>
+              )}
+            </div>
             {debugLogs.length === 0 && (
               <div style={{ color: "#cbd5f5" }}>
                 No stored logs yet.

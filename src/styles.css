@@ -107,6 +107,7 @@ body {
 
 .game-answer-button {
   width: 100%;
+  touch-action: manipulation;
   min-height: 52px;
   text-align: left;
   line-height: 1.2;
