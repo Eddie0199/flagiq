@@ -271,7 +271,12 @@ export default function StoreScreen({
   }
 
   async function buyCoins(pack) {
+    const priceData = getStoreUiPriceData(storeProductsById[pack.id] || null);
     if (storeStatus !== "loaded") {
+      setMessage(storeUnavailableMessage);
+      return;
+    }
+    if (!priceData.hasStoreKitProduct) {
       setMessage(storeUnavailableMessage);
       return;
     }
@@ -761,8 +766,11 @@ export default function StoreScreen({
               <button
                 onClick={async () => {
                   const id = PRODUCT_IDS.HEARTS_REFILL;
+                  const refillPriceData = getStoreUiPriceData(
+                    storeProductsById[id] || null
+                  );
                   try {
-                    if (!storeReady || !heartsRefillPriceData.hasStoreKitProduct) {
+                    if (!storeReady || !refillPriceData.hasStoreKitProduct) {
                       setMessage(storeUnavailableMessage);
                       return;
                     }

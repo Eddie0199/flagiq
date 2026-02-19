@@ -15,6 +15,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     private var diagnosticsLastPurchaseAttempt: [String: Any] = [:]
     private var diagnosticsNativeEvents: [[String: Any]] = []
     private var diagnosticsDeviceLocaleIdentifier: String = Locale.current.identifier
+    private var diagnosticsStorefrontCountryCode: String = "unknown"
+    private var diagnosticsStorefrontCountryCodeNote: String = "Storefront not yet inspected."
 
     public override func load() {
         SKPaymentQueue.default().add(self)
@@ -40,6 +42,7 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
 
         diagnosticsRequestedProductIds = productIds
         diagnosticsDeviceLocaleIdentifier = Locale.current.identifier
+        refreshStorefrontDiagnostics()
         CAPLog.print("[IAP] device locale current=\(diagnosticsDeviceLocaleIdentifier)")
         CAPLog.print("[IAP] product fetch start: \(productIds)")
         appendNativeEvent([
@@ -321,6 +324,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
             "storeKitPurchaseRegistered": registrationSnapshot["bridgeHasStoreKitPurchase"] as? Bool ?? false,
             "deviceLocaleCurrentIdentifier": diagnosticsDeviceLocaleIdentifier,
             "currencySourceNote": "Currency must match StoreKit priceLocale/storefront, not device locale.",
+            "storefrontCountryCode": diagnosticsStorefrontCountryCode,
+            "storefrontCountryCodeNote": diagnosticsStorefrontCountryCodeNote,
             "requestedProductIds": diagnosticsRequestedProductIds,
             "products": diagnosticsProducts,
             "invalidProductIdentifiers": diagnosticsInvalidProductIdentifiers,
@@ -335,6 +340,7 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         diagnosticsInvalidProductIdentifiers = []
         diagnosticsLastPurchaseAttempt = [:]
         diagnosticsNativeEvents = []
+        refreshStorefrontDiagnostics()
         call.resolve(["cleared": true])
     }
 
@@ -389,7 +395,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         let localizedPriceString = format(price: product.price, locale: product.priceLocale)
         let priceLocaleIdentifier = product.priceLocale.identifier
         let currencyCode = product.priceLocale.currencyCode ?? ""
-        CAPLog.print("[IAP] product details productId=\(product.productIdentifier) price=\(product.price.stringValue) priceLocaleIdentifier=\(priceLocaleIdentifier) currencyCode=\(currencyCode) localizedPriceString=\(localizedPriceString)")
+        refreshStorefrontDiagnostics()
+        CAPLog.print("[IAP] product details productId=\(product.productIdentifier) price=\(product.price.stringValue) priceLocaleIdentifier=\(priceLocaleIdentifier) currencyCode=\(currencyCode) localizedPriceString=\(localizedPriceString) storefrontCountryCode=\(diagnosticsStorefrontCountryCode)")
         return [
             "productId": product.productIdentifier,
             "title": product.localizedTitle,
@@ -399,12 +406,31 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
             "localizedPriceString": localizedPriceString,
             "priceLocaleIdentifier": priceLocaleIdentifier,
             "currencyCode": currencyCode,
+            "storefrontCountryCode": diagnosticsStorefrontCountryCode,
+            "storefrontCountryCodeNote": diagnosticsStorefrontCountryCodeNote,
             "priceLocale": [
                 "identifier": priceLocaleIdentifier,
                 "currencyCode": currencyCode,
                 "currencySymbol": product.priceLocale.currencySymbol ?? ""
             ]
         ]
+    }
+
+
+    private func refreshStorefrontDiagnostics() {
+        if #available(iOS 13.0, *) {
+            if let storefrontCountryCode = SKPaymentQueue.default().storefront?.countryCode,
+               !storefrontCountryCode.isEmpty {
+                diagnosticsStorefrontCountryCode = storefrontCountryCode
+                diagnosticsStorefrontCountryCodeNote = "From SKPaymentQueue.default().storefront.countryCode"
+            } else {
+                diagnosticsStorefrontCountryCode = "unknown"
+                diagnosticsStorefrontCountryCodeNote = "SKPaymentQueue.default().storefront unavailable or empty."
+            }
+        } else {
+            diagnosticsStorefrontCountryCode = "unavailable"
+            diagnosticsStorefrontCountryCodeNote = "SKPaymentQueue.default().storefront requires iOS 13+."
+        }
     }
 
     private func currentStoreEnvironment() -> String {
