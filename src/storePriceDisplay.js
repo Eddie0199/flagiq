@@ -12,6 +12,7 @@ export function getStoreUiPriceData(storeProduct) {
     return {
       uiDisplayedPrice: storeProduct.localizedPriceString,
       uiPriceSource: "storekit",
+      uiPriceSourceReason: "Using StoreKit localizedPriceString for this productId.",
       hasStoreKitProduct: true,
     };
   }
@@ -19,6 +20,8 @@ export function getStoreUiPriceData(storeProduct) {
   return {
     uiDisplayedPrice: STORE_PRICE_PLACEHOLDER,
     uiPriceSource: "placeholder",
+    uiPriceSourceReason:
+      "Store product missing or localizedPriceString unavailable; purchase CTA locked until StoreKit product is loaded.",
     hasStoreKitProduct: false,
   };
 }
@@ -33,7 +36,10 @@ export function getProductCurrencyDiagnostics(productId, storeProduct) {
       storeProduct?.priceLocaleIdentifier ||
       storeProduct?.priceLocale?.identifier ||
       null,
+    storefrontCountryCode: storeProduct?.storefrontCountryCode || null,
+    storefrontCountryCodeNote: storeProduct?.storefrontCountryCodeNote || null,
     uiDisplayedPrice: uiPrice.uiDisplayedPrice,
     uiPriceSource: uiPrice.uiPriceSource,
+    uiPriceSourceReason: uiPrice.uiPriceSourceReason,
   };
 }

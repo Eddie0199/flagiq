@@ -207,6 +207,8 @@ export default function IapDiagnosticsPanel({ visible }) {
         state.currencySourceNote ||
           "Currency must match StoreKit priceLocale/storefront, not device locale."
       )}`,
+      `storefrontCountryCode: ${String(state.storefrontCountryCode || "unknown")}`,
+      `storefrontCountryCodeNote: ${String(state.storefrontCountryCodeNote || "")}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
       `invalidProductIdentifiers: ${toPretty(state.invalidProductIdentifiers || [])}`,
@@ -320,21 +322,43 @@ export default function IapDiagnosticsPanel({ visible }) {
             )}
           </strong>
         </div>
+        <div>
+          Storefront country code: <strong>{String(state?.storefrontCountryCode || "unknown")}</strong>
+        </div>
+        <div>
+          Storefront note: <strong>{String(state?.storefrontCountryCodeNote || "") || "n/a"}</strong>
+        </div>
       </div>
 
       <div style={{ fontSize: 12, color: "#cbd5f5", marginBottom: 8 }}>
         <div style={{ fontWeight: 700, marginBottom: 4 }}>Product currency diagnostics</div>
-        {productUiDiagnostics.map((product) => (
-          <div key={product.productId} style={{ marginBottom: 6 }}>
-            <strong>{String(product.productId || "unknown")}</strong>
-            {" — "}
-            uiDisplayedPrice={String(product.uiDisplayedPrice || "n/a")}, uiPriceSource=
-            {String(product.uiPriceSource || "n/a")}, storekit.localizedPriceString=
-            {String(product.storekitLocalizedPriceString || "n/a")}, storekit.currencyCode=
-            {String(product.storekitCurrencyCode || "n/a")}, storekit.priceLocaleIdentifier=
-            {String(product.storekitPriceLocaleIdentifier || "n/a")}
-          </div>
-        ))}
+        {productUiDiagnostics.map((product) => {
+          const usesPlaceholder = product.uiPriceSource !== "storekit";
+          return (
+            <div
+              key={product.productId}
+              style={{
+                marginBottom: 6,
+                color: usesPlaceholder ? "#fca5a5" : "#cbd5f5",
+                border: usesPlaceholder ? "1px solid rgba(220, 38, 38, 0.65)" : "none",
+                borderRadius: usesPlaceholder ? 8 : 0,
+                padding: usesPlaceholder ? "6px 8px" : 0,
+                background: usesPlaceholder ? "rgba(127, 29, 29, 0.35)" : "transparent",
+              }}
+            >
+              <strong>{String(product.productId || "unknown")}</strong>
+              {" — "}
+              uiDisplayedPrice={String(product.uiDisplayedPrice || "n/a")}, uiPriceSource=
+              {String(product.uiPriceSource || "n/a")}, uiPriceSourceReason=
+              {String(product.uiPriceSourceReason || "n/a")}, storekit.localizedPriceString=
+              {String(product.storekitLocalizedPriceString || "n/a")}, storekit.currencyCode=
+              {String(product.storekitCurrencyCode || "n/a")}, storekit.priceLocaleIdentifier=
+              {String(product.storekitPriceLocaleIdentifier || "n/a")}, storekit.storefrontCountryCode=
+              {String(product.storefrontCountryCode || "n/a")}, storekit.storefrontCountryCodeNote=
+              {String(product.storefrontCountryCodeNote || "n/a")}
+            </div>
+          );
+        })}
       </div>
 
       <div
