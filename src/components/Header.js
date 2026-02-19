@@ -38,63 +38,25 @@ function HeartsPill({ hearts, t, lang }) {
       : REGEN_MS - (now - lastTick)
   );
   const showTimer = count < max;
+  const heartsFull = count >= max;
+  const heartsLow = count <= 1;
 
   return (
     <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        background: "#ffffff",
-        border: "1px solid #e2e8f0",
-        borderRadius: 999,
-        padding: "2px 6px",
-        height: 30,
-        boxShadow: "0 1px 2px rgba(0,0,0,.04)",
-      }}
+      className="hearts-pill"
     >
-      <div
-        style={{
-          position: "relative",
-          width: 24,
-          height: 24,
-          borderRadius: 8,
-          background: "#fff",
-          border: "1px solid #e2e8f0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-        title={t && lang ? t(lang, "lives") : "Lives"}
-      >
-        <span style={{ fontSize: 16 }} role="img" aria-label="heart">
-          ❤️
-        </span>
-        <span
-          style={{
-            position: "absolute",
-            bottom: 1,
-            right: 3,
-            fontSize: 10,
-            fontWeight: 800,
-            color: "#0f172a",
-            textShadow: "0 1px 0 rgba(255,255,255,.7)",
-          }}
+      <div className="lives-container" title={t && lang ? t(lang, "lives") : "Lives"}>
+        <div
+          className={`heart-wrapper ${heartsFull ? "full" : ""} ${
+            heartsLow ? "low" : ""
+          }`.trim()}
         >
-          {count}
-        </span>
+          <img src="/assets/heart.svg" alt="lives" className="heart-icon" />
+          <span className="heart-count">{count}</span>
+        </div>
       </div>
       {showTimer && (
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            color: "#0f172a",
-            fontVariantNumeric: "tabular-nums",
-            lineHeight: 1,
-          }}
-          title={t && lang ? t(lang, "nextLife") : "Next life"}
-        >
+        <span className="heart-timer" title={t && lang ? t(lang, "nextLife") : "Next life"}>
           {formatRemaining(nextMs)}
         </span>
       )}
