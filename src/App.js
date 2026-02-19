@@ -837,9 +837,12 @@ function ConfigMissingScreen({ missingKeys }) {
 }
 
 function AuthBootScreen() {
+  const poweredByLabel = "Powered by Wild Moustache Games";
+
   return (
     <div
       style={{
+        position: "relative",
         minHeight: "100vh",
         display: "flex",
         alignItems: "center",
@@ -902,6 +905,25 @@ function AuthBootScreen() {
         >
           Loading…
         </div>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          bottom: "max(20px, calc(env(safe-area-inset-bottom, 0px) + 12px))",
+          transform: "translateX(-50%)",
+          color: "rgba(255,255,255,0.88)",
+          fontSize: 13,
+          fontWeight: 600,
+          letterSpacing: 0.2,
+          textAlign: "center",
+          textShadow: "0 1px 4px rgba(0,0,0,0.2)",
+          padding: "0 16px",
+          width: "100%",
+          boxSizing: "border-box",
+        }}
+      >
+        {poweredByLabel}
       </div>
     </div>
   );
