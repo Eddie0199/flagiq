@@ -313,8 +313,15 @@ export default function StoreScreen({
     heartCtaState === CTA_STATES.purchasing ||
     heartCtaState === CTA_STATES.success ||
     heartCtaState === CTA_STATES.owned;
-  const heartsRefillProduct = storeProductsById[PRODUCT_IDS.HEARTS_REFILL];
-  const heartsRefillPriceData = getStoreUiPriceData(heartsRefillProduct);
+  const getStoreProductPriceViewModel = (productId) => {
+    const storeProduct = storeProductsById[productId] || null;
+    const priceData = getStoreUiPriceData(storeProduct);
+    return { storeProduct, priceData };
+  };
+  const heartsRefillPriceViewModel = getStoreProductPriceViewModel(
+    PRODUCT_IDS.HEARTS_REFILL
+  );
+  const heartsRefillPriceData = heartsRefillPriceViewModel.priceData;
   const heartsRefillState = ctaState.getState(PRODUCT_IDS.HEARTS_REFILL);
   const heartsRefillDisabled =
     heartsFull ||
@@ -631,8 +638,8 @@ export default function StoreScreen({
                 pack.reward?.coins ??
                 pack.coins ??
                 (pack.label ? parseInt(pack.label, 10) : 0);
-              const storeProduct = storeProductsById[pack.id];
-              const priceData = getStoreUiPriceData(storeProduct);
+              const priceViewModel = getStoreProductPriceViewModel(pack.id);
+              const priceData = priceViewModel.priceData;
               const state = ctaState.getState(pack.id);
               const isSuccess = state === CTA_STATES.success;
               const isPurchasing = state === CTA_STATES.purchasing;

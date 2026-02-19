@@ -6,9 +6,9 @@ import {
   purchaseProduct,
 } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
-import { getStoreUiPriceData } from "../storePriceDisplay";
+import { getProductCurrencyDiagnostics } from "../storePriceDisplay";
 
-const JS_BUILD_MARKER = "2026-02-14-A";
+const JS_BUILD_MARKER = "2026-02-19-B42";
 
 function toPretty(value) {
   try {
@@ -120,18 +120,7 @@ export default function IapDiagnosticsPanel({ visible }) {
   const productUiDiagnostics = useMemo(() => {
     return SHOP_PRODUCTS.map((shopProduct) => {
       const storeProduct = productsById[shopProduct.id];
-      const uiPrice = getStoreUiPriceData(storeProduct);
-      return {
-        productId: shopProduct.id,
-        uiDisplayedPrice: uiPrice.uiDisplayedPrice,
-        uiPriceSource: uiPrice.uiPriceSource,
-        storekitLocalizedPriceString: storeProduct?.localizedPriceString || null,
-        storekitCurrencyCode: storeProduct?.currencyCode || null,
-        storekitPriceLocaleIdentifier:
-          storeProduct?.priceLocaleIdentifier ||
-          storeProduct?.priceLocale?.identifier ||
-          null,
-      };
+      return getProductCurrencyDiagnostics(shopProduct.id, storeProduct);
     });
   }, [productsById]);
 
@@ -141,6 +130,49 @@ export default function IapDiagnosticsPanel({ visible }) {
     String(state?.pluginEchoError?.message || "")
       .toLowerCase()
       .includes("plugin is not implemented");
+
+
+  const currencyMismatchSummary = useMemo(() => {
+    const mismatchedProducts = productUiDiagnostics
+      .filter((product) => {
+        const storekitPrice = String(product.storekitLocalizedPriceString || "").trim();
+        const uiPrice = String(product.uiDisplayedPrice || "").trim();
+        if (!storekitPrice || product.uiPriceSource !== "storekit") return false;
+        return uiPrice !== storekitPrice;
+      })
+      .map((product) => product.productId);
+
+    const placeholderProducts = productUiDiagnostics
+      .filter((product) => product.uiPriceSource !== "storekit")
+      .map((product) => product.productId);
+
+    const hasMismatch = mismatchedProducts.length > 0;
+    const hasPlaceholder = placeholderProducts.length > 0;
+
+    let summary = "Currency mismatch summary: all UI prices match StoreKit localizedPriceString.";
+    if (hasMismatch || hasPlaceholder) {
+      const parts = [];
+      parts.push(
+        hasMismatch
+          ? `mismatched products: ${mismatchedProducts.join(", ")}`
+          : "mismatched products: none"
+      );
+      parts.push(
+        hasPlaceholder
+          ? `ui placeholder products: ${placeholderProducts.join(", ")}`
+          : "ui placeholder products: none"
+      );
+      summary = `Currency mismatch summary: ${parts.join(" | ")}`;
+    }
+
+    return {
+      mismatchedProducts,
+      placeholderProducts,
+      hasMismatch,
+      hasPlaceholder,
+      summary,
+    };
+  }, [productUiDiagnostics]);
 
   const diagnosticsText = useMemo(() => {
     if (!state) {
@@ -178,11 +210,14 @@ export default function IapDiagnosticsPanel({ visible }) {
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
       `invalidProductIdentifiers: ${toPretty(state.invalidProductIdentifiers || [])}`,
+      `currencyMismatchSummary: ${currencyMismatchSummary.summary}`,
+      `currencyMismatchProducts: ${toPretty(currencyMismatchSummary.mismatchedProducts)}`,
+      `uiPlaceholderProducts: ${toPretty(currencyMismatchSummary.placeholderProducts)}`,
       `lastPurchaseAttempt: ${toPretty(state.lastPurchaseAttempt || null)}`,
       `jsLastFailure: ${toPretty(state.jsLastFailure || null)}`,
       `logs(last50): ${toPretty(combinedLogs)}`,
     ].join("\n\n");
-  }, [combinedLogs, nativeBuildInfo, safeAreaInfo, state]);
+  }, [combinedLogs, currencyMismatchSummary, nativeBuildInfo, safeAreaInfo, state]);
 
   const runAction = useCallback(
     async (name, fn) => {
@@ -300,6 +335,21 @@ export default function IapDiagnosticsPanel({ visible }) {
             {String(product.storekitPriceLocaleIdentifier || "n/a")}
           </div>
         ))}
+      </div>
+
+      <div
+        style={{
+          fontSize: 12,
+          color: "#d1fae5",
+          marginBottom: 8,
+          border: "1px solid rgba(52, 211, 153, 0.35)",
+          borderRadius: 10,
+          padding: "8px 10px",
+          background: "rgba(6, 78, 59, 0.25)",
+        }}
+      >
+        <div style={{ fontWeight: 700, marginBottom: 4 }}>Currency mismatch summary</div>
+        <div>{currencyMismatchSummary.summary}</div>
       </div>
 
       <div
