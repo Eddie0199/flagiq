@@ -8,7 +8,7 @@ import {
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getProductCurrencyDiagnostics } from "../storePriceDisplay";
 
-const JS_BUILD_MARKER = "2026-02-19-B42";
+const JS_BUILD_MARKER = "2026-02-19-B43";
 
 function toPretty(value) {
   try {
