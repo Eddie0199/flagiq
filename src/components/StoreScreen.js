@@ -4,7 +4,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { fetchStoreProducts, purchaseProduct } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
-import { getStoreUiPriceData } from "../storePriceDisplay";
+import { getDisplayedIapPrice } from "../storePriceDisplay";
 
 const BOOSTER_ITEMS = [
   {
@@ -130,6 +130,7 @@ export default function StoreScreen({
   hearts,
   maxHearts,
   onBuyHeartWithCoins,
+  showPriceDebugOverlay = false,
 }) {
   const [message, setMessage] = useState("");
   const [storeStatus, setStoreStatus] = useState("loading");
@@ -271,12 +272,12 @@ export default function StoreScreen({
   }
 
   async function buyCoins(pack) {
-    const priceData = getStoreUiPriceData(storeProductsById[pack.id] || null);
+    const displayedPrice = getDisplayedIapPrice(pack.id, storeProductsById);
     if (storeStatus !== "loaded") {
       setMessage(storeUnavailableMessage);
       return;
     }
-    if (!priceData.hasStoreKitProduct) {
+    if (displayedPrice.source !== "storekit") {
       setMessage(storeUnavailableMessage);
       return;
     }
@@ -319,21 +320,40 @@ export default function StoreScreen({
     heartCtaState === CTA_STATES.success ||
     heartCtaState === CTA_STATES.owned;
   const getStoreProductPriceViewModel = (productId) => {
-    const storeProduct = storeProductsById[productId] || null;
-    const priceData = getStoreUiPriceData(storeProduct);
-    return { storeProduct, priceData };
+    const displayedPrice = getDisplayedIapPrice(productId, storeProductsById);
+    return { storeProduct: displayedPrice.storeProduct, displayedPrice };
   };
   const heartsRefillPriceViewModel = getStoreProductPriceViewModel(
     PRODUCT_IDS.HEARTS_REFILL
   );
-  const heartsRefillPriceData = heartsRefillPriceViewModel.priceData;
   const heartsRefillState = ctaState.getState(PRODUCT_IDS.HEARTS_REFILL);
   const heartsRefillDisabled =
     heartsFull ||
     !storeReady ||
-    !heartsRefillPriceData.hasStoreKitProduct ||
+    heartsRefillPriceViewModel.displayedPrice.source !== "storekit" ||
     heartsRefillState === CTA_STATES.purchasing ||
     heartsRefillState === CTA_STATES.success;
+
+  useEffect(() => {
+    if (!storeReady) return;
+
+    const hasPoundFromStoreKit = Object.values(storeProductsById).some((product) =>
+      String(product?.localizedPriceString || "").includes("£")
+    );
+    if (!hasPoundFromStoreKit) return;
+
+    const nonStoreKitProducts = SHOP_PRODUCTS.map((product) => {
+      const displayedPrice = getDisplayedIapPrice(product.id, storeProductsById);
+      return displayedPrice.source !== "storekit" ? product.id : null;
+    }).filter(Boolean);
+
+    if (nonStoreKitProducts.length > 0) {
+      console.warn("[IAP diagnostics] StoreKit returned £ but UI is not bound to StoreKit for some products.", {
+        nonStoreKitProducts,
+        storeStatus,
+      });
+    }
+  }, [storeProductsById, storeReady, storeStatus]);
 
   return (
     <div style={{ padding: "10px 16px 24px", maxWidth: 900, margin: "0 auto" }}>
@@ -644,13 +664,13 @@ export default function StoreScreen({
                 pack.coins ??
                 (pack.label ? parseInt(pack.label, 10) : 0);
               const priceViewModel = getStoreProductPriceViewModel(pack.id);
-              const priceData = priceViewModel.priceData;
+              const displayedPrice = priceViewModel.displayedPrice;
               const state = ctaState.getState(pack.id);
               const isSuccess = state === CTA_STATES.success;
               const isPurchasing = state === CTA_STATES.purchasing;
               const disabled =
                 !storeReady ||
-                !priceData.hasStoreKitProduct ||
+                displayedPrice.source !== "storekit" ||
                 isPurchasing ||
                 isSuccess;
               return (
@@ -714,7 +734,7 @@ export default function StoreScreen({
                     textAlign: "center",
                   }}
                 >
-                  {isSuccess ? "✓" : priceData.uiDisplayedPrice}
+                  {isSuccess ? "✓" : displayedPrice.text}
                 </button>
               </div>
               );
@@ -766,11 +786,9 @@ export default function StoreScreen({
               <button
                 onClick={async () => {
                   const id = PRODUCT_IDS.HEARTS_REFILL;
-                  const refillPriceData = getStoreUiPriceData(
-                    storeProductsById[id] || null
-                  );
+                  const refillPriceData = getDisplayedIapPrice(id, storeProductsById);
                   try {
-                    if (!storeReady || !refillPriceData.hasStoreKitProduct) {
+                    if (!storeReady || refillPriceData.source !== "storekit") {
                       setMessage(storeUnavailableMessage);
                       return;
                     }
@@ -823,12 +841,48 @@ export default function StoreScreen({
                   ? text("storeHeartsFull", "Full")
                   : heartsRefillState === CTA_STATES.success
                   ? "✓"
-                  : heartsRefillPriceData.uiDisplayedPrice}
+                  : heartsRefillPriceViewModel.displayedPrice.text}
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {showPriceDebugOverlay && (
+        <div
+          style={{
+            marginTop: 14,
+            borderRadius: 10,
+            border: "1px solid rgba(30, 41, 59, 0.3)",
+            background: "rgba(15, 23, 42, 0.8)",
+            padding: "10px 12px",
+            fontSize: 11,
+            color: "#e2e8f0",
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <div style={{ fontWeight: 700 }}>Shop price debug overlay</div>
+          {SHOP_PRODUCTS.map((product) => {
+            const displayed = getDisplayedIapPrice(product.id, storeProductsById);
+            const storeProduct = displayed.storeProduct || {};
+            return (
+              <div key={product.id}>
+                {product.id} — uiDisplayedPrice={displayed.text}, uiPriceSource={displayed.source},
+                storekit.localizedPriceString={String(
+                  storeProduct.localizedPriceString || "n/a"
+                )}, storekit.currencyCode={String(storeProduct.currencyCode || "n/a")},
+                storekit.priceLocaleIdentifier={String(
+                  storeProduct.priceLocaleIdentifier ||
+                    storeProduct.priceLocale?.identifier ||
+                    "n/a"
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* system message */}
       {message && (
