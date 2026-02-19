@@ -31,6 +31,11 @@ const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
 const NEXT_FLAG_WARMUP_COUNT = 4;
 const PRELOAD_MAX_WAIT_MS = 1800;
 const PRELOAD_ASSET_TIMEOUT_MS = 700;
+const successSummaryTextStyle = {
+  fontSize: 16,
+  marginBottom: 6,
+  color: "#ffffff",
+};
 
 const afterCorrectHighlight = (fn) => {
   nextFrame(() => {
@@ -1235,7 +1240,7 @@ export default function GameScreen({
             >
               {t && lang ? t(lang, "timeTrialComplete") : "Time Trial Complete"}
             </h2>
-            <div style={{ fontSize: 16, marginBottom: 6 }}>
+            <div style={successSummaryTextStyle}>
               {(t && lang ? t(lang, "finalScore") : "Final score") + ": "}
               <strong>{ttScore.toLocaleString()}</strong> /{" "}
               {(QUESTION_COUNT_FALLBACK * TT_MAX_PER_Q).toLocaleString()}
