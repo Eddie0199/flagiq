@@ -2489,6 +2489,7 @@ export default function App() {
             hearts={heartsCurrent}
             maxHearts={heartsMax}
             onBuyHeartWithCoins={handleBuyHeartWithCoins}
+            showPriceDebugOverlay={debugOverlayEnabled && showDebugScreen}
           />
         </>
       )}

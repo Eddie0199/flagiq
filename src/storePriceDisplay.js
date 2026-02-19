@@ -26,6 +26,17 @@ export function getStoreUiPriceData(storeProduct) {
   };
 }
 
+export function getDisplayedIapPrice(productId, storeProductsById = {}) {
+  const storeProduct = storeProductsById?.[productId] || null;
+  const priceData = getStoreUiPriceData(storeProduct);
+
+  return {
+    text: priceData.uiDisplayedPrice,
+    source: priceData.uiPriceSource,
+    storeProduct,
+  };
+}
+
 export function getProductCurrencyDiagnostics(productId, storeProduct) {
   const uiPrice = getStoreUiPriceData(storeProduct);
   return {
