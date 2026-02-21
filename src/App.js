@@ -181,10 +181,12 @@ export const flagSrc = (flagOrCode, w = 256) => {
     gibraltar: "gi",
     "french polynesia": "pf",
     "new caledonia": "nc",
+    "ascension island": "sh-ac",
   };
 
   const CODE_FALLBACK = {
     nir: "gb-nir",
+    ac: "sh-ac",
   };
 
   if (flagOrCode && typeof flagOrCode === "object") {
