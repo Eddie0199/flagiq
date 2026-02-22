@@ -27,7 +27,7 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
             NotificationCenter.default.addObserver(
                 self,
                 selector: #selector(handleStorefrontDidChangeNotification(_:)),
-                name: NSNotification.Name.SKPaymentQueueDidChangeStorefront,
+                name: Notification.Name("SKPaymentQueueDidChangeStorefront"),
                 object: SKPaymentQueue.default()
             )
         }
