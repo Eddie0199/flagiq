@@ -37,6 +37,8 @@ import {
   getPlayerState,
   updatePlayerState,
 } from "./playerStateApi";
+import { fetchDailyRank, fetchDailyUserEntry } from "./dailyChallengeApi";
+import { getDailyQuestionSet, getDailySeed, getUtcDailyKey } from "./dailyChallenge";
 
 
 const LANGUAGE_STORAGE_KEY = "flagLang";
@@ -237,6 +239,8 @@ function normalizeModeKey(rawMode) {
   if (m === "timetrial" || m === "time trial") return "timetrial";
   if (m === "localflags" || m === "local flags" || m === "local")
     return "local";
+  if (m === "daily" || m === "dailychallenge" || m === "daily challenge")
+    return "daily";
   return m || "classic";
 }
 
@@ -968,6 +972,11 @@ export default function App() {
 
   const [screen, setScreen] = useLocalStorage("flagiq:screen", "home");
   const [mode, setMode] = useLocalStorage("flagiq:mode", "classic");
+  const [dailyStatus, setDailyStatus] = useState({ entry: null, rank: null, loading: false });
+  const [dailyLastSubmission, setDailyLastSubmission] = useState(null);
+  const dailyKey = getUtcDailyKey();
+  const dailySeed = getDailySeed(dailyKey);
+  const dailyQuestionPreview = useMemo(() => getDailyQuestionSet(FLAGS, dailyKey, 10), [dailyKey]);
   const defaultLocalPackId = LOCAL_PACKS[0]?.packId || "";
 
   // Always reset scroll so headers stay visible when switching screens (mobile fix)
@@ -2073,6 +2082,42 @@ export default function App() {
   };
   const closeAuth = () => setAuthOpen(false);
 
+  useEffect(() => {
+    if (!loggedIn) {
+      setDailyStatus({ entry: null, rank: null, loading: false });
+      return;
+    }
+    let active = true;
+    setDailyStatus((prev) => ({ ...prev, loading: true }));
+    fetchDailyUserEntry(dailyKey).then(async ({ entry, error }) => {
+      if (!active) return;
+      if (error || !entry) {
+        setDailyStatus({ entry: null, rank: null, loading: false });
+        return;
+      }
+      const rankRes = await fetchDailyRank(dailyKey, entry.score, entry.total_time_ms);
+      if (!active) return;
+      setDailyStatus({ entry, rank: rankRes.rank || null, loading: false });
+    });
+    return () => {
+      active = false;
+    };
+  }, [dailyKey, loggedIn]);
+
+  const handleDailyChallengeCompleted = useCallback((payload) => {
+    setDailyLastSubmission(payload);
+    setDailyStatus({
+      entry: {
+        daily_key: payload.dailyKey,
+        score: payload.score,
+        correct_count: payload.correctCount,
+        total_time_ms: payload.totalTimeMs,
+      },
+      rank: payload.rank || null,
+      loading: false,
+    });
+  }, []);
+
   // NEW: per-mode stats for homepage cards, based on in-memory progress
   const classicStats = deriveModeStatsFromProgress(progress, "classic");
   const timetrialStats = deriveModeStatsFromProgress(progress, "timetrial");
@@ -2083,6 +2128,12 @@ export default function App() {
     }
     if (!loggedIn) {
       openAuth("login");
+      return;
+    }
+    if (nextMode === "daily") {
+      setMode("daily");
+      setLevelId(1);
+      setScreen("game");
       return;
     }
     if (nextMode === "local") {
@@ -2144,7 +2195,7 @@ export default function App() {
     });
   };
 
-  const modeProgress = mode === "local"
+  const modeProgress = mode === "local" || mode === "daily"
     ? { starsByLevel: {}, unlockedUntil: 0 }
     : progress[mode] || {
         starsByLevel: {},
@@ -2168,13 +2219,20 @@ export default function App() {
   const localFlagsLabelRaw = t && lang ? t(lang, "localFlags") : "Local Flags";
   const localFlagsLabel =
     localFlagsLabelRaw === "localFlags" ? "Local Flags" : localFlagsLabelRaw;
-  const activeLevels = mode === "local" ? localPackLevels : levels;
+  const dailyLevels = useMemo(() => [{ id: 1, pool: FLAGS, questionCount: 10 }], []);
+  const activeLevels = mode === "local" ? localPackLevels : mode === "daily" ? dailyLevels : levels;
   const storedStars =
     mode === "local"
       ? getLocalLevelStars(progress, activeLocalPackId, levelId)
+      : mode === "daily"
+      ? 0
       : Number(starsByLevel[levelId]) || 0;
 
   const handleGameBack = () => {
+    if (mode === "daily") {
+      setScreen("home");
+      return;
+    }
     if (mode === "local") {
       setScreen("local-pack-levels");
       return;
@@ -2187,6 +2245,10 @@ export default function App() {
     setGameplayDiagnostics(stats);
   }, []);
   const handleNextLevel = () => {
+    if (mode === "daily") {
+      setScreen("home");
+      return;
+    }
     if (mode === "local") {
       const idx = localPackLevels.findIndex((lvl) => lvl.id === levelId);
       const next = idx >= 0 ? localPackLevels[idx + 1] : null;
@@ -2253,6 +2315,7 @@ export default function App() {
           onDailySpinClaim={handleDailySpinClaim}
           loggedIn={loggedIn}
           onAuthRequest={openAuth}
+          dailyChallenge={{ dailyKey, dailySeed, status: dailyStatus }}
         />
       )}
 
@@ -2455,6 +2518,8 @@ export default function App() {
               })
             }
             onGameplayDiagnostics={handleGameplayDiagnostics}
+            dailyChallenge={{ dailyKey, dailySeed, status: dailyStatus }}
+            onDailyChallengeCompleted={handleDailyChallengeCompleted}
           />
         </>
       )}
@@ -2611,6 +2676,26 @@ export default function App() {
               </button>
             </div>
             <IapDiagnosticsPanel visible={showDebugScreen} />
+            <div
+              style={{
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                background: "rgba(15, 23, 42, 0.65)",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Daily challenge diagnostics</div>
+              <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
+                <div>UTC daily_key: {dailyKey}</div>
+                <div>dailySeed: {dailySeed}</div>
+                <div>Completion status: {dailyStatus?.entry ? "completed" : "not completed"}</div>
+                <div>Today's score: {dailyStatus?.entry?.score ?? "-"}</div>
+                <div>Last submission payload: {dailyLastSubmission ? JSON.stringify({ dailyKey: dailyLastSubmission.dailyKey, score: dailyLastSubmission.score, correctCount: dailyLastSubmission.correctCount, totalTimeMs: dailyLastSubmission.totalTimeMs }) : "none"}</div>
+                <div>Last insert result: {dailyLastSubmission?.insertResult ? JSON.stringify({ error: dailyLastSubmission.insertResult.error?.message || null, id: dailyLastSubmission.insertResult.data?.id || null }) : "none"}</div>
+                <div>First 10 question IDs: {dailyQuestionPreview.questions.map((q) => q.correct.code).join(", ")}</div>
+              </div>
+            </div>
             <div
               style={{
                 border: "1px solid rgba(148, 163, 184, 0.3)",
