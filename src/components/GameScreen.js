@@ -31,6 +31,12 @@ const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
 const NEXT_FLAG_WARMUP_COUNT = 4;
 const PRELOAD_MAX_WAIT_MS = 1800;
 const PRELOAD_ASSET_TIMEOUT_MS = 700;
+const FLAG_PLACEHOLDER_SRC =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect width="320" height="200" fill="#e2e8f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="16">Flag unavailable</text></svg>`
+  );
+
 const successSummaryTextStyle = {
   fontSize: 16,
   marginBottom: 6,
@@ -1558,15 +1564,22 @@ export default function GameScreen({
                 alt={current.correct.name}
                 onError={(event) => {
                   const fallback = current?.correct?.fallbackImg;
-                  if (process.env.NODE_ENV !== "production") {
-                    console.warn(
-                      "Missing local flag image; using fallback.",
-                      current?.correct?.code
-                    );
-                  }
-                  if (fallback && event.currentTarget.src !== fallback) {
+                  const failedSrc = event.currentTarget.currentSrc || event.currentTarget.src;
+                  const flagCode = current?.correct?.code || "unknown";
+                  const usedFallback = event.currentTarget.dataset.usedFallback === "1";
+
+                  console.warn("[flags] missing flag image", {
+                    code: flagCode,
+                    failedSrc,
+                  });
+
+                  if (fallback && event.currentTarget.src !== fallback && !usedFallback) {
+                    event.currentTarget.dataset.usedFallback = "1";
                     event.currentTarget.src = fallback;
+                    return;
                   }
+
+                  event.currentTarget.src = FLAG_PLACEHOLDER_SRC;
                 }}
                 style={{
                   maxWidth: 256,

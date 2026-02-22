@@ -81,6 +81,10 @@ export function getIapDiagnosticsLogs() {
   return [...iapLogBuffer];
 }
 
+export function logIapUiEvent(event, payload = {}) {
+  iapLog(event, payload);
+}
+
 export function getIapLastFailure() {
   return iapLastFailure ? { ...iapLastFailure } : null;
 }

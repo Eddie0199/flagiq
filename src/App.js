@@ -181,12 +181,14 @@ export const flagSrc = (flagOrCode, w = 256) => {
     gibraltar: "gi",
     "french polynesia": "pf",
     "new caledonia": "nc",
-    "ascension island": "sh-ac",
+    // FlagCDN resolves Ascension Island under the dedicated AC ccTLD-like code.
+    "ascension island": "ac",
   };
 
   const CODE_FALLBACK = {
     nir: "gb-nir",
-    ac: "sh-ac",
+    // Keep AC explicit so name/code lookups stay aligned.
+    ac: "ac",
   };
 
   if (flagOrCode && typeof flagOrCode === "object") {

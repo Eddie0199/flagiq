@@ -955,7 +955,7 @@ export default function HomeScreen({
               ×
             </button>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
-              {text("homeInfoTitle", "How to Play")}
+              {text("homeInfoTitle", "How to Play").replace(/[\u{1F300}-\u{1FAFF}]\s*/gu, "").trim()}
             </div>
             <div
               style={{
@@ -985,7 +985,10 @@ export default function HomeScreen({
                       </div>
                     );
                   }
-                  const [, emoji, title, body] = match;
+                  const [, , title, body] = match;
+                  const sectionIcons = ["🏁", "🎮", "❤️", "💡", "⭐", "💰", "🎡"];
+                  const sectionIcon = sectionIcons[index] || "📘";
+                  const hintIcons = ["🎯", "✅", "⏸️"];
                   const bodyLines = body
                     .split("\n")
                     .map((bodyLine) => bodyLine.trim())
@@ -1008,9 +1011,9 @@ export default function HomeScreen({
                     >
                       <span
                         aria-hidden="true"
-                        style={{ fontSize: 18, lineHeight: "20px" }}
+                        style={{ fontSize: 18, lineHeight: "20px", width: 20, textAlign: "center" }}
                       >
-                        {emoji}
+                        {sectionIcon}
                       </span>
                       <span>
                         <strong style={{ color: "#0f172a" }}>
@@ -1028,8 +1031,11 @@ export default function HomeScreen({
                               gap: 6,
                             }}
                           >
-                            {bulletItems.map((item) => (
+                            {bulletItems.map((item, itemIndex) => (
                               <li key={item}>
+                                {index === 3 && hintIcons[itemIndex]
+                                  ? `${hintIcons[itemIndex]} `
+                                  : ""}
                                 {item.replace(/^[-•]\s+/, "")}
                               </li>
                             ))}
