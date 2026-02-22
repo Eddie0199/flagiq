@@ -6,6 +6,7 @@ import {
   fetchStoreProducts,
   getIapDiagnosticsState,
   purchaseProduct,
+  logIapUiEvent,
 } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getUiPricePresentation } from "../storePriceDisplay";
@@ -306,6 +307,7 @@ export default function StoreScreen({
   }
 
   async function buyCoins(pack) {
+    const productId = pack?.id;
     const displayedPrice = getUiPricePresentation(pack.id, storeProductsById?.[pack.id] || null);
     if (storeStatus !== "loaded") {
       setMessage(storeUnavailableMessage);
@@ -316,25 +318,44 @@ export default function StoreScreen({
       return;
     }
 
-    ctaState.beginPurchase(pack.id);
+    ctaState.beginPurchase(productId);
+    logIapUiEvent("iap:coinPurchaseUiLock:start", { productId });
 
     try {
-      const result = await purchaseProduct(pack.id);
+      const result = await purchaseProduct(productId);
       if (result?.success) {
         setMessage(text("storeCoinsAdded", "Purchase successful! Coins added."));
-        ctaState.markSuccess(pack.id);
+        ctaState.markSuccess(productId);
+        logIapUiEvent("iap:coinPurchaseUiLock:end", {
+          productId,
+          result: "success",
+        });
       } else if (result?.cancelled) {
-        ctaState.resetState(pack.id);
+        ctaState.resetState(productId);
         setMessage(purchaseCancelledMessage);
+        logIapUiEvent("iap:coinPurchaseUiLock:end", {
+          productId,
+          result: "cancel",
+        });
       } else {
-        ctaState.resetState(pack.id);
+        ctaState.resetState(productId);
         setMessage(
           result?.error || text("storePurchaseFailed", "Purchase failed")
         );
+        logIapUiEvent("iap:coinPurchaseUiLock:end", {
+          productId,
+          result: "error",
+          error: result?.error || null,
+        });
       }
     } catch (e) {
-      ctaState.resetState(pack.id);
+      ctaState.resetState(productId);
       setMessage(text("storePurchaseFailed", "Purchase failed"));
+      logIapUiEvent("iap:coinPurchaseUiLock:end", {
+        productId,
+        result: "error",
+        error: e?.message || String(e),
+      });
     }
   }
 
@@ -804,6 +825,11 @@ export default function StoreScreen({
                 displayedPrice.uiPriceSource !== "storekit" ||
                 isPurchasing ||
                 isSuccess;
+              const ctaLabel = isPurchasing
+                ? "…"
+                : isSuccess
+                ? "✓"
+                : displayedPrice.uiDisplayedPrice;
               return (
                 <div
                   key={pack.id}
@@ -859,14 +885,19 @@ export default function StoreScreen({
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: disabled ? "not-allowed" : "pointer",
-                    background: isSuccess ? "#16a34a" : storeReady ? "#0f172a" : "#94a3b8",
+                    background:
+                      isSuccess
+                        ? "#16a34a"
+                        : disabled
+                        ? "#cbd5e1"
+                        : "#0f172a",
                     border: isSuccess ? "1px dashed #15803d" : "none",
                     color: "#fff",
                     minWidth: 80,
                     textAlign: "center",
                   }}
                 >
-                  {isSuccess ? "✓" : displayedPrice.uiDisplayedPrice}
+                  {ctaLabel}
                 </button>
               </div>
               );
@@ -974,6 +1005,8 @@ export default function StoreScreen({
                   ? text("storeHeartsFull", "Full")
                   : heartsRefillState === CTA_STATES.success
                   ? "✓"
+                  : heartsRefillState === CTA_STATES.purchasing
+                  ? "…"
                   : heartsRefillPriceViewModel.displayedPrice.uiDisplayedPrice}
               </button>
             </div>
