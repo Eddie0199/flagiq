@@ -20,6 +20,7 @@ const STRINGS = {
     homeLeaderboardBody:
       "The global leaderboard is on the way. Stay tuned for competitive rankings.",
     leaderboardTopLabel: "Top 100 Players • Total Points",
+    dailyLeaderboardTopLabel: "Top 100 Players • Daily Score",
     leaderboardLoading: "Loading leaderboard...",
     leaderboardError: "Unable to load leaderboard right now.",
     leaderboardEmpty: "No Time Trial scores yet.",
@@ -2933,7 +2934,6 @@ export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
   return pack[key] || STRINGS.en[key] || key;
 }
-
 
 
 

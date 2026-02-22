@@ -1822,7 +1822,7 @@ export default function GameScreen({
             </div>
             {dailyLeaderboardEntries.map((entry) => (
               <div key={`${entry.userId}-${entry.rank}`} style={{ display: "grid", gridTemplateColumns: "40px 1fr auto", gap: 8, padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
-                <span>#{entry.rank}</span><span>{entry.name}</span><span>{entry.score}</span>
+                <span>#{entry.rank}</span><span>{String(entry?.name || "Player")}</span><span>{entry.score}</span>
               </div>
             ))}
           </div>

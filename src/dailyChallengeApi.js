@@ -42,7 +42,7 @@ export async function submitDailyScore(payload) {
 export async function fetchDailyLeaderboard(dailyKey, limit = 100) {
   const { data, error } = await supabase
     .from("daily_scores")
-    .select("user_id, score, total_time_ms, created_at, profiles!inner(username)")
+    .select("user_id, score, total_time_ms, created_at")
     .eq("daily_key", dailyKey)
     .order("score", { ascending: false })
     .order("total_time_ms", { ascending: true })
@@ -50,10 +50,31 @@ export async function fetchDailyLeaderboard(dailyKey, limit = 100) {
 
   if (error) return { entries: [], error };
 
+  const userIds = Array.from(
+    new Set((data || []).map((row) => row?.user_id).filter(Boolean))
+  );
+  let usernameByUserId = {};
+
+  if (userIds.length > 0) {
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .in("id", userIds);
+
+    usernameByUserId = (profilesData || []).reduce((acc, row) => {
+      if (row?.id) {
+        acc[row.id] = row?.username || "";
+      }
+      return acc;
+    }, {});
+  }
+
   const entries = (data || []).map((row, idx) => ({
     rank: idx + 1,
     userId: row.user_id,
-    name: row?.profiles?.username || `Player ${String(row.user_id).slice(-4)}`,
+    name:
+      usernameByUserId[row.user_id] ||
+      `Player ${String(row.user_id || "").slice(-4) || "0000"}`,
     score: Number(row.score || 0),
     totalTimeMs: Number(row.total_time_ms || 0),
   }));

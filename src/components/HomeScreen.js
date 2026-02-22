@@ -1,6 +1,7 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
+import { fetchDailyLeaderboard } from "../dailyChallengeApi";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
 import { getUtcResetMs } from "../dailyChallenge";
 
@@ -575,6 +576,7 @@ export default function HomeScreen({
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState("");
   const [dailyResetMs, setDailyResetMs] = useState(() => getUtcResetMs());
+  const [selectedLeaderboardMode, setSelectedLeaderboardMode] = useState("timetrial");
 
   useEffect(() => {
     const timer = setInterval(() => setDailyResetMs(getUtcResetMs()), 1000);
@@ -587,6 +589,11 @@ export default function HomeScreen({
         id: "timetrial",
         label: t && lang ? t(lang, "timeTrial") : "Time Trial",
         icon: "⏱️",
+      },
+      {
+        id: "daily",
+        label: text("dailyChallenge", "Daily Challenge"),
+        icon: "🗓️",
       },
     ],
     [lang, t]
@@ -610,7 +617,10 @@ export default function HomeScreen({
     const loadLeaderboard = async () => {
       setLeaderboardLoading(true);
       setLeaderboardError("");
-      const { entries, error } = await fetchTimeTrialLeaderboard(100);
+      const { entries, error } =
+        selectedLeaderboardMode === "daily"
+          ? await fetchDailyLeaderboard(dailyChallenge?.dailyKey, 100)
+          : await fetchTimeTrialLeaderboard(100);
       if (!isActive) return;
       if (error) {
         console.error("Failed to load leaderboard", error);
@@ -632,7 +642,7 @@ export default function HomeScreen({
     return () => {
       isActive = false;
     };
-  }, [showLeaderboardModal]);
+  }, [dailyChallenge?.dailyKey, loggedIn, selectedLeaderboardMode, showLeaderboardModal]);
 
   // per-mode stats derived from the same store logic as App.js
   // compute on every render so newly loaded progress shows immediately
@@ -657,18 +667,21 @@ export default function HomeScreen({
     }
   };
 
-  const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
+  const Card = ({ color, icon, title, stats, onClick, mode, disabled, descriptionOverride, rightContent }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
     const showProgress = !disabled;
     const maxLevels = Number(maxLevelsByMode?.[mode] ?? 0);
     const maxStars = maxLevels * 3;
     const description =
-      mode === "classic"
+      descriptionOverride ||
+      (mode === "classic"
         ? text("classicDesc", "Learn flags at your pace")
         : mode === "timetrial"
         ? text("timeTrialDesc", "Beat the timer!")
-        : text("localFlagsDesc", "Country packs focused on regional flags.");
+        : mode === "daily"
+        ? text("dailyChallengeDesc", "Same challenge for everyone every day")
+        : text("localFlagsDesc", "Country packs focused on regional flags."));
 
     return (
       <button
@@ -711,7 +724,7 @@ export default function HomeScreen({
             <span className="home-card-description">{description}</span>
           </div>
         </div>
-        {disabled ? (
+        {rightContent ? rightContent : disabled ? (
           <div
             style={{
               fontSize: 12,
@@ -1131,25 +1144,33 @@ export default function HomeScreen({
                   }}
                 >
                   {leaderboardModes.map((mode) => (
-                    <div
+                    <button
                       key={mode.id}
+                      onClick={() => setSelectedLeaderboardMode(mode.id)}
                       style={{
                         display: "flex",
                         alignItems: "center",
                         gap: 8,
                         padding: "10px 16px",
                         borderRadius: 16,
-                        background: "#7c3aed",
-                        color: "white",
+                        border: "none",
+                        cursor: "pointer",
+                        background:
+                          selectedLeaderboardMode === mode.id ? "#7c3aed" : "#e2e8f0",
+                        color:
+                          selectedLeaderboardMode === mode.id ? "white" : "#334155",
                         fontWeight: 700,
-                        boxShadow: "0 6px 14px rgba(124,58,237,0.28)",
+                        boxShadow:
+                          selectedLeaderboardMode === mode.id
+                            ? "0 6px 14px rgba(124,58,237,0.28)"
+                            : "none",
                       }}
                     >
                       <span role="img" aria-label={mode.label}>
                         {mode.icon}
                       </span>
                       {mode.label}
-                    </div>
+                    </button>
                   ))}
                 </div>
                 <div
@@ -1163,7 +1184,9 @@ export default function HomeScreen({
                     letterSpacing: 0.8,
                   }}
                 >
-                  {text("leaderboardTopLabel", "Top 100 Players • Total Points")}
+                  {selectedLeaderboardMode === "daily"
+                    ? text("dailyLeaderboardTopLabel", "Top 100 Players • Daily Score")
+                    : text("leaderboardTopLabel", "Top 100 Players • Total Points")}
                 </div>
               </div>
               {leaderboardLoading ? (
@@ -1239,7 +1262,7 @@ export default function HomeScreen({
                           fontSize: 16,
                         }}
                       >
-                        {entry.name.slice(0, 1).toUpperCase()}
+                        {String(entry?.name || "P").slice(0, 1).toUpperCase()}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div
@@ -1249,7 +1272,7 @@ export default function HomeScreen({
                             fontSize: 16,
                           }}
                         >
-                          {entry.name}
+                          {String(entry?.name || "Player")}
                         </div>
                         <div
                           style={{
@@ -1259,7 +1282,9 @@ export default function HomeScreen({
                             marginTop: 2,
                           }}
                         >
-                          {entry.attempts} attempts
+                          {selectedLeaderboardMode === "daily"
+                            ? `${Math.round((Number(entry.totalTimeMs || 0) / 1000) * 10) / 10}s`
+                            : `${entry.attempts} attempts`}
                         </div>
                       </div>
                       <div
@@ -1291,19 +1316,32 @@ export default function HomeScreen({
             alignItems: "center",
           }}
         >
-          <button
-            disabled={Boolean(dailyChallenge?.status?.entry)}
-            onClick={() => onStart && onStart("daily")}
-            style={{ width: "85%", maxWidth: 520, margin: "12px auto", borderRadius: 22, border: "none", background: "#111827", color: "#fff", padding: "12px 14px", textAlign: "left" }}
-          >
-            <div style={{ fontWeight: 800 }}>{text("dailyChallenge", "Daily Challenge")}</div>
-            <div style={{ fontSize: 12, opacity: 0.9 }}>{text("dailyResetsIn", "Resets in")}: {formatMs(dailyResetMs)}</div>
-            {dailyChallenge?.status?.entry ? (
-              <div style={{ fontSize: 12, marginTop: 6 }}>
-                {text("dailyCompleted", "Completed")} · {text("score", "Score")}: {dailyChallenge.status.entry.score} · {text("dailyGlobalRank", "Global Rank")} #{dailyChallenge.status.rank || "-"}
-              </div>
-            ) : null}
-          </button>
+          <Card
+            color="#111827"
+            icon="🗓️"
+            title={text("dailyChallenge", "Daily Challenge")}
+            stats={{ completedLevels: 0, stars: 0 }}
+            onClick={() => {
+              if (!dailyChallenge?.status?.entry) {
+                onStart && onStart("daily");
+              }
+            }}
+            mode="daily"
+            rightContent={
+              dailyChallenge?.status?.entry ? (
+                <div style={{ fontSize: 12, fontWeight: 700, textAlign: "right", color: "#fff" }}>
+                  <div>{text("dailyCompleted", "Completed")}</div>
+                  <div>{text("score", "Score")}: {dailyChallenge.status.entry.score}</div>
+                  <div>#{dailyChallenge.status.rank || "-"}</div>
+                  <div style={{ opacity: 0.85 }}>{text("dailyResetsIn", "Resets in")} {formatMs(dailyResetMs)}</div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}>
+                  {text("playNow", "Play")}
+                </div>
+              )
+            }
+          />
           <Card
             color="#f3cc2f"
             icon="🚩"
