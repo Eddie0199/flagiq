@@ -105,6 +105,7 @@ export async function getIapDiagnosticsState() {
       "Currency must match StoreKit priceLocale/storefront, not device locale.",
     storefrontCountryCode: null,
     storefrontCountryCodeNote: null,
+    storefrontIdentifier: null,
     requestedProductIds: SHOP_PRODUCTS.map((product) => product.id),
     products: [],
     invalidProductIdentifiers: [],
