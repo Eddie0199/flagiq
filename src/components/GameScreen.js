@@ -2,6 +2,12 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
+import {
+  fetchDailyLeaderboard,
+  fetchDailyRank,
+  submitDailyScore,
+} from "../dailyChallengeApi";
+import { getDailyQuestionSet } from "../dailyChallenge";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -11,6 +17,10 @@ const TT_MS_PER_Q = 10000;
 const TT_TICK_MS = 120;
 const TT_STAR3 = 8000;
 const TT_STAR2 = 6000;
+const DAILY_BASE_POINTS = 1000;
+const DAILY_TIME_BONUS_MULTIPLIER = 50;
+const DAILY_WRONG_PENALTY = 250;
+const DAILY_PERFECT_BONUS = 1000;
 
 // helper to store hint-popup per user per device
 const getHintSeenKey = (playerId) => `hasSeenHintInfo_${playerId || "default"}`;
@@ -86,6 +96,8 @@ export default function GameScreen({
   activeUser,
   onCoinsChange,
   onGameplayDiagnostics,
+  dailyChallenge,
+  onDailyChallengeCompleted,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -152,7 +164,13 @@ export default function GameScreen({
     () => levels.find((l) => l.id === levelId) || levels[0],
     [levels, levelId]
   );
-  const questionCount = levelDef?.questionCount || QUESTION_COUNT_FALLBACK;
+  const isDailyMode = mode === "daily";
+  const dailyQuestionSet = useMemo(() => {
+    if (!isDailyMode || !dailyChallenge?.dailyKey) return null;
+    return getDailyQuestionSet(FLAGS || [], dailyChallenge.dailyKey, QUESTION_COUNT_FALLBACK);
+  }, [FLAGS, dailyChallenge?.dailyKey, isDailyMode]);
+  const questionCount =
+    dailyQuestionSet?.questions?.length || levelDef?.questionCount || QUESTION_COUNT_FALLBACK;
 
   // ---- similarity helpers for picking better wrong answers ----
   function getFlagColors(flag) {
@@ -268,13 +286,19 @@ export default function GameScreen({
 
   // initial questions
   const [questions, setQuestions] = useState(() =>
-    buildQuestions(levelDef, questionCount)
+    isDailyMode
+      ? dailyQuestionSet?.questions || []
+      : buildQuestions(levelDef, questionCount)
   );
 
   // rebuild when level / count changes
   useEffect(() => {
-    setQuestions(buildQuestions(levelDef, questionCount));
-  }, [levelDef, questionCount]);
+    setQuestions(
+      isDailyMode
+        ? dailyQuestionSet?.questions || []
+        : buildQuestions(levelDef, questionCount)
+    );
+  }, [dailyQuestionSet, isDailyMode, levelDef, questionCount]);
 
   // ---------- STATE ----------
   const [qIndex, setQIndex] = useState(0);
@@ -290,6 +314,16 @@ export default function GameScreen({
   const [ttScore, setTtScore] = useState(0);
   const [ttRemaining, setTtRemaining] = useState(TT_MS_PER_Q);
   const [ttPaused, setTtPaused] = useState(false); // pause state
+  const [dailyScore, setDailyScore] = useState(0);
+  const [dailyCorrectCount, setDailyCorrectCount] = useState(0);
+  const [dailyPenaltyTotal, setDailyPenaltyTotal] = useState(0);
+  const [dailyTotalTimeMs, setDailyTotalTimeMs] = useState(0);
+  const [dailyRank, setDailyRank] = useState(null);
+  const [dailySubmitting, setDailySubmitting] = useState(false);
+  const [dailySubmitPayload, setDailySubmitPayload] = useState(null);
+  const [dailySubmitResult, setDailySubmitResult] = useState(null);
+  const [showDailyLeaderboard, setShowDailyLeaderboard] = useState(false);
+  const [dailyLeaderboardEntries, setDailyLeaderboardEntries] = useState([]);
 
   // show “you earned 100 coins!”
   const [showCoinReward, setShowCoinReward] = useState(false);
@@ -308,6 +342,16 @@ export default function GameScreen({
     setTtScore(0);
     setTtRemaining(TT_MS_PER_Q);
     setTtPaused(false);
+    setDailyScore(0);
+    setDailyCorrectCount(0);
+    setDailyPenaltyTotal(0);
+    setDailyTotalTimeMs(0);
+    setDailyRank(null);
+    setDailySubmitting(false);
+    setDailySubmitPayload(null);
+    setDailySubmitResult(null);
+    setShowDailyLeaderboard(false);
+    setDailyLeaderboardEntries([]);
     setShowCoinReward(false);
     setRunStars(0);
     runStartedRef.current = false;
@@ -340,7 +384,7 @@ export default function GameScreen({
 
   // ---------- TIME TRIAL TICKER ----------
   useEffect(() => {
-    if (mode !== "timetrial") return;
+    if (!isTimedMode) return;
     if (!preloadReady) return;
     if (done || fail) return;
     if (ttPaused) return;
@@ -350,6 +394,10 @@ export default function GameScreen({
         const next = prev - TT_TICK_MS;
         if (next <= 0) {
           clearInterval(timer);
+          if (mode === "daily") {
+            handleAnswer("__timeout__", { fromHint: true });
+            return TT_MS_PER_Q;
+          }
           setFail(true);
           setSkulls((s) => clamp(s + 1, 0, 3));
           // time-out = failed run → lose exactly one life
@@ -362,7 +410,7 @@ export default function GameScreen({
 
     return () => clearInterval(timer);
     
-  }, [mode, preloadReady, done, fail, ttPaused]);
+  }, [isTimedMode, preloadReady, done, fail, ttPaused]);
 
   const current = questions[qIndex];
   const isLocalFlag = (flag) =>
@@ -588,7 +636,8 @@ export default function GameScreen({
   }, [levelDef]);
 
   // ---------- PROGRESS ----------
-  const isClassicMode = mode !== "timetrial";
+  const isTimedMode = mode === "timetrial" || mode === "daily";
+  const isClassicMode = mode === "classic" || mode === "local";
   const classicProgress =
     isClassicMode && questionCount > 0
       ? done
@@ -597,7 +646,7 @@ export default function GameScreen({
       : 0;
 
   const ttProgress =
-    mode === "timetrial" ? clamp(1 - ttRemaining / TT_MS_PER_Q, 0, 1) * 100 : 0;
+    isTimedMode ? clamp(1 - ttRemaining / TT_MS_PER_Q, 0, 1) * 100 : 0;
 
   const text = (key, fallback) => {
     if (!t || !lang) return fallback;
@@ -627,6 +676,8 @@ export default function GameScreen({
       ? t && lang
         ? t(lang, "timeTrial")
         : "Time Trial"
+      : mode === "daily"
+      ? text("dailyChallenge", "Daily Challenge")
       : mode === "local"
       ? localModeLabel
       : t && lang
@@ -793,38 +844,71 @@ export default function GameScreen({
       return;
     }
 
-    // ----- TIME TRIAL -----
-    if (mode === "timetrial") {
+    // ----- TIMED MODES -----
+    if (isTimedMode) {
       if (isCorrect) {
         soundCorrect && soundCorrect();
-        const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
-        const newTotal = ttScore + gain;
-        const lastQ = qIndex + 1 >= questionCount;
+      } else {
+        soundWrong && soundWrong();
+      }
+
+      const lastQ = qIndex + 1 >= questionCount;
+      const timeUsedMs = TT_MS_PER_Q - ttRemaining;
+
+      if (mode === "daily") {
+        const remainingSeconds = Math.max(0, Math.floor(ttRemaining / 1000));
+        const gained = isCorrect
+          ? DAILY_BASE_POINTS + remainingSeconds * DAILY_TIME_BONUS_MULTIPLIER
+          : 0;
+        const nextPenalty = dailyPenaltyTotal + (isCorrect ? 0 : DAILY_WRONG_PENALTY);
+        const nextCorrect = dailyCorrectCount + (isCorrect ? 1 : 0);
 
         afterCorrectHighlight(() => {
           if (lastQ) {
-            // stars based on score AND mistakes
+            const rawTotal = dailyScore + gained - nextPenalty;
+            const perfectBonus = nextCorrect === questionCount ? DAILY_PERFECT_BONUS : 0;
+            const finalScore = Math.max(0, rawTotal + perfectBonus);
+            const nextTotalMs = dailyTotalTimeMs + Math.max(0, timeUsedMs);
+
+            markRunEnded();
+            setDailyCorrectCount(nextCorrect);
+            setDailyPenaltyTotal(nextPenalty);
+            setDailyTotalTimeMs(nextTotalMs);
+            setDailyScore(finalScore);
+            setDone(true);
+          } else {
+            setDailyCorrectCount(nextCorrect);
+            setDailyPenaltyTotal(nextPenalty);
+            setDailyTotalTimeMs((prev) => prev + Math.max(0, timeUsedMs));
+            setDailyScore((prev) => Math.max(0, prev + gained - (isCorrect ? 0 : DAILY_WRONG_PENALTY)));
+            setQIndex((p) => p + 1);
+            setTtRemaining(TT_MS_PER_Q);
+            setSelectedAnswer(null);
+            setWrongAnswers([]);
+          }
+        });
+        return;
+      }
+
+      if (isCorrect) {
+        const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
+        const newTotal = ttScore + gain;
+
+        afterCorrectHighlight(() => {
+          if (lastQ) {
             const maxByMistakes = clamp(3 - skulls, 0, 3);
             let stars = 1;
             if (newTotal >= TT_STAR3) stars = 3;
             else if (newTotal >= TT_STAR2) stars = 2;
             stars = Math.min(stars, maxByMistakes);
-
-            // ⭐ set stars for THIS run
             setRunStars(stars);
-
-            // check if this level had *any* stars before (per mode)
             const alreadyCompletedBefore = Number(storedStars || 0) > 0;
-
             if (onProgressUpdate) {
               onProgressUpdate(mode, levelId, stars);
             }
-
-            // award coins ONLY if this is the first completion of this level+mode
             if (!alreadyCompletedBefore && stars > 0) {
               awardCoinsOnce();
             }
-
             markRunEnded();
             setTtScore(newTotal);
             setDone(true);
@@ -837,12 +921,11 @@ export default function GameScreen({
           }
         });
       } else {
-        soundWrong && soundWrong();
         setSkulls((prev) => {
           const next = prev + 1;
           if (next >= 3) {
             setFail(true);
-            loseLifeOnce(); // lose exactly one life on fail
+            loseLifeOnce();
           }
           return next;
         });
@@ -899,6 +982,61 @@ export default function GameScreen({
       console.error("Failed to submit Time Trial result", err);
     });
   }, [mode, done, fail, levelId, ttScore]);
+
+  useEffect(() => {
+    if (mode !== "daily" || !done || !dailyChallenge?.dailyKey || dailySubmitting) return;
+    let active = true;
+
+    const persistDaily = async () => {
+      setDailySubmitting(true);
+      const payload = {
+        dailyKey: dailyChallenge.dailyKey,
+        score: dailyScore,
+        correctCount: dailyCorrectCount,
+        totalTimeMs: dailyTotalTimeMs,
+      };
+      setDailySubmitPayload(payload);
+      const insertResult = await submitDailyScore(payload);
+      if (!active) return;
+      setDailySubmitResult(insertResult);
+      if (!insertResult.error) {
+        const rankRes = await fetchDailyRank(payload.dailyKey, payload.score, payload.totalTimeMs);
+        if (!active) return;
+        if (!rankRes.error) setDailyRank(rankRes.rank);
+        if (onDailyChallengeCompleted) {
+          onDailyChallengeCompleted({ ...payload, rank: rankRes.rank, insertResult });
+        }
+      }
+      setDailySubmitting(false);
+    };
+
+    persistDaily();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    dailyChallenge?.dailyKey,
+    dailyCorrectCount,
+    dailyScore,
+    dailySubmitting,
+    dailyTotalTimeMs,
+    done,
+    mode,
+    onDailyChallengeCompleted,
+  ]);
+
+  useEffect(() => {
+    if (!showDailyLeaderboard || mode !== "daily" || !dailyChallenge?.dailyKey) return;
+    let active = true;
+    fetchDailyLeaderboard(dailyChallenge.dailyKey, 100).then(({ entries }) => {
+      if (!active) return;
+      setDailyLeaderboardEntries(entries || []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [dailyChallenge?.dailyKey, mode, showDailyLeaderboard]);
 
   // skulls render
   const skullsRow = (
@@ -1085,7 +1223,7 @@ export default function GameScreen({
           }}
         >
           {/* progress text */}
-          {mode === "timetrial" ? (
+          {isTimedMode ? (
             <div style={{ fontSize: 13, color: "#475569" }}>
               {`${Math.min(qIndex + 1, questionCount)}/${questionCount}`}
             </div>
@@ -1132,7 +1270,7 @@ export default function GameScreen({
         >
           {/* left (score for TT) */}
           <div style={{ minHeight: 18 }}>
-            {mode === "timetrial" && !done && !fail ? (
+            {isTimedMode && !done && !fail ? (
               <div
                 style={{
                   fontSize: 13,
@@ -1143,7 +1281,7 @@ export default function GameScreen({
               >
                 {(t && lang ? t(lang, "score") : "Score") +
                   ": " +
-                  ttScore.toLocaleString()}
+                  (mode === "daily" ? dailyScore : ttScore).toLocaleString()}
               </div>
             ) : null}
           </div>
@@ -1228,7 +1366,33 @@ export default function GameScreen({
           <div className="game-preload-spinner" />
         </div>
       ) : done ? (
-        mode === "timetrial" ? (
+        mode === "daily" ? (
+          <div style={{ textAlign: "center", marginTop: 40 }}>
+            <h2 style={{ fontSize: 26, fontWeight: 700, color: "#ffffff", marginBottom: 10 }}>
+              {text("dailyChallenge", "Daily Challenge")}
+            </h2>
+            <div style={successSummaryTextStyle}>
+              {text("finalScore", "Final score")}: <strong>{dailyScore.toLocaleString()}</strong>
+            </div>
+            <div style={successSummaryTextStyle}>
+              {text("dailyCorrectCount", "Correct")}: <strong>{dailyCorrectCount}/{questionCount}</strong>
+            </div>
+            <div style={successSummaryTextStyle}>
+              {text("dailyAvgTime", "Avg time")}: <strong>{Math.round((dailyTotalTimeMs / Math.max(1, questionCount)) / 100) / 10}s</strong>
+            </div>
+            <div style={successSummaryTextStyle}>
+              {text("dailyGlobalRank", "Global Rank")}: <strong>{dailyRank ? `#${dailyRank}` : (dailySubmitting ? "..." : "-")}</strong>
+            </div>
+            <div style={actionGroupStyle}>
+              <button onClick={() => setShowDailyLeaderboard(true)} style={primaryActionButton}>
+                {text("dailyViewLeaderboard", "View Leaderboard")}
+              </button>
+              <button onClick={onMainMenu} style={secondaryActionButton}>
+                {t && lang ? t(lang, "goToMainMenu") : "Go to Main Menu"}
+              </button>
+            </div>
+          </div>
+        ) : mode === "timetrial" ? (
           <div style={{ textAlign: "center", marginTop: 40 }}>
             <h2
               style={{
@@ -1647,6 +1811,23 @@ export default function GameScreen({
           </div>
         </>
       )}
+
+
+      {showDailyLeaderboard ? (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)", zIndex: 1200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: "min(520px, 92vw)", maxHeight: "80vh", overflowY: "auto", background: "#fff", borderRadius: 16, padding: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <strong>{text("dailyViewLeaderboard", "View Leaderboard")}</strong>
+              <button onClick={() => setShowDailyLeaderboard(false)}>Close</button>
+            </div>
+            {dailyLeaderboardEntries.map((entry) => (
+              <div key={`${entry.userId}-${entry.rank}`} style={{ display: "grid", gridTemplateColumns: "40px 1fr auto", gap: 8, padding: "8px 0", borderBottom: "1px solid #e2e8f0" }}>
+                <span>#{entry.rank}</span><span>{entry.name}</span><span>{entry.score}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {preloadError && (
         <div style={{ textAlign: "center", color: "#ef4444", marginTop: 10 }}>

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
+import { getUtcResetMs } from "../dailyChallenge";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -549,6 +550,7 @@ export default function HomeScreen({
   onDailySpinClaim,
   loggedIn,
   onAuthRequest,
+  dailyChallenge,
 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
@@ -572,6 +574,12 @@ export default function HomeScreen({
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState("");
+  const [dailyResetMs, setDailyResetMs] = useState(() => getUtcResetMs());
+
+  useEffect(() => {
+    const timer = setInterval(() => setDailyResetMs(getUtcResetMs()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const leaderboardModes = useMemo(
     () => [
@@ -1283,6 +1291,19 @@ export default function HomeScreen({
             alignItems: "center",
           }}
         >
+          <button
+            disabled={Boolean(dailyChallenge?.status?.entry)}
+            onClick={() => onStart && onStart("daily")}
+            style={{ width: "85%", maxWidth: 520, margin: "12px auto", borderRadius: 22, border: "none", background: "#111827", color: "#fff", padding: "12px 14px", textAlign: "left" }}
+          >
+            <div style={{ fontWeight: 800 }}>{text("dailyChallenge", "Daily Challenge")}</div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>{text("dailyResetsIn", "Resets in")}: {formatMs(dailyResetMs)}</div>
+            {dailyChallenge?.status?.entry ? (
+              <div style={{ fontSize: 12, marginTop: 6 }}>
+                {text("dailyCompleted", "Completed")} · {text("score", "Score")}: {dailyChallenge.status.entry.score} · {text("dailyGlobalRank", "Global Rank")} #{dailyChallenge.status.rank || "-"}
+              </div>
+            ) : null}
+          </button>
           <Card
             color="#f3cc2f"
             icon="🚩"
