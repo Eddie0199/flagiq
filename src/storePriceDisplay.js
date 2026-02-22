@@ -26,14 +26,25 @@ export function getStoreUiPriceData(storeProduct) {
   };
 }
 
-export function getDisplayedIapPrice(productId, storeProductsById = {}) {
-  const storeProduct = storeProductsById?.[productId] || null;
+export function getUiPricePresentation(productId, storeProduct) {
   const priceData = getStoreUiPriceData(storeProduct);
 
   return {
-    text: priceData.uiDisplayedPrice,
-    source: priceData.uiPriceSource,
+    productId,
+    uiDisplayedPrice: priceData.uiDisplayedPrice,
+    uiPriceSource: priceData.uiPriceSource,
+    uiPriceSourceReason: priceData.uiPriceSourceReason,
     storeProduct,
+  };
+}
+
+export function getDisplayedIapPrice(productId, storeProductsById = {}) {
+  const storeProduct = storeProductsById?.[productId] || null;
+  const presentation = getUiPricePresentation(productId, storeProduct);
+  return {
+    text: presentation.uiDisplayedPrice,
+    source: presentation.uiPriceSource,
+    storeProduct: presentation.storeProduct,
   };
 }
 

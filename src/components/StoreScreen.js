@@ -8,7 +8,7 @@ import {
   purchaseProduct,
 } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
-import { getDisplayedIapPrice } from "../storePriceDisplay";
+import { getUiPricePresentation } from "../storePriceDisplay";
 
 const BOOSTER_ITEMS = [
   {
@@ -141,6 +141,7 @@ export default function StoreScreen({
   const [storeProductsById, setStoreProductsById] = useState({});
   const [nativeStoreSummary, setNativeStoreSummary] = useState({
     storefrontCountryCode: null,
+    storefrontIdentifier: null,
     deviceLocaleCurrentIdentifier: null,
   });
   const loadRequestIdRef = useRef(0);
@@ -204,6 +205,7 @@ export default function StoreScreen({
         const diagnostics = await getIapDiagnosticsState();
         setNativeStoreSummary({
           storefrontCountryCode: diagnostics?.storefrontCountryCode || null,
+          storefrontIdentifier: diagnostics?.storefrontIdentifier || null,
           deviceLocaleCurrentIdentifier:
             diagnostics?.deviceLocaleCurrentIdentifier || null,
         });
@@ -226,6 +228,7 @@ export default function StoreScreen({
       .then((diagnostics) => {
         setNativeStoreSummary({
           storefrontCountryCode: diagnostics?.storefrontCountryCode || null,
+          storefrontIdentifier: diagnostics?.storefrontIdentifier || null,
           deviceLocaleCurrentIdentifier:
             diagnostics?.deviceLocaleCurrentIdentifier || null,
         });
@@ -303,12 +306,12 @@ export default function StoreScreen({
   }
 
   async function buyCoins(pack) {
-    const displayedPrice = getDisplayedIapPrice(pack.id, storeProductsById);
+    const displayedPrice = getUiPricePresentation(pack.id, storeProductsById?.[pack.id] || null);
     if (storeStatus !== "loaded") {
       setMessage(storeUnavailableMessage);
       return;
     }
-    if (displayedPrice.source !== "storekit") {
+    if (displayedPrice.uiPriceSource !== "storekit") {
       setMessage(storeUnavailableMessage);
       return;
     }
@@ -351,7 +354,7 @@ export default function StoreScreen({
     heartCtaState === CTA_STATES.success ||
     heartCtaState === CTA_STATES.owned;
   const getStoreProductPriceViewModel = (productId) => {
-    const displayedPrice = getDisplayedIapPrice(productId, storeProductsById);
+    const displayedPrice = getUiPricePresentation(productId, storeProductsById?.[productId] || null);
     return { storeProduct: displayedPrice.storeProduct, displayedPrice };
   };
   const heartsRefillPriceViewModel = getStoreProductPriceViewModel(
@@ -361,7 +364,7 @@ export default function StoreScreen({
   const heartsRefillDisabled =
     heartsFull ||
     !storeReady ||
-    heartsRefillPriceViewModel.displayedPrice.source !== "storekit" ||
+    heartsRefillPriceViewModel.displayedPrice.uiPriceSource !== "storekit" ||
     heartsRefillState === CTA_STATES.purchasing ||
     heartsRefillState === CTA_STATES.success;
   const mappedProductCount = Object.keys(storeProductsById).length;
@@ -376,8 +379,8 @@ export default function StoreScreen({
     if (!hasPoundFromStoreKit) return;
 
     const nonStoreKitProducts = SHOP_PRODUCTS.map((product) => {
-      const displayedPrice = getDisplayedIapPrice(product.id, storeProductsById);
-      return displayedPrice.source !== "storekit" ? product.id : null;
+      const displayedPrice = getUiPricePresentation(product.id, storeProductsById?.[product.id] || null);
+      return displayedPrice.uiPriceSource !== "storekit" ? product.id : null;
     }).filter(Boolean);
 
     if (nonStoreKitProducts.length > 0) {
@@ -392,7 +395,7 @@ export default function StoreScreen({
     if (!showPriceDebugOverlay) return;
 
     SHOP_PRODUCTS.forEach((product) => {
-      const displayedPrice = getDisplayedIapPrice(product.id, storeProductsById);
+      const displayedPrice = getUiPricePresentation(product.id, storeProductsById?.[product.id] || null);
       const storekitLocalizedPriceString =
         displayedPrice.storeProduct?.localizedPriceString || null;
       if (storekitLocalizedPriceString) return;
@@ -405,14 +408,24 @@ export default function StoreScreen({
         console.error("[IAP diagnostics] Dollar sign detected while StoreKit localizedPriceString is null.", {
           componentPath: "StoreScreen > iap-cta",
           productId: product.id,
-          uiDisplayedPrice: displayedPrice.text,
+          uiDisplayedPrice: displayedPrice.uiDisplayedPrice,
           ctaRenderedText: ctaText,
-          uiPriceSource: displayedPrice.source,
+          uiPriceSource: displayedPrice.uiPriceSource,
           storekitLocalizedPriceString,
         });
       }
     });
   }, [showPriceDebugOverlay, storeProductsById, storeStatus]);
+
+  const inferredCurrencyCodes = Array.from(
+    new Set(
+      Object.values(storeProductsById)
+        .map((product) => String(product?.currencyCode || "").trim())
+        .filter(Boolean)
+    )
+  );
+  const inferredPrimaryCurrency =
+    inferredCurrencyCodes.length === 1 ? inferredCurrencyCodes[0] : "mixed/unknown";
 
   return (
     <div style={{ padding: "10px 16px 24px", maxWidth: 900, margin: "0 auto" }}>
@@ -731,21 +744,36 @@ export default function StoreScreen({
                   gap: 6,
                 }}
               >
-                <div style={{ fontWeight: 700 }}>Shop price debug overlay</div>
+                <div style={{ fontWeight: 700 }}>
+                  StoreKit Storefront / Currency (Closest to Apple Account Currency)
+                </div>
+                <div style={{ opacity: 0.9 }}>
+                  iOS does NOT expose Apple ID account currency directly. Storefront + product
+                  currencyCode are the closest possible signals.
+                </div>
                 <div>storeProductsLoaded: {String(storeProductsLoaded)}</div>
                 <div>mappedProductCount: {mappedProductCount}</div>
                 <div>
-                  storefrontCountryCode(native): {nativeStoreSummary.storefrontCountryCode || "null"}
+                  storekitStorefrontCountryCode: {nativeStoreSummary.storefrontCountryCode || "null"}
                 </div>
                 <div>
-                  deviceLocaleCurrentIdentifier(native): {nativeStoreSummary.deviceLocaleCurrentIdentifier || "null"}
+                  storekitStorefrontIdentifier: {nativeStoreSummary.storefrontIdentifier || "null"}
+                </div>
+                <div>
+                  deviceLocaleCurrentIdentifier: {nativeStoreSummary.deviceLocaleCurrentIdentifier || "null"}
+                </div>
+                <div>
+                  storekitInferredCurrencyFromProducts: {inferredCurrencyCodes.join(", ") || "none"}
+                </div>
+                <div>
+                  storekitInferredCurrencyPrimary: {inferredPrimaryCurrency}
                 </div>
                 {SHOP_PRODUCTS.map((product) => {
-                  const displayed = getDisplayedIapPrice(product.id, storeProductsById);
+                  const displayed = getUiPricePresentation(product.id, storeProductsById?.[product.id] || null);
                   const storeProduct = displayed.storeProduct || {};
                   return (
                     <div key={`diag-${product.id}`}>
-                      {product.id} — uiDisplayedPrice={displayed.text}, uiPriceSource={displayed.source},
+                      {product.id} — uiDisplayedPrice={displayed.uiDisplayedPrice}, uiPriceSource={displayed.uiPriceSource},
                       storekit.localizedPriceString={String(
                         storeProduct.localizedPriceString || null
                       )}, storekit.currencyCode={String(storeProduct.currencyCode || null)},
@@ -773,7 +801,7 @@ export default function StoreScreen({
               const isPurchasing = state === CTA_STATES.purchasing;
               const disabled =
                 !storeReady ||
-                displayedPrice.source !== "storekit" ||
+                displayedPrice.uiPriceSource !== "storekit" ||
                 isPurchasing ||
                 isSuccess;
               return (
@@ -838,7 +866,7 @@ export default function StoreScreen({
                     textAlign: "center",
                   }}
                 >
-                  {isSuccess ? "✓" : displayedPrice.text}
+                  {isSuccess ? "✓" : displayedPrice.uiDisplayedPrice}
                 </button>
               </div>
               );
@@ -891,9 +919,9 @@ export default function StoreScreen({
                 data-iap-cta-product-id={PRODUCT_IDS.HEARTS_REFILL}
                 onClick={async () => {
                   const id = PRODUCT_IDS.HEARTS_REFILL;
-                  const refillPriceData = getDisplayedIapPrice(id, storeProductsById);
+                  const refillPriceData = getUiPricePresentation(id, storeProductsById?.[id] || null);
                   try {
-                    if (!storeReady || refillPriceData.source !== "storekit") {
+                    if (!storeReady || refillPriceData.uiPriceSource !== "storekit") {
                       setMessage(storeUnavailableMessage);
                       return;
                     }
@@ -946,7 +974,7 @@ export default function StoreScreen({
                   ? text("storeHeartsFull", "Full")
                   : heartsRefillState === CTA_STATES.success
                   ? "✓"
-                  : heartsRefillPriceViewModel.displayedPrice.text}
+                  : heartsRefillPriceViewModel.displayedPrice.uiDisplayedPrice}
               </button>
             </div>
             </div>
