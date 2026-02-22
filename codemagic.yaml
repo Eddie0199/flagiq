@@ -54,6 +54,14 @@ workflows:
         script: |
           set -euo pipefail
           PBXPROJ="ios/App/App.xcodeproj/project.pbxproj"
+          if ! grep -nE "StoreKitPurchasePlugin\\.swift in Sources" "$PBXPROJ"; then
+            echo "❌ StoreKitPurchasePlugin.swift is not in App target Sources build phase"
+            exit 1
+          fi
+          if ! grep -nE "path = StoreKitPurchasePlugin\\.swift;" "$PBXPROJ"; then
+            echo "❌ StoreKitPurchasePlugin.swift file reference missing from Xcode project"
+            exit 1
+          fi
           if ! grep -nE "StoreKitPurchasePlugin\\.m in Sources" "$PBXPROJ"; then
             echo "❌ StoreKitPurchasePlugin.m is not in App target Sources build phase"
             exit 1
@@ -62,7 +70,7 @@ workflows:
             echo "❌ StoreKitPurchasePlugin.m file reference missing from Xcode project"
             exit 1
           fi
-          echo "✅ StoreKitPurchasePlugin.m is referenced and in Sources after cap sync"
+          echo "✅ StoreKitPurchasePlugin Swift + shim sources are referenced and in Sources after cap sync"
       - name: Print workspace schemes and selected scheme
         script: |
           set -euo pipefail

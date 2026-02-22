@@ -20,7 +20,11 @@ class AppBridgeViewController: CAPBridgeViewController {
 
         let preRegistered = bridge?.plugin(withName: "StoreKitPurchase") != nil
         if !preRegistered {
-            bridge?.registerPluginInstance(StoreKitPurchasePlugin())
+            if let pluginType = NSClassFromString("StoreKitPurchasePlugin") as? CAPPlugin.Type {
+                bridge?.registerPluginType(pluginType)
+            } else {
+                CAPLog.print("[Startup] StoreKitPurchasePlugin class missing at runtime; skipping manual registration")
+            }
         }
         let postRegistered = bridge?.plugin(withName: "StoreKitPurchase") != nil
         CAPLog.print("[Startup] StoreKitPurchase preRegistered=\(preRegistered) postRegistered=\(postRegistered)")
