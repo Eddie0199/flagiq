@@ -576,7 +576,7 @@ export default function HomeScreen({
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState("");
   const [dailyResetMs, setDailyResetMs] = useState(() => getUtcResetMs());
-  const [selectedLeaderboardMode, setSelectedLeaderboardMode] = useState("timetrial");
+  const [selectedLeaderboardMode, setSelectedLeaderboardMode] = useState("daily");
 
   useEffect(() => {
     const timer = setInterval(() => setDailyResetMs(getUtcResetMs()), 1000);
@@ -586,14 +586,14 @@ export default function HomeScreen({
   const leaderboardModes = useMemo(
     () => [
       {
-        id: "timetrial",
-        label: t && lang ? t(lang, "timeTrial") : "Time Trial",
-        icon: "⏱️",
-      },
-      {
         id: "daily",
         label: text("dailyChallenge", "Daily Challenge"),
         icon: "🗓️",
+      },
+      {
+        id: "timetrial",
+        label: t && lang ? t(lang, "timeTrial") : "Time Trial",
+        icon: "⏱️",
       },
     ],
     [lang, t]
@@ -667,7 +667,7 @@ export default function HomeScreen({
     }
   };
 
-  const Card = ({ color, icon, title, stats, onClick, mode, disabled, descriptionOverride, rightContent }) => {
+  const Card = ({ color, icon, title, stats, onClick, mode, disabled, descriptionOverride, rightContent, textColor }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
     const showProgress = !disabled;
@@ -702,7 +702,7 @@ export default function HomeScreen({
           background: disabled ? "#e5e7eb" : color,
           boxShadow: disabled ? "none" : "0 8px 18px rgba(0,0,0,.12)",
           cursor: disabled ? "not-allowed" : "pointer",
-          color: disabled ? "#6b7280" : "inherit",
+          color: disabled ? "#6b7280" : textColor || "inherit",
           opacity: disabled ? 0.75 : 1,
         }}
       >
@@ -1322,11 +1322,11 @@ export default function HomeScreen({
             title={text("dailyChallenge", "Daily Challenge")}
             stats={{ completedLevels: 0, stars: 0 }}
             onClick={() => {
-              if (!dailyChallenge?.status?.entry) {
-                onStart && onStart("daily");
-              }
+              if (dailyChallenge?.status?.entry) return;
+              onStart && onStart("daily");
             }}
             mode="daily"
+            textColor="#ffffff"
             rightContent={
               dailyChallenge?.status?.entry ? (
                 <div style={{ fontSize: 12, fontWeight: 700, textAlign: "right", color: "#fff" }}>

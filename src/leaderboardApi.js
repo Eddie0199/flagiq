@@ -16,13 +16,31 @@ export async function fetchTimeTrialLeaderboard(limit = 100) {
     return { entries: [], error };
   }
 
+  const userIds = Array.from(
+    new Set((data || []).map((row) => row?.user_id).filter(Boolean))
+  );
+
+  let usernameByUserId = {};
+  if (userIds.length > 0) {
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, username")
+      .in("id", userIds);
+
+    usernameByUserId = (profilesData || []).reduce((acc, row) => {
+      if (row?.id) {
+        acc[row.id] = row?.username || "";
+      }
+      return acc;
+    }, {});
+  }
+
   const entries = (data || []).map((row, index) => {
     const userId = row?.user_id || null;
-    const suffix = userId ? String(userId).slice(-4) : "";
-    const fallbackName = suffix ? `Player ${suffix}` : "Player";
+    const fallbackName = "Unknown player";
     return {
       rank: index + 1,
-      name: row?.username || fallbackName,
+      name: usernameByUserId[userId] || row?.username || fallbackName,
       score: Number(row?.points ?? 0),
       attempts: Number(row?.plays ?? 0),
       userId,

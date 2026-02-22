@@ -72,9 +72,7 @@ export async function fetchDailyLeaderboard(dailyKey, limit = 100) {
   const entries = (data || []).map((row, idx) => ({
     rank: idx + 1,
     userId: row.user_id,
-    name:
-      usernameByUserId[row.user_id] ||
-      `Player ${String(row.user_id || "").slice(-4) || "0000"}`,
+    name: usernameByUserId[row.user_id] || "Unknown player",
     score: Number(row.score || 0),
     totalTimeMs: Number(row.total_time_ms || 0),
   }));
