@@ -208,6 +208,9 @@ export default function IapDiagnosticsPanel({ visible }) {
           "Currency must match StoreKit priceLocale/storefront, not device locale."
       )}`,
       `storefrontCountryCode: ${String(state.storefrontCountryCode || "unknown")}`,
+      `storefrontIdentifier: ${String(state.storefrontIdentifier || "unknown")}`,
+      `storefrontIsNil: ${String(state.storefrontIsNil)}`,
+      `storefrontFetchedAt: ${String(state.storefrontFetchedAt || "unknown")}`,
       `storefrontCountryCodeNote: ${String(state.storefrontCountryCodeNote || "")}`,
       `requestedProductIds: ${toPretty(state.requestedProductIds || [])}`,
       `products: ${toPretty(state.products || [])}`,
@@ -324,6 +327,15 @@ export default function IapDiagnosticsPanel({ visible }) {
         </div>
         <div>
           Storefront country code: <strong>{String(state?.storefrontCountryCode || "unknown")}</strong>
+        </div>
+        <div>
+          Storefront identifier: <strong>{String(state?.storefrontIdentifier || "unknown")}</strong>
+        </div>
+        <div>
+          Storefront is nil: <strong>{String(state?.storefrontIsNil)}</strong>
+        </div>
+        <div>
+          Storefront fetched at: <strong>{String(state?.storefrontFetchedAt || "unknown")}</strong>
         </div>
         <div>
           Storefront note: <strong>{String(state?.storefrontCountryCodeNote || "") || "n/a"}</strong>
