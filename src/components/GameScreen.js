@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
+import { createFlagFallbackPlaceholder } from "../flagAssets";
+import { HINT_ICON_BY_TYPE } from "../uiIcons";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -108,6 +110,8 @@ export default function GameScreen({
   const [preloadReady, setPreloadReady] = useState(false);
   const [preloadError, setPreloadError] = useState("");
   const [flagImageCache, setFlagImageCache] = useState({});
+  const [flagLoadFailed, setFlagLoadFailed] = useState(false);
+  const loggedMissingFlagKeysRef = useRef(new Set());
   const preloadStatsRef = useRef({
     startedAt: 0,
     completedAt: 0,
@@ -650,6 +654,9 @@ export default function GameScreen({
       currentFlagSrc ||
       localFallbackSrc
     : currentFlagSrc;
+  useEffect(() => {
+    setFlagLoadFailed(false);
+  }, [displayFlagSrc, current?.correct?.code]);
 
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
@@ -1424,7 +1431,7 @@ export default function GameScreen({
                     : "pointer",
               }}
             >
-              <span aria-hidden="true">🎯</span>
+              <span aria-hidden="true">{HINT_ICON_BY_TYPE.remove2}</span>
               <span>{hints?.remove2 ?? 0}</span>
             </button>
 
@@ -1455,7 +1462,7 @@ export default function GameScreen({
                     : "pointer",
               }}
             >
-              <span aria-hidden="true">✅</span>
+              <span aria-hidden="true">{HINT_ICON_BY_TYPE.autoPass}</span>
               <span>{hints?.autoPass ?? 0}</span>
             </button>
 
@@ -1495,7 +1502,7 @@ export default function GameScreen({
                     : "pointer",
               }}
             >
-              <span aria-hidden="true">⏸️</span>
+              <span aria-hidden="true">{HINT_ICON_BY_TYPE.pause}</span>
               <span>{hints?.pause ?? 0}</span>
             </button>
 
@@ -1553,19 +1560,43 @@ export default function GameScreen({
             }}
           >
             {current ? (
+              flagLoadFailed ? (
+                <img
+                  src={createFlagFallbackPlaceholder(
+                    `${current?.correct?.name || "Unknown"} (${current?.correct?.code || "?"})`
+                  )}
+                  alt={`${current.correct.name} unavailable`}
+                  style={{
+                    maxWidth: 256,
+                    maxHeight: 160,
+                    width: "auto",
+                    height: "auto",
+                    objectFit: "contain",
+                    borderRadius: 12,
+                    border: "1px solid rgba(0, 0, 0, 0.12)",
+                    display: "block",
+                  }}
+                />
+              ) : (
               <img
                 src={displayFlagSrc || flagSrc(current.correct, 320)}
                 alt={current.correct.name}
                 onError={(event) => {
                   const fallback = current?.correct?.fallbackImg;
-                  if (process.env.NODE_ENV !== "production") {
-                    console.warn(
-                      "Missing local flag image; using fallback.",
-                      current?.correct?.code
-                    );
+                  const missingKey = `${current?.correct?.name || "Unknown"}:${
+                    current?.correct?.code || "?"
+                  }`;
+                  if (!loggedMissingFlagKeysRef.current.has(missingKey)) {
+                    loggedMissingFlagKeysRef.current.add(missingKey);
+                    console.warn("[flags] Missing flag asset", {
+                      key: missingKey,
+                      src: event.currentTarget.src,
+                    });
                   }
                   if (fallback && event.currentTarget.src !== fallback) {
                     event.currentTarget.src = fallback;
+                  } else {
+                    setFlagLoadFailed(true);
                   }
                 }}
                 style={{
@@ -1579,6 +1610,7 @@ export default function GameScreen({
                   display: "block",
                 }}
               />
+              )
             ) : (
               <div className="game-preload-spinner" aria-label="Loading" />
             )}

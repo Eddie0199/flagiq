@@ -13,7 +13,7 @@ const STRINGS = {
   en: {
     appTitle: "FlagIQ",
     appSubtitle: "Test your world knowledge — one flag at a time",
-    homeInfoTitle: "How to Play 🎯",
+    homeInfoTitle: "How to Play",
     homeInfoBody:
       "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n\n🎮 Game Modes:\n• Classic Mode: Play at your own pace with no timer pressure.\n• Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n• Local Flags: Explore regional packs like US states and master local flags.\n\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n\n💡 Hints & Boosters:\n• Remove 2: Eliminates two incorrect options.\n• Auto Pass: Instantly completes the flag and moves you forward.\n• Pause Timer: Freezes the Time Trial clock for 3 seconds.\n\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts.",
     homeLeaderboardTitle: "Leaderboard",
@@ -589,7 +589,7 @@ const STRINGS = {
     appTitle: "FlagIQ",
     appSubtitle:
       "Pon a prueba tu conocimiento del mundo — una bandera a la vez",
-    homeInfoTitle: "Cómo jugar 🎯",
+    homeInfoTitle: "Cómo jugar",
     homeInfoBody:
       "🎯 Objetivo: Identifica el país correcto para cada bandera. Cuanto más rápido y preciso seas, mejor será tu puntuación.\n\n🎮 Modos de juego:\n• Modo Clásico: juega a tu ritmo sin presión de tiempo.\n• Contrarreloj: compite contra el reloj donde la velocidad y la precisión importan; las respuestas correctas más rápidas dan mayor puntuación.\n• Banderas locales: explora packs regionales como estados de EE. UU. y domina banderas locales.\n\n❤️ Sistema de vidas: Pierdes una vida cada vez que no completas un nivel con éxito. Las vidas se recargan automáticamente con el tiempo.\n\n💡 Pistas y potenciadores:\n• Quitar 2: elimina dos opciones incorrectas.\n• Pase automático: completa la bandera al instante y te hace avanzar.\n• Pausar temporizador: congela el reloj de Contrarreloj durante 3 segundos.\n\n⭐ Estrellas y progreso: Gana hasta tres estrellas por nivel según tu rendimiento. Reúne estrellas para desbloquear nuevos niveles, regiones y packs especiales de banderas.\n\n🪙 Monedas y recompensas: Completar un nivel por primera vez otorga monedas. Gástalas en la tienda en pistas y potenciadores para avanzar más rápido.\n\n🎁 Potenciador diario: Abre una caja gratis cada 24 horas para recibir pistas y potenciadores.",
     homeLeaderboardTitle: "Clasificación",
@@ -1047,7 +1047,7 @@ const STRINGS = {
   pt: {
     appTitle: "FlagIQ",
     appSubtitle: "Teste o seu conhecimento do mundo — uma bandeira de cada vez",
-    homeInfoTitle: "Como jogar 🎯",
+    homeInfoTitle: "Como jogar",
     homeInfoBody:
       "🎯 Objetivo: Identifique o país correto de cada bandeira. Quanto mais rápido e preciso for, melhor será a sua pontuação.\n\n🎮 Modos de jogo:\n• Modo Clássico: jogue no seu ritmo sem pressão de tempo.\n• Contra o tempo: corra contra o relógio, onde a velocidade e a precisão contam; respostas corretas mais rápidas dão mais pontos.\n• Bandeiras locais: explore pacotes regionais como estados dos EUA e domine bandeiras locais.\n\n❤️ Sistema de vidas: Perde uma vida sempre que não consegue completar um nível com sucesso. As vidas recarregam automaticamente com o tempo.\n\n💡 Dicas e bónus:\n• Remover 2: elimina duas opções incorretas.\n• Passar automático: completa a bandeira instantaneamente e avança.\n• Pausar temporizador: congela o relógio do Contra o tempo por 3 segundos.\n\n⭐ Estrelas e progresso: Ganhe até três estrelas por nível consoante o seu desempenho. Junte estrelas para desbloquear novos níveis, regiões e pacotes especiais de bandeiras.\n\n🪙 Moedas e recompensas: Completar um nível pela primeira vez dá moedas. Gaste-as na loja em dicas e bónus para avançar mais depressa.\n\n🎁 Bónus diário: Abra uma caixa grátis a cada 24 horas para receber dicas e bónus.",
     homeLeaderboardTitle: "Classificação",
@@ -1504,7 +1504,7 @@ const STRINGS = {
   de: {
     appTitle: "FlagIQ",
     appSubtitle: "Teste dein Weltwissen – Fahne für Fahne",
-    homeInfoTitle: "So spielst du 🎯",
+    homeInfoTitle: "So spielst du",
     homeInfoBody:
       "🎯 Ziel: Erkenne für jede Flagge das richtige Land. Je schneller und genauer du bist, desto besser ist deine Punktzahl.\n\n🎮 Spielmodi:\n• Klassischer Modus: spiele in deinem Tempo ohne Zeitdruck.\n• Zeitmodus: gegen die Uhr, bei dem Tempo und Genauigkeit zählen; schnellere richtige Antworten bringen höhere Punkte.\n• Lokale Flaggen: erkunde regionale Pakete wie US-Bundesstaaten und meistere lokale Flaggen.\n\n❤️ Lebenssystem: Du verlierst ein Leben, wenn du ein Level nicht erfolgreich abschließt. Leben füllen sich mit der Zeit automatisch wieder auf.\n\n💡 Hinweise & Booster:\n• 2 entfernen: entfernt zwei falsche Optionen.\n• Auto-Lösen: löst die Flagge sofort und bringt dich weiter.\n• Timer-Pause: stoppt die Zeit im Zeitmodus für 3 Sekunden.\n\n⭐ Sterne & Fortschritt: Verdiene bis zu drei Sterne pro Level je nach Leistung. Sammle Sterne, um neue Level, Regionen und spezielle Flaggen-Packs freizuschalten.\n\n🪙 Münzen & Belohnungen: Das erste Abschließen eines Levels gibt Münzen. Gib sie im Shop für Hinweise und Booster aus, um schneller voranzukommen.\n\n🎁 Täglicher Booster: Öffne alle 24 Stunden eine kostenlose Box, um Hinweise und Booster zu erhalten.",
     homeLeaderboardTitle: "Bestenliste",
@@ -1964,7 +1964,7 @@ const STRINGS = {
   fr: {
     appTitle: "FlagIQ",
     appSubtitle: "Teste tes connaissances du monde — un drapeau à la fois",
-    homeInfoTitle: "Comment jouer 🎯",
+    homeInfoTitle: "Comment jouer",
     homeInfoBody:
       "🎯 Objectif : Identifie le bon pays pour chaque drapeau. Plus tu es rapide et précis, meilleur est ton score.\n\n🎮 Modes de jeu :\n• Mode Classique: joue à ton rythme sans pression de temps.\n• Contre-la-montre: course contre la montre où vitesse et précision comptent ; des réponses correctes plus rapides donnent un meilleur score.\n• Drapeaux locaux: explore des packs régionaux comme les États américains et maîtrise les drapeaux locaux.\n\n❤️ Système de vies : Tu perds une vie chaque fois que tu échoues à terminer un niveau. Les vies se rechargent automatiquement avec le temps.\n\n💡 Indices et boosters :\n• Retirer 2: supprime deux options incorrectes.\n• Passage auto: termine instantanément le drapeau et te fait avancer.\n• Pause du minuteur: gèle le chrono en Contre-la-montre pendant 3 secondes.\n\n⭐ Étoiles et progression : Gagne jusqu'à trois étoiles par niveau selon ta performance. Cumule des étoiles pour débloquer de nouveaux niveaux, régions et packs spéciaux de drapeaux.\n\n🪙 Pièces et récompenses : Terminer un niveau pour la première fois donne des pièces. Dépense-les dans la boutique en indices et boosters pour avancer plus vite.\n\n🎁 Booster quotidien : Ouvre une boîte gratuite toutes les 24 heures pour recevoir des indices et des boosters.",
     homeLeaderboardTitle: "Classement",
@@ -2428,7 +2428,7 @@ const STRINGS = {
   nl: {
     appTitle: "FlagIQ",
     appSubtitle: "Test je wereldkennis — vlag voor vlag",
-    homeInfoTitle: "Zo speel je 🎯",
+    homeInfoTitle: "Zo speel je",
     homeInfoBody:
       "🎯 Doel: Kies het juiste land bij elke vlag. Hoe sneller en nauwkeuriger je bent, hoe beter je score.\n\n🎮 Spelmodi:\n• Klassieke modus: speel op je eigen tempo zonder tijdsdruk.\n• Tijdrit: race tegen de klok waarbij snelheid en nauwkeurigheid tellen; snellere juiste antwoorden leveren hogere scores op.\n• Lokale vlaggen: verken regionale pakketten zoals Amerikaanse staten en leer lokale vlaggen.\n\n❤️ Levenssysteem: Je verliest één leven wanneer je een level niet succesvol voltooit. Levens vullen zich automatisch weer aan na verloop van tijd.\n\n💡 Hints en boosters:\n• Verwijder 2: verwijdert twee foute opties.\n• Auto-pass: voltooit de vlag direct en laat je doorgaan.\n• Pauze-timer: bevriest de Tijdrit-klok 3 seconden.\n\n⭐ Sterren en voortgang: Verdien tot drie sterren per level op basis van je prestaties. Verzamel sterren om nieuwe levels, regio’s en speciale vlaggenpacks te ontgrendelen.\n\n🪙 Munten en beloningen: Een level voor het eerst voltooien levert munten op. Geef ze uit in de winkel aan hints en boosters om sneller vooruit te komen.\n\n🎁 Dagelijkse booster: Open elke 24 uur een gratis doosje om hints en boosts te ontvangen.",
     homeLeaderboardTitle: "Ranglijst",

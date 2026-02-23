@@ -9,6 +9,7 @@ import {
 } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getUiPricePresentation } from "../storePriceDisplay";
+import { HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 
 const BOOSTER_ITEMS = [
   {
@@ -16,7 +17,7 @@ const BOOSTER_ITEMS = [
     type: "remove2",
     qty: 1,
     cost: 80,
-    icon: "🎯",
+    icon: HINT_ICON_BY_TYPE.remove2,
     labelKey: "storeRemove2Single",
     fallbackLabel: "Remove 2 (x1)",
   },
@@ -25,7 +26,7 @@ const BOOSTER_ITEMS = [
     type: "pause",
     qty: 1,
     cost: 90,
-    icon: "⏸️",
+    icon: HINT_ICON_BY_TYPE.pause,
     labelKey: "storePauseSingle",
     fallbackLabel: "Pause timer (x1)",
   },
@@ -34,7 +35,7 @@ const BOOSTER_ITEMS = [
     type: "autoPass",
     qty: 1,
     cost: 120,
-    icon: "✅",
+    icon: HINT_ICON_BY_TYPE.autoPass,
     labelKey: "storeAutoPassSingle",
     fallbackLabel: "Auto pass (x1)",
   },
@@ -569,7 +570,7 @@ export default function StoreScreen({
                       textAlign: "center",
                     }}
                   >
-                    {isSuccess ? successLabel : `💰 ${item.cost}`}
+                    {isSuccess ? successLabel : `${SHOP_COIN_ICON} ${item.cost}`}
                   </button>
                 </div>
               );
@@ -647,7 +648,7 @@ export default function StoreScreen({
                   ? text("storeHeartsFull", "Full")
                   : heartCtaState === CTA_STATES.success
                   ? "✓"
-                  : `💰 ${HEART_COIN_COST}`}
+                  : `${SHOP_COIN_ICON} ${HEART_COIN_COST}`}
               </button>
             </div>
           </div>
@@ -832,7 +833,7 @@ export default function StoreScreen({
                       fontSize: 20,
                     }}
                   >
-                    💰
+                    {SHOP_COIN_ICON}
                   </div>
 
                   <div>
