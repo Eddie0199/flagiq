@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
+import { DAILY_BOOSTER_ICON, HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -128,21 +129,21 @@ function DailySpinButton({
         id: "remove2",
         label: "Remove 2",
         type: "remove2",
-        icon: "🎯",
+        icon: HINT_ICON_BY_TYPE.remove2,
         weight: 35,
       },
       {
         id: "autoPass",
         label: "Auto pass",
         type: "autoPass",
-        icon: "✅",
+        icon: HINT_ICON_BY_TYPE.autoPass,
         weight: 30,
       },
       {
         id: "pause",
         label: "Pause timer",
         type: "pause",
-        icon: "⏸️",
+        icon: HINT_ICON_BY_TYPE.pause,
         weight: 30,
       },
     ],
@@ -336,7 +337,7 @@ function DailySpinButton({
               : "0 6px 16px rgba(15,23,42,0.15)",
           }}
         >
-          <span style={{ fontSize: 18 }}>🎡</span>
+          <span style={{ fontSize: 18 }}>{DAILY_BOOSTER_ICON}</span>
         </button>
         <span
           style={{
@@ -649,6 +650,64 @@ export default function HomeScreen({
     }
   };
 
+  const homeInfoTitle = text("homeInfoTitle", "How to Play").replace(
+    /^\p{Emoji_Presentation}\s*/u,
+    ""
+  );
+  const howToPlaySections = [
+    {
+      key: "goal",
+      icon: "🏁",
+      title: "Goal",
+      body:
+        "Identify the correct country for each flag. The faster and more accurate you are, the better your score.",
+    },
+    {
+      key: "modes",
+      icon: "🎮",
+      title: "Game Modes",
+      bullets: [
+        "Classic Mode: Play at your own pace with no timer pressure.",
+        "Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.",
+        "Local Flags: Explore regional packs like US states and master local flags.",
+      ],
+    },
+    {
+      key: "lives",
+      icon: "❤️",
+      title: "Lives System",
+      body: "You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.",
+    },
+    {
+      key: "hints",
+      icon: "💡",
+      title: "Hints & Boosters",
+      hintRows: [
+        { icon: HINT_ICON_BY_TYPE.remove2, label: "Remove 2", body: "Eliminates two incorrect options." },
+        { icon: HINT_ICON_BY_TYPE.autoPass, label: "Auto Pass", body: "Instantly completes the flag and moves you forward." },
+        { icon: HINT_ICON_BY_TYPE.pause, label: "Pause Timer", body: "Freezes the Time Trial clock for 3 seconds." },
+      ],
+    },
+    {
+      key: "stars",
+      icon: "⭐",
+      title: "Stars & Progress",
+      body: "Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.",
+    },
+    {
+      key: "coins",
+      icon: SHOP_COIN_ICON,
+      title: "Coins & Rewards",
+      body: "Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.",
+    },
+    {
+      key: "daily",
+      icon: DAILY_BOOSTER_ICON,
+      title: "Daily Booster",
+      body: "Open a free booster box every 24 hours to receive hints and boosts.",
+    },
+  ];
+
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
@@ -955,7 +1014,7 @@ export default function HomeScreen({
               ×
             </button>
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
-              {text("homeInfoTitle", "How to Play")}
+              {homeInfoTitle}
             </div>
             <div
               style={{
@@ -967,78 +1026,46 @@ export default function HomeScreen({
                 paddingRight: 6,
               }}
             >
-              {text(
-                "homeInfoBody",
-                "🎯 Goal: Identify the correct country for each flag. The faster and more accurate you are, the better your score.\n\n🎮 Game Modes:\n• Classic Mode: Play at your own pace with no timer pressure.\n• Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.\n• Local Flags: Explore regional packs like US states and master local flags.\n\n❤️ Lives System: You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.\n\n💡 Hints & Boosters:\n• Remove 2: Eliminates two incorrect options.\n• Auto Pass: Instantly completes the flag and moves you forward.\n• Pause Timer: Freezes the Time Trial clock for 3 seconds.\n\n⭐ Stars & Progress: Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.\n\n🪙 Coins & Rewards: Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.\n\n🎁 Daily Booster: Open a free booster box every 24 hours to receive hints and boosts."
-              )
-                .split("\n\n")
-                .filter(Boolean)
-                .map((line, index, arr) => {
-                  const match = line.match(/^(\S+)\s*([^:]+):\s*([\s\S]*)$/);
-                  if (!match) {
-                    return (
-                      <div
-                        key={`${line}-${index}`}
-                        style={{ marginBottom: index === arr.length - 1 ? 0 : 12 }}
-                      >
-                        {line}
+              {howToPlaySections.map((section, index) => (
+                <div
+                  key={section.key}
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    alignItems: "flex-start",
+                    marginBottom: index === howToPlaySections.length - 1 ? 0 : 12,
+                  }}
+                >
+                  <span aria-hidden="true" style={{ fontSize: 18, lineHeight: "20px" }}>
+                    {section.icon}
+                  </span>
+                  <span>
+                    <strong style={{ color: "#0f172a" }}>{section.title}:</strong>{" "}
+                    {section.body ? <span>{section.body}</span> : null}
+                    {section.bullets?.length ? (
+                      <ul style={{ margin: "8px 0 0", paddingLeft: 20, display: "grid", gap: 6 }}>
+                        {section.bullets.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {section.hintRows?.length ? (
+                      <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+                        {section.hintRows.map((item) => (
+                          <div key={item.label} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                            <span aria-hidden="true" style={{ fontSize: 16, width: 20, textAlign: "center" }}>
+                              {item.icon}
+                            </span>
+                            <span>
+                              <strong>{item.label}:</strong> {item.body}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    );
-                  }
-                  const [, emoji, title, body] = match;
-                  const bodyLines = body
-                    .split("\n")
-                    .map((bodyLine) => bodyLine.trim())
-                    .filter(Boolean);
-                  const bulletItems = bodyLines.filter((bodyLine) =>
-                    /^[-•]\s+/.test(bodyLine)
-                  );
-                  const plainLines = bodyLines.filter(
-                    (bodyLine) => !/^[-•]\s+/.test(bodyLine)
-                  );
-                  return (
-                    <div
-                      key={`${title}-${index}`}
-                      style={{
-                        display: "flex",
-                        gap: 10,
-                        alignItems: "flex-start",
-                        marginBottom: index === arr.length - 1 ? 0 : 12,
-                      }}
-                    >
-                      <span
-                        aria-hidden="true"
-                        style={{ fontSize: 18, lineHeight: "20px" }}
-                      >
-                        {emoji}
-                      </span>
-                      <span>
-                        <strong style={{ color: "#0f172a" }}>
-                          {title.trim()}:
-                        </strong>{" "}
-                        {plainLines.length > 0 ? (
-                          <span>{plainLines.join(" ")}</span>
-                        ) : null}
-                        {bulletItems.length > 0 ? (
-                          <ul
-                            style={{
-                              margin: "8px 0 0",
-                              paddingLeft: 20,
-                              display: "grid",
-                              gap: 6,
-                            }}
-                          >
-                            {bulletItems.map((item) => (
-                              <li key={item}>
-                                {item.replace(/^[-•]\s+/, "")}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </span>
-                    </div>
-                  );
-                })}
+                    ) : null}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

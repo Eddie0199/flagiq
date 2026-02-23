@@ -37,6 +37,7 @@ import {
   getPlayerState,
   updatePlayerState,
 } from "./playerStateApi";
+import { resolveFlagImageSrc } from "./flagAssets";
 
 
 const LANGUAGE_STORAGE_KEY = "flagLang";
@@ -158,56 +159,7 @@ const remainingDailySpinMs = (lastClaimedAt) => {
   return Math.max(DAILY_SPIN_COOLDOWN_MS - elapsed, 0);
 };
 
-// flag helper (fix Northern Ireland + fallback map)
-export const flagSrc = (flagOrCode, w = 256) => {
-  const FALLBACK_MAP = {
-    england: "gb-eng",
-    scotland: "gb-sct",
-    wles: "gb-wls",
-    wales: "gb-wls",
-    "northern ireland": "gb-nir",
-    "isle of man": "im",
-    greenland: "gl",
-    "puerto rico": "pr",
-    "hong kong": "hk",
-    macau: "mo",
-    "faroe islands": "fo",
-    bermuda: "bm",
-    curaçao: "cw",
-    aruba: "aw",
-    "cayman islands": "ky",
-    guernsey: "gg",
-    jersey: "je",
-    gibraltar: "gi",
-    "french polynesia": "pf",
-    "new caledonia": "nc",
-    "ascension island": "sh-ac",
-  };
-
-  const CODE_FALLBACK = {
-    nir: "gb-nir",
-    ac: "sh-ac",
-  };
-
-  if (flagOrCode && typeof flagOrCode === "object") {
-    if (flagOrCode.img) return flagOrCode.img;
-
-    let code = (flagOrCode.code || "").toLowerCase().replace(/_/g, "-");
-    const name = (flagOrCode.name || "").toLowerCase();
-
-    if (CODE_FALLBACK[code]) {
-      code = CODE_FALLBACK[code];
-    } else if (FALLBACK_MAP[name]) {
-      code = FALLBACK_MAP[name];
-    }
-
-    return `https://flagcdn.com/w${w}/${code}.png`;
-  }
-
-  const raw = String(flagOrCode || "").toLowerCase().replace(/_/g, "-");
-  const mapped = FALLBACK_MAP[raw] || raw;
-  return `https://flagcdn.com/w${w}/${mapped}.png`;
-};
+export const flagSrc = resolveFlagImageSrc;
 
 export const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const hashPwd = (str) => {
