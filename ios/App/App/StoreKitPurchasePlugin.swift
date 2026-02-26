@@ -1,5 +1,6 @@
 import Capacitor
 import StoreKit
+import AVFoundation
 
 @objc(StoreKitPurchasePlugin)
 public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPaymentTransactionObserver {
@@ -27,6 +28,41 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
 
     deinit {
         SKPaymentQueue.default().remove(self)
+    }
+
+
+    @objc func audioSessionConfigure(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? true
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if enabled {
+                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+                try session.setActive(true)
+            } else {
+                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+                try session.setActive(false, options: [.notifyOthersOnDeactivation])
+            }
+            let payload: [String: Any] = [
+                "success": true,
+                "category": session.category.rawValue,
+                "mode": session.mode.rawValue,
+                "active": session.isOtherAudioPlaying == false || enabled
+            ]
+            CAPLog.print("[AudioSession] configured category=\(session.category.rawValue) enabled=\(enabled)")
+            call.resolve(payload)
+        } catch {
+            call.reject("Failed to configure AVAudioSession: \(error.localizedDescription)")
+        }
+    }
+
+    @objc func audioSessionStatus(_ call: CAPPluginCall) {
+        let session = AVAudioSession.sharedInstance()
+        let payload: [String: Any] = [
+            "category": session.category.rawValue,
+            "mode": session.mode.rawValue,
+            "active": session.secondaryAudioShouldBeSilencedHint == false
+        ]
+        call.resolve(payload)
     }
 
     @objc func fetchProducts(_ call: CAPPluginCall) {

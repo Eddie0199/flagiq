@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import AVFoundation
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -12,7 +13,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         CAPLog.print("[Startup] CFBundleShortVersionString: \(shortVersion)")
         CAPLog.print("[Startup] CFBundleVersion: \(buildVersion)")
         CAPLog.print("[Startup] StoreKitPurchasePlugin loaded")
+        configureInitialAudioSession()
         return true
+    }
+
+    private func configureInitialAudioSession() {
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try session.setActive(true)
+            CAPLog.print("[AudioSession] startup category=\(session.category.rawValue) mode=\(session.mode.rawValue)")
+        } catch {
+            CAPLog.print("[AudioSession] startup configuration failed: \(error.localizedDescription)")
+        }
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
