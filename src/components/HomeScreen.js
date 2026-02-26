@@ -1,6 +1,7 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
+import { ti, tp } from "../i18n";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
 import { DAILY_BOOSTER_ICON, HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 
@@ -550,6 +551,7 @@ export default function HomeScreen({
   onDailySpinClaim,
   loggedIn,
   onAuthRequest,
+  i18nAuditEnabled = false,
 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
@@ -573,6 +575,39 @@ export default function HomeScreen({
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState("");
+  const [showI18nKeys, setShowI18nKeys] = useState(false);
+  const infoModalRef = useRef(null);
+  const leaderboardModalRef = useRef(null);
+
+  const textf = (key, fallback, vars = {}) => {
+    if (showI18nKeys) return key;
+    if (!t || !lang) return fallback;
+    const value = ti(lang, key, vars);
+    if (i18nAuditEnabled && lang !== "en" && value === fallback) {
+      console.warn(`[i18n-audit] Missing translation for key "${key}" in HomeScreen.js`);
+    }
+    return value === key ? fallback : value;
+  };
+
+  useEffect(() => {
+    if (!i18nAuditEnabled) return;
+    const scanForRawText = (container, name) => {
+      if (!container) return;
+      const textContent = container.innerText || "";
+      const suspicious = [
+        "Game Modes",
+        "Lives System",
+        "Hints & Boosters",
+        "Top 100 Players",
+        "Loading leaderboard",
+      ].filter((token) => textContent.includes(token));
+      if (suspicious.length > 0) {
+        console.warn(`[i18n-audit] Potential hardcoded strings in ${name} (HomeScreen.js):`, suspicious);
+      }
+    };
+    scanForRawText(infoModalRef.current, "Info modal");
+    scanForRawText(leaderboardModalRef.current, "Leaderboard modal");
+  }, [i18nAuditEnabled, showInfoModal, showLeaderboardModal, leaderboardEntries, lang, showI18nKeys]);
 
   const leaderboardModes = useMemo(
     () => [
@@ -658,53 +693,55 @@ export default function HomeScreen({
     {
       key: "goal",
       icon: "🏁",
-      title: "Goal",
-      body:
-        "Identify the correct country for each flag. The faster and more accurate you are, the better your score.",
+      title: textf("homeInfo.goal.title", "Goal"),
+      body: textf(
+        "homeInfo.goal.body",
+        "Identify the correct country for each flag. The faster and more accurate you are, the better your score."
+      ),
     },
     {
       key: "modes",
       icon: "🎮",
-      title: "Game Modes",
+      title: textf("homeInfo.modes.title", "Game Modes"),
       bullets: [
-        "Classic Mode: Play at your own pace with no timer pressure.",
-        "Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.",
-        "Local Flags: Explore regional packs like US states and master local flags.",
+        textf("homeInfo.modes.classic", "Classic Mode: Play at your own pace with no timer pressure."),
+        textf("homeInfo.modes.timetrial", "Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores."),
+        textf("homeInfo.modes.local", "Local Flags: Explore regional packs like US states and master local flags."),
       ],
     },
     {
       key: "lives",
       icon: "❤️",
-      title: "Lives System",
-      body: "You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.",
+      title: textf("homeInfo.lives.title", "Lives System"),
+      body: textf("homeInfo.lives.body", "You lose one life each time you fail to successfully complete a level. Lives automatically refill over time."),
     },
     {
       key: "hints",
       icon: "💡",
-      title: "Hints & Boosters",
+      title: textf("homeInfo.hints.title", "Hints & Boosters"),
       hintRows: [
-        { icon: HINT_ICON_BY_TYPE.remove2, label: "Remove 2", body: "Eliminates two incorrect options." },
-        { icon: HINT_ICON_BY_TYPE.autoPass, label: "Auto Pass", body: "Instantly completes the flag and moves you forward." },
-        { icon: HINT_ICON_BY_TYPE.pause, label: "Pause Timer", body: "Freezes the Time Trial clock for 3 seconds." },
+        { icon: HINT_ICON_BY_TYPE.remove2, label: textf("homeInfo.hints.remove2.label", "Remove 2"), body: textf("homeInfo.hints.remove2.body", "Eliminates two incorrect options.") },
+        { icon: HINT_ICON_BY_TYPE.autoPass, label: textf("homeInfo.hints.autopass.label", "Auto Pass"), body: textf("homeInfo.hints.autopass.body", "Instantly completes the flag and moves you forward.") },
+        { icon: HINT_ICON_BY_TYPE.pause, label: textf("homeInfo.hints.pause.label", "Pause Timer"), body: textf("homeInfo.hints.pause.body", "Freezes the Time Trial clock for 3 seconds.") },
       ],
     },
     {
       key: "stars",
       icon: "⭐",
-      title: "Stars & Progress",
-      body: "Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.",
+      title: textf("homeInfo.stars.title", "Stars & Progress"),
+      body: textf("homeInfo.stars.body", "Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs."),
     },
     {
       key: "coins",
       icon: SHOP_COIN_ICON,
-      title: "Coins & Rewards",
-      body: "Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.",
+      title: textf("homeInfo.coins.title", "Coins & Rewards"),
+      body: textf("homeInfo.coins.body", "Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster."),
     },
     {
       key: "daily",
       icon: DAILY_BOOSTER_ICON,
-      title: "Daily Booster",
-      body: "Open a free booster box every 24 hours to receive hints and boosts.",
+      title: textf("homeInfo.daily.title", "Daily Booster"),
+      body: textf("homeInfo.daily.body", "Open a free booster box every 24 hours to receive hints and boosts."),
     },
   ];
 
@@ -994,6 +1031,7 @@ export default function HomeScreen({
           }}
         >
           <div
+            ref={infoModalRef}
             style={{
               width: "100%",
               maxWidth: 420,
@@ -1016,6 +1054,14 @@ export default function HomeScreen({
             <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>
               {homeInfoTitle}
             </div>
+            {i18nAuditEnabled && (
+              <button
+                onClick={() => setShowI18nKeys((prev) => !prev)}
+                style={{ marginBottom: 10, border: "1px solid #cbd5e1", borderRadius: 8, padding: "6px 10px", background: "#f8fafc", cursor: "pointer", fontWeight: 600, fontSize: 12 }}
+              >
+                {showI18nKeys ? "Hide i18n keys" : "Show i18n keys"}
+              </button>
+            )}
             <div
               style={{
                 fontSize: 15,
@@ -1087,6 +1133,7 @@ export default function HomeScreen({
           }}
         >
           <div
+            ref={leaderboardModalRef}
             style={{
               width: "100%",
               maxWidth: 420,
@@ -1116,7 +1163,7 @@ export default function HomeScreen({
                 marginBottom: 14,
               }}
             >
-              <span role="img" aria-label="Trophy">
+              <span role="img" aria-label={text("homeLeaderboardTitle", "Leaderboard")}>
                 🏆
               </span>
               {text("homeLeaderboardTitle", "Leaderboard")}
@@ -1278,7 +1325,11 @@ export default function HomeScreen({
                             marginTop: 2,
                           }}
                         >
-                          {entry.attempts} attempts
+                          {showI18nKeys
+                            ? "leaderboard.attempts"
+                            : tp(lang, "leaderboard.attempts", Number(entry.attempts) || 0, {
+                                count: Number(entry.attempts) || 0,
+                              })}
                         </div>
                       </div>
                       <div

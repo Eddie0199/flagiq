@@ -24,6 +24,29 @@ const STRINGS = {
     leaderboardError: "Unable to load leaderboard right now.",
     leaderboardEmpty: "No Time Trial scores yet.",
     leaderboardLoginRequired: "Leaderboard is available for logged in users only.",
+    "homeInfo.goal.title": "Goal",
+    "homeInfo.goal.body": "Identify the correct country for each flag. The faster and more accurate you are, the better your score.",
+    "homeInfo.modes.title": "Game Modes",
+    "homeInfo.modes.classic": "Classic Mode: Play at your own pace with no timer pressure.",
+    "homeInfo.modes.timetrial": "Time Trial: Race against the clock where both speed and accuracy matter; faster correct answers earn higher scores.",
+    "homeInfo.modes.local": "Local Flags: Explore regional packs like US states and master local flags.",
+    "homeInfo.lives.title": "Lives System",
+    "homeInfo.lives.body": "You lose one life each time you fail to successfully complete a level. Lives automatically refill over time.",
+    "homeInfo.hints.title": "Hints & Boosters",
+    "homeInfo.hints.remove2.label": "Remove 2",
+    "homeInfo.hints.remove2.body": "Eliminates two incorrect options.",
+    "homeInfo.hints.autopass.label": "Auto Pass",
+    "homeInfo.hints.autopass.body": "Instantly completes the flag and moves you forward.",
+    "homeInfo.hints.pause.label": "Pause Timer",
+    "homeInfo.hints.pause.body": "Freezes the Time Trial clock for 3 seconds.",
+    "homeInfo.stars.title": "Stars & Progress",
+    "homeInfo.stars.body": "Earn up to three stars per level based on your performance. Collect stars to unlock new levels, regions, and special flag packs.",
+    "homeInfo.coins.title": "Coins & Rewards",
+    "homeInfo.coins.body": "Completing a level for the first time earns coins. Spend them in the shop on hints and boosters to advance faster.",
+    "homeInfo.daily.title": "Daily Booster",
+    "homeInfo.daily.body": "Open a free booster box every 24 hours to receive hints and boosts.",
+    "leaderboard.attempts.one": "{{count}} attempt",
+    "leaderboard.attempts.other": "{{count}} attempts",
 
     classic: "Classic",
     classicDesc: "Learn flags at your pace",
@@ -601,6 +624,29 @@ const STRINGS = {
     leaderboardEmpty: "Aún no hay puntuaciones de Contrarreloj.",
     leaderboardLoginRequired:
       "La clasificación está disponible solo para usuarios con sesión iniciada.",
+    "homeInfo.goal.title": "Objetivo",
+    "homeInfo.goal.body": "Identifica el país correcto para cada bandera. Cuanto más rápido y preciso seas, mejor será tu puntuación.",
+    "homeInfo.modes.title": "Modos de juego",
+    "homeInfo.modes.classic": "Modo clásico: juega a tu ritmo sin presión de tiempo.",
+    "homeInfo.modes.timetrial": "Contrarreloj: compite contra el reloj; la velocidad y la precisión importan.",
+    "homeInfo.modes.local": "Banderas locales: explora paquetes regionales como estados de EE. UU. y domina sus banderas.",
+    "homeInfo.lives.title": "Sistema de vidas",
+    "homeInfo.lives.body": "Pierdes una vida cada vez que no logras completar un nivel. Las vidas se recargan automáticamente con el tiempo.",
+    "homeInfo.hints.title": "Pistas y potenciadores",
+    "homeInfo.hints.remove2.label": "Eliminar 2",
+    "homeInfo.hints.remove2.body": "Elimina dos opciones incorrectas.",
+    "homeInfo.hints.autopass.label": "Pase automático",
+    "homeInfo.hints.autopass.body": "Completa instantáneamente la bandera y te hace avanzar.",
+    "homeInfo.hints.pause.label": "Pausar temporizador",
+    "homeInfo.hints.pause.body": "Congela el reloj de Contrarreloj durante 3 segundos.",
+    "homeInfo.stars.title": "Estrellas y progreso",
+    "homeInfo.stars.body": "Gana hasta tres estrellas por nivel según tu rendimiento. Reúne estrellas para desbloquear nuevos niveles, regiones y paquetes especiales.",
+    "homeInfo.coins.title": "Monedas y recompensas",
+    "homeInfo.coins.body": "Completar un nivel por primera vez te da monedas. Úsalas en la tienda para avanzar más rápido.",
+    "homeInfo.daily.title": "Potenciador diario",
+    "homeInfo.daily.body": "Abre una caja de potenciador gratis cada 24 horas para recibir ayudas y mejoras.",
+    "leaderboard.attempts.one": "{{count}} intento",
+    "leaderboard.attempts.other": "{{count}} intentos",
 
     classic: "Clásico",
     classicDesc: "Aprende banderas a tu ritmo",
@@ -1059,6 +1105,29 @@ const STRINGS = {
     leaderboardEmpty: "Ainda não há pontuações de Contra o tempo.",
     leaderboardLoginRequired:
       "A classificação está disponível apenas para utilizadores com sessão iniciada.",
+    "homeInfo.goal.title": "Objetivo",
+    "homeInfo.goal.body": "Identifica o país correto para cada bandeira. Quanto mais rápido e preciso fores, melhor será a tua pontuação.",
+    "homeInfo.modes.title": "Modos de jogo",
+    "homeInfo.modes.classic": "Modo Clássico: joga ao teu ritmo sem pressão de tempo.",
+    "homeInfo.modes.timetrial": "Contra o tempo: corre contra o relógio; velocidade e precisão contam.",
+    "homeInfo.modes.local": "Bandeiras locais: explora coleções regionais como estados dos EUA e domina as suas bandeiras.",
+    "homeInfo.lives.title": "Sistema de vidas",
+    "homeInfo.lives.body": "Perdes uma vida sempre que não concluis com sucesso um nível. As vidas recarregam automaticamente com o tempo.",
+    "homeInfo.hints.title": "Dicas e impulsionadores",
+    "homeInfo.hints.remove2.label": "Remover 2",
+    "homeInfo.hints.remove2.body": "Elimina duas opções incorretas.",
+    "homeInfo.hints.autopass.label": "Passe automático",
+    "homeInfo.hints.autopass.body": "Conclui instantaneamente a bandeira e avança.",
+    "homeInfo.hints.pause.label": "Pausar temporizador",
+    "homeInfo.hints.pause.body": "Congela o relógio do Contra o tempo por 3 segundos.",
+    "homeInfo.stars.title": "Estrelas e progresso",
+    "homeInfo.stars.body": "Ganha até três estrelas por nível com base no teu desempenho. Junta estrelas para desbloquear novos níveis, regiões e pacotes especiais.",
+    "homeInfo.coins.title": "Moedas e recompensas",
+    "homeInfo.coins.body": "Concluir um nível pela primeira vez dá moedas. Gasta-as na loja em dicas e impulsionadores para avançar mais rápido.",
+    "homeInfo.daily.title": "Impulsionador diário",
+    "homeInfo.daily.body": "Abre uma caixa gratuita a cada 24 horas para receber dicas e bónus.",
+    "leaderboard.attempts.one": "{{count}} tentativa",
+    "leaderboard.attempts.other": "{{count}} tentativas",
 
     classic: "Clássico",
     classicDesc: "Aprenda bandeiras no seu ritmo",
@@ -1516,6 +1585,29 @@ const STRINGS = {
     leaderboardEmpty: "Noch keine Zeitmodus-Ergebnisse.",
     leaderboardLoginRequired:
       "Die Bestenliste ist nur für eingeloggte Nutzer verfügbar.",
+    "homeInfo.goal.title": "Ziel",
+    "homeInfo.goal.body": "Ordne jeder Flagge das richtige Land zu. Je schneller und genauer du bist, desto besser ist deine Punktzahl.",
+    "homeInfo.modes.title": "Spielmodi",
+    "homeInfo.modes.classic": "Klassischer Modus: Spiele ohne Zeitdruck in deinem eigenen Tempo.",
+    "homeInfo.modes.timetrial": "Zeitrennen: Spiele gegen die Uhr – Geschwindigkeit und Genauigkeit zählen.",
+    "homeInfo.modes.local": "Lokale Flaggen: Erkunde regionale Pakete wie US-Bundesstaaten und meistere ihre Flaggen.",
+    "homeInfo.lives.title": "Leben-System",
+    "homeInfo.lives.body": "Du verlierst ein Leben, wenn du ein Level nicht erfolgreich abschließt. Leben füllen sich mit der Zeit automatisch auf.",
+    "homeInfo.hints.title": "Hinweise & Booster",
+    "homeInfo.hints.remove2.label": "2 entfernen",
+    "homeInfo.hints.remove2.body": "Entfernt zwei falsche Optionen.",
+    "homeInfo.hints.autopass.label": "Auto-Pass",
+    "homeInfo.hints.autopass.body": "Schließt die Flagge sofort ab und bringt dich weiter.",
+    "homeInfo.hints.pause.label": "Timer pausieren",
+    "homeInfo.hints.pause.body": "Hält die Zeit im Zeitrennen für 3 Sekunden an.",
+    "homeInfo.stars.title": "Sterne & Fortschritt",
+    "homeInfo.stars.body": "Verdiene bis zu drei Sterne pro Level. Sammle Sterne, um neue Levels, Regionen und Spezialpakete freizuschalten.",
+    "homeInfo.coins.title": "Münzen & Belohnungen",
+    "homeInfo.coins.body": "Beim ersten Abschluss eines Levels erhältst du Münzen. Nutze sie im Shop für Hinweise und Booster.",
+    "homeInfo.daily.title": "Täglicher Booster",
+    "homeInfo.daily.body": "Öffne alle 24 Stunden eine kostenlose Booster-Box für Hinweise und Boni.",
+    "leaderboard.attempts.one": "{{count}} Versuch",
+    "leaderboard.attempts.other": "{{count}} Versuche",
 
     classic: "Klassisch",
     classicDesc: "Lerne Flaggen in deinem Tempo",
@@ -1976,6 +2068,29 @@ const STRINGS = {
     leaderboardEmpty: "Pas encore de scores Contre-la-montre.",
     leaderboardLoginRequired:
       "Le classement est disponible uniquement pour les utilisateurs connectés.",
+    "homeInfo.goal.title": "Objectif",
+    "homeInfo.goal.body": "Identifiez le bon pays pour chaque drapeau. Plus vous êtes rapide et précis, meilleur est votre score.",
+    "homeInfo.modes.title": "Modes de jeu",
+    "homeInfo.modes.classic": "Mode Classique : jouez à votre rythme, sans pression du temps.",
+    "homeInfo.modes.timetrial": "Contre-la-montre : courez contre le chrono ; vitesse et précision comptent.",
+    "homeInfo.modes.local": "Drapeaux locaux : explorez des packs régionaux comme les États américains et maîtrisez leurs drapeaux.",
+    "homeInfo.lives.title": "Système de vies",
+    "homeInfo.lives.body": "Vous perdez une vie à chaque échec de niveau. Les vies se rechargent automatiquement avec le temps.",
+    "homeInfo.hints.title": "Indices et boosters",
+    "homeInfo.hints.remove2.label": "Retirer 2",
+    "homeInfo.hints.remove2.body": "Élimine deux mauvaises options.",
+    "homeInfo.hints.autopass.label": "Passe auto",
+    "homeInfo.hints.autopass.body": "Valide instantanément le drapeau et vous fait avancer.",
+    "homeInfo.hints.pause.label": "Pause chrono",
+    "homeInfo.hints.pause.body": "Fige le chronomètre du contre-la-montre pendant 3 secondes.",
+    "homeInfo.stars.title": "Étoiles et progression",
+    "homeInfo.stars.body": "Gagnez jusqu'à trois étoiles par niveau selon vos performances. Collectez des étoiles pour débloquer de nouveaux niveaux, régions et packs spéciaux.",
+    "homeInfo.coins.title": "Pièces et récompenses",
+    "homeInfo.coins.body": "Terminer un niveau pour la première fois rapporte des pièces. Dépensez-les dans la boutique pour avancer plus vite.",
+    "homeInfo.daily.title": "Booster quotidien",
+    "homeInfo.daily.body": "Ouvrez une boîte booster gratuite toutes les 24 heures pour obtenir des indices et bonus.",
+    "leaderboard.attempts.one": "{{count}} tentative",
+    "leaderboard.attempts.other": "{{count}} tentatives",
 
     classic: "Classique",
     classicDesc: "Apprends les drapeaux à ton rythme",
@@ -2440,6 +2555,29 @@ const STRINGS = {
     leaderboardEmpty: "Nog geen Tijdrit-scores.",
     leaderboardLoginRequired:
       "De ranglijst is alleen beschikbaar voor ingelogde gebruikers.",
+    "homeInfo.goal.title": "Doel",
+    "homeInfo.goal.body": "Kies voor elke vlag het juiste land. Hoe sneller en nauwkeuriger je bent, hoe hoger je score.",
+    "homeInfo.modes.title": "Spelmodi",
+    "homeInfo.modes.classic": "Klassieke modus: speel op je eigen tempo zonder tijdsdruk.",
+    "homeInfo.modes.timetrial": "Tijdrit: race tegen de klok; snelheid en nauwkeurigheid tellen mee.",
+    "homeInfo.modes.local": "Lokale vlaggen: verken regionale pakketten zoals Amerikaanse staten en leer hun vlaggen.",
+    "homeInfo.lives.title": "Levenssysteem",
+    "homeInfo.lives.body": "Je verliest één leven wanneer je een level niet succesvol afrondt. Levens vullen na verloop van tijd automatisch aan.",
+    "homeInfo.hints.title": "Hints en boosters",
+    "homeInfo.hints.remove2.label": "Verwijder 2",
+    "homeInfo.hints.remove2.body": "Verwijdert twee onjuiste opties.",
+    "homeInfo.hints.autopass.label": "Auto-pas",
+    "homeInfo.hints.autopass.body": "Voltooit de vlag direct en laat je doorgaan.",
+    "homeInfo.hints.pause.label": "Timer pauzeren",
+    "homeInfo.hints.pause.body": "Bevriest de tijdritklok gedurende 3 seconden.",
+    "homeInfo.stars.title": "Sterren en voortgang",
+    "homeInfo.stars.body": "Verdien tot drie sterren per level op basis van je prestatie. Verzamel sterren om nieuwe levels, regio's en speciale pakketten vrij te spelen.",
+    "homeInfo.coins.title": "Munten en beloningen",
+    "homeInfo.coins.body": "Een level voor de eerste keer voltooien levert munten op. Geef ze uit in de winkel aan hints en boosters om sneller vooruit te komen.",
+    "homeInfo.daily.title": "Dagelijkse booster",
+    "homeInfo.daily.body": "Open elke 24 uur een gratis boosterbox om hints en boosts te ontvangen.",
+    "leaderboard.attempts.one": "{{count}} poging",
+    "leaderboard.attempts.other": "{{count}} pogingen",
 
     classic: "Klassiek",
     classicDesc: "Leer vlaggen in je eigen tempo",
@@ -2884,6 +3022,22 @@ const STRINGS = {
 export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
   return pack[key] || STRINGS.en[key] || key;
+}
+
+function interpolate(template, vars = {}) {
+  if (typeof template !== "string") return template;
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, token) =>
+    Object.prototype.hasOwnProperty.call(vars, token) ? String(vars[token]) : ""
+  );
+}
+
+export function ti(lang, key, vars = {}) {
+  return interpolate(t(lang, key), vars);
+}
+
+export function tp(lang, key, count, vars = {}) {
+  const pluralKey = count === 1 ? `${key}.one` : `${key}.other`;
+  return interpolate(t(lang, pluralKey), { ...vars, count });
 }
 
 

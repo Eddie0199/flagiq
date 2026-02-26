@@ -2205,6 +2205,7 @@ export default function App() {
           onDailySpinClaim={handleDailySpinClaim}
           loggedIn={loggedIn}
           onAuthRequest={openAuth}
+          i18nAuditEnabled={debugOverlayEnabled && showDebugScreen}
         />
       )}
 
