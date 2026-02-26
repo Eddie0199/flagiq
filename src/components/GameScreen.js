@@ -4,6 +4,7 @@ import { clamp, flagSrc, shuffle } from "../App";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
 import { createFlagFallbackPlaceholder } from "../flagAssets";
 import { HINT_ICON_BY_TYPE } from "../uiIcons";
+import { getHintTranslation, HINT_IDS } from "../hints";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -1020,32 +1021,32 @@ export default function GameScreen({
               <li style={{ marginBottom: 6 }}>
                 🎯{" "}
                 <strong>
-                  {t && lang ? t(lang, "hint.remove2Label") : "Remove 2"}
+                  {getHintTranslation(t, lang, HINT_IDS.REMOVE_TWO, "label")}
                 </strong>{" "}
                 —{" "}
                 {t && lang
-                  ? t(lang, "hint.remove2Desc")
-                  : "removes two wrong answers."}
+                  ? t(lang, "hints.removeTwo.description")
+                  : "hints.removeTwo.description"}
               </li>
               <li style={{ marginBottom: 6 }}>
                 ✅{" "}
                 <strong>
-                  {t && lang ? t(lang, "hint.autoPassLabel") : "Auto Pass"}
+                  {getHintTranslation(t, lang, HINT_IDS.AUTO_PASS, "label")}
                 </strong>{" "}
                 —{" "}
                 {t && lang
-                  ? t(lang, "hint.autoPassDesc")
-                  : "picks the correct flag for you."}
+                  ? t(lang, "hints.autoPass.description")
+                  : "hints.autoPass.description"}
               </li>
               <li style={{ marginBottom: 6 }}>
                 ⏸️{" "}
                 <strong>
-                  {t && lang ? t(lang, "hint.pauseLabel") : "Pause"}
+                  {getHintTranslation(t, lang, HINT_IDS.PAUSE_TIMER, "label")}
                 </strong>{" "}
                 —{" "}
                 {t && lang
-                  ? t(lang, "hint.pauseDesc")
-                  : "pauses the timer for 3 seconds (Time Trial only)."}
+                  ? t(lang, "hints.pauseTimer.description")
+                  : "hints.pauseTimer.description"}
               </li>
             </ul>
             <button
@@ -1412,8 +1413,8 @@ export default function GameScreen({
               disabled={!hints || hints.remove2 <= 0 || selectedAnswer !== null}
               title={
                 t && lang
-                  ? t(lang, "hint.remove2Desc")
-                  : "Remove 2 wrong answers"
+                  ? t(lang, "hints.removeTwo.description")
+                  : "hints.removeTwo.description"
               }
               style={{
                 flex: "0 0 auto",
@@ -1443,8 +1444,8 @@ export default function GameScreen({
               }
               title={
                 t && lang
-                  ? t(lang, "hint.autoPassDesc")
-                  : "Auto-pass (correct answer)"
+                  ? t(lang, "hints.autoPass.description")
+                  : "hints.autoPass.description"
               }
               style={{
                 flex: "0 0 auto",
@@ -1477,8 +1478,8 @@ export default function GameScreen({
               }
               title={
                 t && lang
-                  ? t(lang, "hint.pauseDesc")
-                  : "Pause timer for 3 seconds"
+                  ? t(lang, "hints.pauseTimer.description")
+                  : "hints.pauseTimer.description"
               }
               style={{
                 flex: "0 0 auto",

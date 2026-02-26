@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
 import { ti, tp } from "../i18n";
+import { getHintTranslation, HINT_IDS } from "../hints";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
 import { DAILY_BOOSTER_ICON, HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 
@@ -121,34 +122,34 @@ function DailySpinButton({
     () => [
       {
         id: "all",
-        label: "All 3 hints",
+        label: text("hints.bundleAll.label", "hints.bundleAll.label"),
         type: "all",
         icon: "⭐",
         weight: 5,
       },
       {
         id: "remove2",
-        label: "Remove 2",
+        label: getHintTranslation(t, lang, HINT_IDS.REMOVE_TWO, "label"),
         type: "remove2",
         icon: HINT_ICON_BY_TYPE.remove2,
         weight: 35,
       },
       {
         id: "autoPass",
-        label: "Auto pass",
+        label: getHintTranslation(t, lang, HINT_IDS.AUTO_PASS, "label"),
         type: "autoPass",
         icon: HINT_ICON_BY_TYPE.autoPass,
         weight: 30,
       },
       {
         id: "pause",
-        label: "Pause timer",
+        label: getHintTranslation(t, lang, HINT_IDS.PAUSE_TIMER, "label"),
         type: "pause",
         icon: HINT_ICON_BY_TYPE.pause,
         weight: 30,
       },
     ],
-    []
+    [lang, t]
   );
 
   useEffect(() => {
@@ -720,9 +721,9 @@ export default function HomeScreen({
       icon: "💡",
       title: textf("homeInfo.hints.title", "Hints & Boosters"),
       hintRows: [
-        { icon: HINT_ICON_BY_TYPE.remove2, label: textf("homeInfo.hints.remove2.label", "Remove 2"), body: textf("homeInfo.hints.remove2.body", "Eliminates two incorrect options.") },
-        { icon: HINT_ICON_BY_TYPE.autoPass, label: textf("homeInfo.hints.autopass.label", "Auto Pass"), body: textf("homeInfo.hints.autopass.body", "Instantly completes the flag and moves you forward.") },
-        { icon: HINT_ICON_BY_TYPE.pause, label: textf("homeInfo.hints.pause.label", "Pause Timer"), body: textf("homeInfo.hints.pause.body", "Freezes the Time Trial clock for 3 seconds.") },
+        { icon: HINT_ICON_BY_TYPE.remove2, label: getHintTranslation(t, lang, HINT_IDS.REMOVE_TWO, "label"), body: getHintTranslation(t, lang, HINT_IDS.REMOVE_TWO, "description") },
+        { icon: HINT_ICON_BY_TYPE.autoPass, label: getHintTranslation(t, lang, HINT_IDS.AUTO_PASS, "label"), body: getHintTranslation(t, lang, HINT_IDS.AUTO_PASS, "description") },
+        { icon: HINT_ICON_BY_TYPE.pause, label: getHintTranslation(t, lang, HINT_IDS.PAUSE_TIMER, "label"), body: getHintTranslation(t, lang, HINT_IDS.PAUSE_TIMER, "description") },
       ],
     },
     {

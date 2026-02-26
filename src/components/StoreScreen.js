@@ -10,6 +10,7 @@ import {
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getUiPricePresentation } from "../storePriceDisplay";
 import { HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
+import { getHintTranslation, HINT_IDS } from "../hints";
 
 const BOOSTER_ITEMS = [
   {
@@ -18,8 +19,7 @@ const BOOSTER_ITEMS = [
     qty: 1,
     cost: 80,
     icon: HINT_ICON_BY_TYPE.remove2,
-    labelKey: "storeRemove2Single",
-    fallbackLabel: "Remove 2 (x1)",
+    hintId: HINT_IDS.REMOVE_TWO,
   },
   {
     id: "pause_1",
@@ -27,8 +27,7 @@ const BOOSTER_ITEMS = [
     qty: 1,
     cost: 90,
     icon: HINT_ICON_BY_TYPE.pause,
-    labelKey: "storePauseSingle",
-    fallbackLabel: "Pause timer (x1)",
+    hintId: HINT_IDS.PAUSE_TIMER,
   },
   {
     id: "autoPass_1",
@@ -36,8 +35,7 @@ const BOOSTER_ITEMS = [
     qty: 1,
     cost: 120,
     icon: HINT_ICON_BY_TYPE.autoPass,
-    labelKey: "storeAutoPassSingle",
-    fallbackLabel: "Auto pass (x1)",
+    hintId: HINT_IDS.AUTO_PASS,
   },
   {
     id: "bundle_all",
@@ -45,8 +43,7 @@ const BOOSTER_ITEMS = [
     qty: 1,
     cost: 250,
     icon: "⭐",
-    labelKey: "storeAllBundle",
-    fallbackLabel: "Triple pack (1 of each)",
+    labelKey: "hints.bundleAll.label",
   },
 ];
 
@@ -521,7 +518,9 @@ export default function StoreScreen({
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {BOOSTER_ITEMS.map((item) => {
               const affordable = coins >= item.cost;
-              const label = text(item.labelKey, item.fallbackLabel);
+              const label = item.hintId
+                    ? `${getHintTranslation(t, lang, item.hintId, "label")} (x${item.qty})`
+                    : text(item.labelKey, item.labelKey);
               const state = ctaState.getState(item.id);
               const isSuccess = state === CTA_STATES.success;
               const isPurchasing = state === CTA_STATES.purchasing;

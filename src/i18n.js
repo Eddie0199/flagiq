@@ -265,6 +265,13 @@ const STRINGS = {
 
     "hint.title": "How hints work 💡",
     "hint.subtitle": "Use these to help answer tough flags:",
+    "hints.removeTwo.label": "Remove 2",
+    "hints.removeTwo.description": "Eliminates two incorrect answers.",
+    "hints.autoPass.label": "Auto Pass",
+    "hints.autoPass.description": "Selects the correct answer for you.",
+    "hints.pauseTimer.label": "Pause",
+    "hints.pauseTimer.description": "Pauses the timer for 3 seconds (Time Trial only).",
+    "hints.bundleAll.label": "Triple pack (1 of each)",
     "hint.remove2Label": "Remove 2",
     "hint.remove2Desc": "Removes two wrong answers.",
     "hint.autoPassLabel": "Auto Pass",
@@ -745,7 +752,14 @@ const STRINGS = {
 
     "hint.title": "Cómo funcionan las pistas 💡",
     "hint.subtitle": "Úsalas para ayudarte con las banderas difíciles:",
-    "hint.remove2Label": "Quitar 2",
+    "hints.removeTwo.label": "Eliminar 2",
+    "hints.removeTwo.description": "Elimina dos respuestas incorrectas.",
+    "hints.autoPass.label": "Pase automático",
+    "hints.autoPass.description": "Elige la respuesta correcta por ti.",
+    "hints.pauseTimer.label": "Pausar",
+    "hints.pauseTimer.description": "Pausa el tiempo durante 3 segundos (solo Contrarreloj).",
+    "hints.bundleAll.label": "Pack triple (1 de cada)",
+    "hint.remove2Label": "Eliminar 2",
     "hint.remove2Desc": "Elimina dos respuestas incorrectas.",
     "hint.autoPassLabel": "Pase automático",
     "hint.autoPassDesc": "Elige la respuesta correcta por ti.",
@@ -1224,6 +1238,13 @@ const STRINGS = {
 
     "hint.title": "Como funcionam as dicas 💡",
     "hint.subtitle": "Use-as para ajudar nas bandeiras difíceis:",
+    "hints.removeTwo.label": "Remover 2",
+    "hints.removeTwo.description": "Remove duas respostas erradas.",
+    "hints.autoPass.label": "Passar automático",
+    "hints.autoPass.description": "Escolhe a resposta certa por ti.",
+    "hints.pauseTimer.label": "Pausar",
+    "hints.pauseTimer.description": "Pausa o tempo por 3 segundos (apenas Contra o tempo).",
+    "hints.bundleAll.label": "Pacote triplo (1 de cada)",
     "hint.remove2Label": "Remover 2",
     "hint.remove2Desc": "Remove duas respostas erradas.",
     "hint.autoPassLabel": "Passar automático",
@@ -1707,6 +1728,13 @@ const STRINGS = {
 
     "hint.title": "So funktionieren die Hinweise 💡",
     "hint.subtitle": "Nutze sie für schwierige Flaggen:",
+    "hints.removeTwo.label": "2 entfernen",
+    "hints.removeTwo.description": "Entfernt zwei falsche Antworten.",
+    "hints.autoPass.label": "Auto-Lösen",
+    "hints.autoPass.description": "Wählt die richtige Antwort für dich.",
+    "hints.pauseTimer.label": "Pause",
+    "hints.pauseTimer.description": "Pausiert den Timer für 3 Sekunden (nur Zeitmodus).",
+    "hints.bundleAll.label": "Dreierpack (je 1)",
     "hint.remove2Label": "2 entfernen",
     "hint.remove2Desc": "Entfernt zwei falsche Antworten.",
     "hint.autoPassLabel": "Auto-Lösen",
@@ -2193,6 +2221,13 @@ const STRINGS = {
 
     "hint.title": "Comment fonctionnent les indices 💡",
     "hint.subtitle": "Utilise-les pour t’aider sur les drapeaux difficiles :",
+    "hints.removeTwo.label": "Retirer 2",
+    "hints.removeTwo.description": "Retire deux mauvaises réponses.",
+    "hints.autoPass.label": "Passage auto",
+    "hints.autoPass.description": "Choisit la bonne réponse pour toi.",
+    "hints.pauseTimer.label": "Pause",
+    "hints.pauseTimer.description": "Met le chrono en pause pendant 3 secondes (mode chrono uniquement).",
+    "hints.bundleAll.label": "Pack triple (1 de chaque)",
     "hint.remove2Label": "Retirer 2",
     "hint.remove2Desc": "Retire deux mauvaises réponses.",
     "hint.autoPassLabel": "Passage auto",
@@ -2676,6 +2711,13 @@ const STRINGS = {
 
     "hint.title": "Zo werken hints 💡",
     "hint.subtitle": "Gebruik ze bij lastige vlaggen:",
+    "hints.removeTwo.label": "Verwijder 2",
+    "hints.removeTwo.description": "Verwijdert twee foute antwoorden.",
+    "hints.autoPass.label": "Auto-pass",
+    "hints.autoPass.description": "Kiest het juiste antwoord voor je.",
+    "hints.pauseTimer.label": "Pauze",
+    "hints.pauseTimer.description": "Pauzeert de timer 3 seconden (alleen Tijdspel).",
+    "hints.bundleAll.label": "Drievoudig pakket (1 van elk)",
     "hint.remove2Label": "Verwijder 2",
     "hint.remove2Desc": "Verwijdert twee foute antwoorden.",
     "hint.autoPassLabel": "Auto-pass",
@@ -3019,9 +3061,34 @@ const STRINGS = {
   },
 };
 
+const LEGACY_HINT_KEYS = new Set([
+  "hint.remove2Label",
+  "hint.remove2Desc",
+  "hint.autoPassLabel",
+  "hint.autoPassDesc",
+  "hint.pauseLabel",
+  "hint.pauseDesc",
+  "homeInfo.hints.remove2.label",
+  "homeInfo.hints.remove2.body",
+  "homeInfo.hints.autopass.label",
+  "homeInfo.hints.autopass.body",
+  "homeInfo.hints.pause.label",
+  "homeInfo.hints.pause.body",
+  "storeRemove2Single",
+  "storePauseSingle",
+  "storeAutoPassSingle",
+]);
+
+const warnedLegacyHintKeys = new Set();
+
 export function t(lang, key) {
   const pack = STRINGS[lang] || STRINGS.en;
-  return pack[key] || STRINGS.en[key] || key;
+  const value = pack[key] || STRINGS.en[key] || key;
+  if (process.env.NODE_ENV !== "production" && LEGACY_HINT_KEYS.has(key) && !warnedLegacyHintKeys.has(key)) {
+    warnedLegacyHintKeys.add(key);
+    console.warn(`[i18n] Legacy hint translation key requested: ${key}`);
+  }
+  return value;
 }
 
 function interpolate(template, vars = {}) {
