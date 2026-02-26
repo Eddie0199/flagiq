@@ -5,6 +5,7 @@ import { ti, tp } from "../i18n";
 import { getHintTranslation, HINT_IDS } from "../hints";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
 import { DAILY_BOOSTER_ICON, HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
+import Header from "./Header";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -540,6 +541,9 @@ function DailySpinButton({
 export default function HomeScreen({
   username,
   onSettings,
+  hearts,
+  coins,
+  onShop,
   onStart,
   classicStats, // still accepted but unused; we rely on fresh calc
   timetrialStats, // (kept for backward compatibility with App)
@@ -668,8 +672,6 @@ export default function HomeScreen({
   const classicFromStore = getPerModeStats(progress, "classic");
   const timetrialFromStore = getPerModeStats(progress, "timetrial");
   const localFromStore = useMemo(() => getLocalStats(progress), [progress]);
-  const headerContentOffset = "calc(var(--header-top-padding) + 42px)";
-  const topIconOffset = `calc(${headerContentOffset} + 12px)`;
   const footerLinkStyle = {
     background: "none",
     border: "none",
@@ -850,23 +852,35 @@ export default function HomeScreen({
   const localDisabled = true;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "#0b74ff",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        overflowY: "auto",
-        paddingBottom: 120,
-      }}
-    >
+    <>
+      <Header
+        hearts={hearts}
+        username={username}
+        onSettings={onSettings}
+        showHearts
+        t={t}
+        lang={lang}
+        coins={coins}
+        onCoinsClick={onShop}
+      />
+      <div
+        style={{
+          flex: 1,
+          width: "100%",
+          position: "relative",
+          backgroundColor: "#0b74ff",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          overflowY: "auto",
+          paddingBottom: 120,
+        }}
+      >
       {/* top left icons */}
       <div
         style={{
           position: "absolute",
-          top: topIconOffset,
+          top: 12,
           left: 12,
           display: "flex",
           flexDirection: "column",
@@ -916,7 +930,7 @@ export default function HomeScreen({
       <div
         style={{
           position: "absolute",
-          top: topIconOffset,
+          top: 12,
           right: 12,
           display: "flex",
           flexDirection: "column",
@@ -925,26 +939,6 @@ export default function HomeScreen({
           zIndex: 9999,
         }}
       >
-        <button
-          onClick={onSettings}
-          aria-label={text("settings", "Settings")}
-          style={{
-            background: "#f1f5f9",
-            color: "#0f172a",
-            border: "1px solid #e2e8f0",
-            borderRadius: 999,
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-            cursor: "pointer",
-          }}
-        >
-          ⚙️
-        </button>
         {username && (
           <DailySpinButton
             t={t}
@@ -979,7 +973,7 @@ export default function HomeScreen({
       {/* title area */}
       <div
         style={{
-          marginTop: `calc(${headerContentOffset} + 20px)`,
+          marginTop: 84,
           padding: "18px 26px",
           borderRadius: 20,
           background: "transparent",
@@ -1496,6 +1490,7 @@ export default function HomeScreen({
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

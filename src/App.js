@@ -2196,6 +2196,14 @@ export default function App() {
         <HomeScreen
           username={activeUser}
           onSettings={() => setSettingsOpen(true)}
+          hearts={{
+            current: heartsCurrent,
+            max: heartsMax,
+            lastRegenAt,
+            nextRefreshAt: nextHeartsRefreshAt,
+          }}
+          coins={coins}
+          onShop={openStoreFromScreen}
           onStart={handleHomeStart}
           classicStats={classicStats}
           timetrialStats={timetrialStats}
