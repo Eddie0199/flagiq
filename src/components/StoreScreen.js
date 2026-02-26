@@ -140,14 +140,29 @@ export default function StoreScreen({
   const [message, setMessage] = useState("");
   const [storeStatus, setStoreStatus] = useState("loading");
   const [storeProductsById, setStoreProductsById] = useState({});
+  const [purchaseInFlightByProduct, setPurchaseInFlightByProduct] = useState(
+    {}
+  );
   const [nativeStoreSummary, setNativeStoreSummary] = useState({
     storefrontCountryCode: null,
     storefrontIdentifier: null,
     deviceLocaleCurrentIdentifier: null,
   });
   const loadRequestIdRef = useRef(0);
+  const purchaseInFlightByProductRef = useRef({});
   const ctaListRef = useRef(null);
   const ctaState = useCtaStateMachine(1200);
+
+  const setProductPurchaseInFlight = (productId, isInFlight) => {
+    purchaseInFlightByProductRef.current = {
+      ...purchaseInFlightByProductRef.current,
+      [productId]: isInFlight,
+    };
+    setPurchaseInFlightByProduct((prev) => ({
+      ...prev,
+      [productId]: isInFlight,
+    }));
+  };
 
   const text = (key, fallback) => {
     if (t && lang) {
@@ -308,6 +323,13 @@ export default function StoreScreen({
 
   async function buyCoins(pack) {
     const productId = pack?.id;
+    if (!productId) {
+      setMessage(purchaseFailedMessage);
+      return;
+    }
+    if (purchaseInFlightByProductRef.current[productId]) {
+      return;
+    }
     const displayedPrice = getUiPricePresentation(pack.id, storeProductsById?.[pack.id] || null);
     if (storeStatus !== "loaded") {
       setMessage(storeUnavailableMessage);
@@ -318,6 +340,7 @@ export default function StoreScreen({
       return;
     }
 
+    setProductPurchaseInFlight(productId, true);
     ctaState.beginPurchase(productId);
     logIapUiEvent("iap:coinPurchaseUiLock:start", { productId });
 
@@ -325,7 +348,7 @@ export default function StoreScreen({
       const result = await purchaseProduct(productId);
       if (result?.success) {
         setMessage(text("storeCoinsAdded", "Purchase successful! Coins added."));
-        ctaState.markSuccess(productId);
+        ctaState.resetState(productId);
         logIapUiEvent("iap:coinPurchaseUiLock:end", {
           productId,
           result: "success",
@@ -356,6 +379,8 @@ export default function StoreScreen({
         result: "error",
         error: e?.message || String(e),
       });
+    } finally {
+      setProductPurchaseInFlight(productId, false);
     }
   }
 
@@ -819,12 +844,13 @@ export default function StoreScreen({
               const displayedPrice = priceViewModel.displayedPrice;
               const state = ctaState.getState(pack.id);
               const isSuccess = state === CTA_STATES.success;
-              const isPurchasing = state === CTA_STATES.purchasing;
+              const isPurchasing =
+                state === CTA_STATES.purchasing ||
+                purchaseInFlightByProduct[pack.id] === true;
               const disabled =
                 !storeReady ||
                 displayedPrice.uiPriceSource !== "storekit" ||
-                isPurchasing ||
-                isSuccess;
+                isPurchasing;
               const ctaLabel = isPurchasing
                 ? "…"
                 : isSuccess
