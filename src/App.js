@@ -1,6 +1,6 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Capacitor } from "@capacitor/core";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
 import { HINT_IDS, HINT_INVENTORY_KEYS } from "./hints";
@@ -46,6 +46,7 @@ const LEGACY_LANGUAGE_KEYS = ["flagiq:lang"];
 const SUPPORTED_LANGUAGE_CODES = new Set(LANGS.map((l) => l.code));
 const DEBUG_LOGS_STORAGE_KEY = "flagiq:debugLogs";
 const DEBUG_LOGS_MAX = 100;
+const StoreKitPurchase = registerPlugin("StoreKitPurchase");
 
 function normalizeLanguageCode(code) {
   const raw = String(code || "").toLowerCase();
@@ -922,6 +923,15 @@ export default function App() {
   );
   const [soundOn, setSoundOn] = useLocalStorage("flagiq:soundOn", true);
   const [volume] = useLocalStorage("flagiq:volume", 0.5);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [audioUnlockResult, setAudioUnlockResult] = useState(null);
+  const [audioDiagLogs, setAudioDiagLogs] = useState([]);
+  const [audioDiagTick, setAudioDiagTick] = useState(0);
+  const [audioSessionInfo, setAudioSessionInfo] = useState({
+    category: "unknown",
+    mode: "unknown",
+    active: false,
+  });
 
   const [screen, setScreen] = useLocalStorage("flagiq:screen", "home");
   const [mode, setMode] = useLocalStorage("flagiq:mode", "classic");
@@ -1967,6 +1977,14 @@ export default function App() {
   }
 
   const audioCtxRef = useRef(null);
+  const activeTonesRef = useRef(0);
+  const initAudioStartedRef = useRef(false);
+  const isIOSPlatform = useMemo(() => {
+    if (typeof Capacitor?.getPlatform === "function") {
+      return Capacitor.getPlatform() === "ios";
+    }
+    return false;
+  }, []);
   const ensureAudio = () => {
     if (!audioCtxRef.current) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -1975,6 +1993,112 @@ export default function App() {
     }
     return audioCtxRef.current;
   };
+  const pushAudioDiagLog = useCallback((message) => {
+    const line = `${new Date().toISOString()} ${message}`;
+    setAudioDiagLogs((prev) => [line, ...prev].slice(0, 30));
+  }, []);
+
+  const readAudioSessionStatus = useCallback(async () => {
+    if (!isIOSPlatform || !StoreKitPurchase?.audioSessionStatus) return;
+    try {
+      const status = await StoreKitPurchase.audioSessionStatus();
+      setAudioSessionInfo({
+        category: status?.category || "unknown",
+        mode: status?.mode || "unknown",
+        active: Boolean(status?.active),
+      });
+    } catch (error) {
+      pushAudioDiagLog(`audioSessionStatus failed: ${error?.message || String(error)}`);
+    }
+  }, [isIOSPlatform, pushAudioDiagLog]);
+
+  const applyIosAudioSession = useCallback(async (enabled) => {
+    if (!isIOSPlatform || !StoreKitPurchase?.audioSessionConfigure) return;
+    try {
+      const response = await StoreKitPurchase.audioSessionConfigure({ enabled: Boolean(enabled) });
+      setAudioSessionInfo({
+        category: response?.category || "unknown",
+        mode: response?.mode || "unknown",
+        active: Boolean(response?.active),
+      });
+      pushAudioDiagLog(`AVAudioSession category: ${response?.category || "unknown"} (enabled=${Boolean(enabled)})`);
+    } catch (error) {
+      pushAudioDiagLog(`audioSessionConfigure failed: ${error?.message || String(error)}`);
+    }
+  }, [isIOSPlatform, pushAudioDiagLog]);
+
+  const unlockAudio = useCallback(async () => {
+    try {
+      const ctx = ensureAudio();
+      if (!ctx) {
+        const result = { ok: false, message: "AudioContext unavailable" };
+        setAudioUnlockResult(result);
+        pushAudioDiagLog(`Unlock Audio failed: ${result.message}`);
+        return result;
+      }
+      if (ctx.state !== "running") {
+        await ctx.resume();
+      }
+      const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate * 0.08)), ctx.sampleRate);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.0001;
+      source.connect(gain).connect(ctx.destination);
+      source.start(0);
+      source.stop(ctx.currentTime + 0.08);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const ok = ctx.state === "running";
+      const result = { ok, message: ok ? "Audio unlocked" : `AudioContext state is ${ctx.state}` };
+      setAudioUnlockResult(result);
+      pushAudioDiagLog(`Unlock Audio ${ok ? "success" : "failed"}: ${result.message}`);
+      return result;
+    } catch (error) {
+      const result = { ok: false, message: error?.message || String(error) };
+      setAudioUnlockResult(result);
+      pushAudioDiagLog(`Unlock Audio failed: ${result.message}`);
+      return result;
+    }
+  }, [pushAudioDiagLog]);
+
+  const initAudioOnce = useCallback(() => {
+    if (initAudioStartedRef.current) return;
+    initAudioStartedRef.current = true;
+    const onFirstGesture = async () => {
+      setHasUserInteracted(true);
+      await unlockAudio();
+      window.removeEventListener("pointerdown", onFirstGesture);
+      window.removeEventListener("touchstart", onFirstGesture);
+      window.removeEventListener("click", onFirstGesture);
+    };
+    window.addEventListener("pointerdown", onFirstGesture, { passive: true });
+    window.addEventListener("touchstart", onFirstGesture, { passive: true });
+    window.addEventListener("click", onFirstGesture, { passive: true });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        unlockAudio();
+      }
+    };
+    const onFocus = () => unlockAudio();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onFocus);
+  }, [unlockAudio]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    initAudioOnce();
+  }, [initAudioOnce]);
+
+  useEffect(() => {
+    const id = setInterval(() => setAudioDiagTick((prev) => prev + 1), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    applyIosAudioSession(soundOn);
+    readAudioSessionStatus();
+  }, [applyIosAudioSession, readAudioSessionStatus, soundOn]);
+
   useEffect(() => {
     if (!soundOn) return;
     const unlockAudio = () => {
@@ -1996,6 +2120,10 @@ export default function App() {
 
   const tone = (f, d, type = "sine", delay = 0) => {
     if (!soundOn) return;
+    if (isIOSPlatform && !hasUserInteracted) {
+      pushAudioDiagLog("Blocked tone before iOS user interaction");
+      return;
+    }
     const ctx = ensureAudio();
     if (!ctx) return;
     const playTone = () => {
@@ -2006,6 +2134,10 @@ export default function App() {
       g.gain.value = volume;
       o.connect(g).connect(ctx.destination);
       const t0 = ctx.currentTime + delay;
+      activeTonesRef.current += 1;
+      o.onended = () => {
+        activeTonesRef.current = Math.max(0, activeTonesRef.current - 1);
+      };
       o.start(t0);
       o.stop(t0 + d);
     };
@@ -2022,6 +2154,11 @@ export default function App() {
   };
   const soundWrong = () => {
     tone(200, 0.1, "sawtooth");
+  };
+  const testMusic = () => {
+    tone(261.63, 0.35, "sine", 0);
+    tone(329.63, 0.35, "sine", 0.4);
+    tone(392.0, 0.35, "sine", 0.8);
   };
 
   const openAuth = (tab = "login") => {
@@ -2577,6 +2714,99 @@ export default function App() {
               </button>
             </div>
             <IapDiagnosticsPanel visible={showDebugScreen} />
+            <div
+              style={{
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                background: "rgba(15, 23, 42, 0.65)",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Audio diagnostics</div>
+              <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
+                <div>platform: {typeof Capacitor?.getPlatform === "function" ? Capacitor.getPlatform() : "web"}</div>
+                <div>visibilityState: {typeof document !== "undefined" ? document.visibilityState : "unknown"}</div>
+                <div>hasUserInteracted: {String(hasUserInteracted)}</div>
+                <div>audio system used: WebAudio</div>
+                <div>AudioContext state: {audioCtxRef.current?.state || "unavailable"}</div>
+                <div>AudioContext sampleRate: {audioCtxRef.current?.sampleRate || "unavailable"}</div>
+                <div>loaded sounds: 0</div>
+                <div>currently playing sounds: {activeTonesRef.current}</div>
+                <div>sfxEnabled: {String(soundOn)}</div>
+                <div>musicEnabled: {String(soundOn)}</div>
+                <div>sfxVolume: {Number(volume).toFixed(2)}</div>
+                <div>musicVolume: {Number(volume).toFixed(2)}</div>
+                <div>masterVolume: {Number(volume).toFixed(2)}</div>
+                <div>global mute path active: {String(!soundOn || Number(volume) <= 0)}</div>
+                <div>AVAudioSession category: {audioSessionInfo.category}</div>
+                <div>AVAudioSession mode: {audioSessionInfo.mode}</div>
+                <div>AVAudioSession active: {String(audioSessionInfo.active)}</div>
+                <div>unlock result: {audioUnlockResult ? `${audioUnlockResult.ok ? "success" : "fail"} - ${audioUnlockResult.message}` : "not run"}</div>
+                <div>last tick: {audioDiagTick}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                <button
+                  onClick={() => unlockAudio()}
+                  style={{
+                    background: "rgba(16, 185, 129, 0.2)",
+                    border: "1px solid rgba(16, 185, 129, 0.5)",
+                    color: "white",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  Unlock Audio
+                </button>
+                <button
+                  onClick={() => {
+                    soundCorrect();
+                    pushAudioDiagLog("Test SFX pressed");
+                  }}
+                  style={{
+                    background: "rgba(59, 130, 246, 0.2)",
+                    border: "1px solid rgba(59, 130, 246, 0.5)",
+                    color: "white",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  Test SFX
+                </button>
+                <button
+                  onClick={() => {
+                    testMusic();
+                    pushAudioDiagLog("Test Music pressed");
+                  }}
+                  style={{
+                    background: "rgba(168, 85, 247, 0.2)",
+                    border: "1px solid rgba(168, 85, 247, 0.5)",
+                    color: "white",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                  }}
+                >
+                  Test Music
+                </button>
+              </div>
+              <div
+                style={{
+                  marginTop: 10,
+                  background: "rgba(2, 6, 23, 0.7)",
+                  borderRadius: 8,
+                  padding: 8,
+                  fontSize: 12,
+                  maxHeight: 140,
+                  overflowY: "auto",
+                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                }}
+              >
+                {audioDiagLogs.length === 0 ? "No audio logs yet" : audioDiagLogs.join("\n")}
+              </div>
+            </div>
             <div
               style={{
                 border: "1px solid rgba(148, 163, 184, 0.3)",

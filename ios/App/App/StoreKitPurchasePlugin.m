@@ -7,4 +7,6 @@ CAP_PLUGIN(StoreKitPurchasePlugin, "StoreKitPurchase",
     CAP_PLUGIN_METHOD(iapCanMakePayments, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(iapDiagnosticsGetState, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(iapDiagnosticsClear, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(audioSessionConfigure, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(audioSessionStatus, CAPPluginReturnPromise);
 )
