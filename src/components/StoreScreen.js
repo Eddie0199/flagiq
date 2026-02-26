@@ -147,7 +147,9 @@ export default function StoreScreen({
   });
   const loadRequestIdRef = useRef(0);
   const ctaListRef = useRef(null);
+  const coinPurchaseInFlightRef = useRef({});
   const ctaState = useCtaStateMachine(1200);
+  const [purchaseInFlightByProduct, setPurchaseInFlightByProduct] = useState({});
 
   const text = (key, fallback) => {
     if (t && lang) {
@@ -171,6 +173,8 @@ export default function StoreScreen({
     const requestId = ++loadRequestIdRef.current;
     setStoreStatus("loading");
     ctaState.resetAll();
+    coinPurchaseInFlightRef.current = {};
+    setPurchaseInFlightByProduct({});
 
     try {
       const result = await fetchStoreProducts();
@@ -307,6 +311,10 @@ export default function StoreScreen({
   }
 
   async function buyCoins(pack) {
+    if (coinPurchaseInFlightRef.current[pack.id]) {
+      return;
+    }
+
     const displayedPrice = getUiPricePresentation(pack.id, storeProductsById?.[pack.id] || null);
     if (storeStatus !== "loaded") {
       setMessage(storeUnavailableMessage);
@@ -317,6 +325,14 @@ export default function StoreScreen({
       return;
     }
 
+    coinPurchaseInFlightRef.current = {
+      ...coinPurchaseInFlightRef.current,
+      [pack.id]: true,
+    };
+    setPurchaseInFlightByProduct((prev) => ({
+      ...prev,
+      [pack.id]: true,
+    }));
     ctaState.beginPurchase(pack.id);
 
     try {
@@ -336,6 +352,15 @@ export default function StoreScreen({
     } catch (e) {
       ctaState.resetState(pack.id);
       setMessage(text("storePurchaseFailed", "Purchase failed"));
+    } finally {
+      coinPurchaseInFlightRef.current = {
+        ...coinPurchaseInFlightRef.current,
+        [pack.id]: false,
+      };
+      setPurchaseInFlightByProduct((prev) => ({
+        ...prev,
+        [pack.id]: false,
+      }));
     }
   }
 
@@ -799,7 +824,7 @@ export default function StoreScreen({
               const displayedPrice = priceViewModel.displayedPrice;
               const state = ctaState.getState(pack.id);
               const isSuccess = state === CTA_STATES.success;
-              const isPurchasing = state === CTA_STATES.purchasing;
+              const isPurchasing = purchaseInFlightByProduct[pack.id] === true;
               const disabled =
                 !storeReady ||
                 displayedPrice.uiPriceSource !== "storekit" ||
@@ -860,7 +885,11 @@ export default function StoreScreen({
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: disabled ? "not-allowed" : "pointer",
-                    background: isSuccess ? "#16a34a" : storeReady ? "#0f172a" : "#94a3b8",
+                    background: isSuccess
+                      ? "#16a34a"
+                      : disabled
+                      ? "#cbd5e1"
+                      : "#0f172a",
                     border: isSuccess ? "1px dashed #15803d" : "none",
                     color: "#fff",
                     minWidth: 80,
