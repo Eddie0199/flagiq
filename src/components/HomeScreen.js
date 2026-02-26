@@ -859,7 +859,7 @@ export default function HomeScreen({
         onSettings={onSettings}
         showHearts={loggedIn}
         showCoins={loggedIn}
-        showSettings={false}
+        showSettings={loggedIn}
         t={t}
         lang={lang}
         coins={coins}
@@ -928,7 +928,7 @@ export default function HomeScreen({
         </button>
       </div>
 
-      {/* top right icons */}
+      {/* top right icon */}
       <div
         style={{
           position: "absolute",
@@ -936,31 +936,10 @@ export default function HomeScreen({
           right: 12,
           display: "flex",
           flexDirection: "column",
-          gap: 8,
           alignItems: "center",
           zIndex: 9999,
         }}
       >
-        <button
-          onClick={onSettings}
-          aria-label={text("settings", "Settings")}
-          style={{
-            background: "#f1f5f9",
-            color: "#0f172a",
-            border: "1px solid #e2e8f0",
-            borderRadius: 999,
-            width: 36,
-            height: 36,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 18,
-            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-            cursor: "pointer",
-          }}
-        >
-          ⚙️
-        </button>
         {username && (
           <DailySpinButton
             t={t}
