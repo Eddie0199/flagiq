@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Capacitor } from "@capacitor/core";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
+import { HINT_IDS, HINT_INVENTORY_KEYS } from "./hints";
 
 import Header from "./components/Header";
 import HomeScreen from "./components/HomeScreen";
@@ -644,12 +645,16 @@ function deriveModeStatsFromProgress(progress, mode) {
 }
 
 // ----- per-user hints hook (with migration from old keys) -----
-const DEFAULT_HINTS = { remove2: 3, autoPass: 1, pause: 2 };
+const DEFAULT_HINTS = {
+  [HINT_INVENTORY_KEYS[HINT_IDS.REMOVE_TWO]]: 3,
+  [HINT_INVENTORY_KEYS[HINT_IDS.AUTO_PASS]]: 1,
+  [HINT_INVENTORY_KEYS[HINT_IDS.PAUSE_TIMER]]: 2,
+};
 
 const LEGACY_HINT_KEY_MAP = {
-  "Remove Two": "remove2",
-  InstantCorrect: "autoPass",
-  "Extra Time": "pause",
+  "Remove Two": HINT_INVENTORY_KEYS[HINT_IDS.REMOVE_TWO],
+  InstantCorrect: HINT_INVENTORY_KEYS[HINT_IDS.AUTO_PASS],
+  "Extra Time": HINT_INVENTORY_KEYS[HINT_IDS.PAUSE_TIMER],
 };
 
 function normalizeInventory(rawInventory) {
