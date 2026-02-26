@@ -152,6 +152,8 @@ export default function Header({
   hearts,
   onSettings,
   showHearts,
+  showCoins = true,
+  showSettings = true,
   t,
   lang,
   coins = 0, // live coins prop from parent
@@ -191,35 +193,39 @@ export default function Header({
           {showHearts && hearts ? (
             <HeartsPill hearts={hearts} t={t} lang={lang} />
           ) : null}
-          <CoinsPill
-            username={username}
-            coinsProp={coins}
-            t={t}
-            lang={lang}
-            onClick={onCoinsClick}
-            disableClick={disableCoinsClick}
-          />
-          <button
-            onClick={onSettings}
-            aria-label={t && lang ? t(lang, "settings") : "Settings"}
-            title={t && lang ? t(lang, "settings") : "Settings"}
-            style={{
-              background: "#f1f5f9",
-              color: "#0f172a",
-              border: "1px solid #e2e8f0",
-              borderRadius: 999,
-              width: 30,
-              height: 30,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 16,
-              boxShadow: "0 1px 3px rgba(0,0,0,.06)",
-              cursor: "pointer",
-            }}
-          >
-            ⚙️
-          </button>
+          {showCoins ? (
+            <CoinsPill
+              username={username}
+              coinsProp={coins}
+              t={t}
+              lang={lang}
+              onClick={onCoinsClick}
+              disableClick={disableCoinsClick}
+            />
+          ) : null}
+          {showSettings ? (
+            <button
+              onClick={onSettings}
+              aria-label={t && lang ? t(lang, "settings") : "Settings"}
+              title={t && lang ? t(lang, "settings") : "Settings"}
+              style={{
+                background: "#f1f5f9",
+                color: "#0f172a",
+                border: "1px solid #e2e8f0",
+                borderRadius: 999,
+                width: 30,
+                height: 30,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+                boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+                cursor: "pointer",
+              }}
+            >
+              ⚙️
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

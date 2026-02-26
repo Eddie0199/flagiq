@@ -857,7 +857,9 @@ export default function HomeScreen({
         hearts={hearts}
         username={username}
         onSettings={onSettings}
-        showHearts
+        showHearts={loggedIn}
+        showCoins={loggedIn}
+        showSettings={false}
         t={t}
         lang={lang}
         coins={coins}
@@ -939,6 +941,26 @@ export default function HomeScreen({
           zIndex: 9999,
         }}
       >
+        <button
+          onClick={onSettings}
+          aria-label={text("settings", "Settings")}
+          style={{
+            background: "#f1f5f9",
+            color: "#0f172a",
+            border: "1px solid #e2e8f0",
+            borderRadius: 999,
+            width: 36,
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 18,
+            boxShadow: "0 1px 3px rgba(0,0,0,.06)",
+            cursor: "pointer",
+          }}
+        >
+          ⚙️
+        </button>
         {username && (
           <DailySpinButton
             t={t}
