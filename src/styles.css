@@ -9,6 +9,9 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --safe-area-left: env(safe-area-inset-left, 0px);
   --header-top-padding: calc(var(--safe-area-top) + 2px);
+  --success-strong: #16a34a;
+  --success-strong-bg: #22c55e;
+  --success-strong-glow: rgba(34, 197, 94, 0.35);
 }
 
 html {
@@ -170,7 +173,7 @@ body {
 .game-answers {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
@@ -187,6 +190,42 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+}
+
+.game-answer-button-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.game-answer-label {
+  min-width: 0;
+  flex: 1;
+}
+
+.game-answer-correct-icon {
+  flex: 0 0 auto;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.game-answer-button.is-correct-reveal {
+  animation: game-answer-correct-pulse 0.26s ease-out;
+}
+
+@keyframes game-answer-correct-pulse {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .game-preload-spinner {
