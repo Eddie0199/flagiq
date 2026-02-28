@@ -1623,14 +1623,30 @@ export default function GameScreen({
               ? current.options.map((opt) => {
                   const isSelected = selectedAnswer === opt;
                   const isWrong = wrongAnswers.includes(opt);
+                  const isCorrect = current.correct.name === opt;
+                  const revealState = selectedAnswer !== null;
+                  const showCorrectReveal = revealState && isCorrect;
                   let border = "1px solid #e2e8f0";
                   let bg = "#fff";
+                  let color = "#0f172a";
+                  let boxShadow = "none";
+
+                  if (showCorrectReveal) {
+                    border = "2px solid var(--success-strong)";
+                    bg = "var(--success-strong-bg)";
+                    color = "#fff";
+                    boxShadow = "0 0 0 3px var(--success-strong-glow)";
+                  }
+
                   if (isSelected) {
-                    const correct = current.correct.name === opt;
-                    border = correct
-                      ? "2px solid #22c55e"
+                    border = isCorrect
+                      ? "2px solid var(--success-strong)"
                       : "2px solid #ef4444";
-                    bg = correct ? "#ecfdf3" : "#fef2f2";
+                    bg = isCorrect ? "var(--success-strong-bg)" : "#fef2f2";
+                    color = isCorrect ? "#fff" : "#7f1d1d";
+                    boxShadow = isCorrect
+                      ? "0 0 0 3px var(--success-strong-glow)"
+                      : "none";
                   } else if (isWrong) {
                     bg = "#f8fafc";
                   }
@@ -1657,6 +1673,8 @@ export default function GameScreen({
                       style={{
                         background: bg,
                         border,
+                        color,
+                        boxShadow,
                         borderRadius: 14,
                         padding: "10px 12px",
                         textAlign: "left",
@@ -1666,11 +1684,21 @@ export default function GameScreen({
                             ? "not-allowed"
                             : "pointer",
                         opacity: isWrong ? 0.5 : 1,
-                        transition: "background 0.15s ease, border 0.15s ease",
+                        transition:
+                          "background 0.15s ease, border 0.15s ease, box-shadow 0.15s ease, color 0.15s ease",
                       }}
-                      className="game-answer-button"
+                      className={`game-answer-button${
+                        showCorrectReveal ? " is-correct-reveal" : ""
+                      }`}
                     >
-                      {label}
+                      <span className="game-answer-button-content">
+                        <span className="game-answer-label">{label}</span>
+                        {showCorrectReveal && (
+                          <span className="game-answer-correct-icon" aria-hidden="true">
+                            ✓
+                          </span>
+                        )}
+                      </span>
                     </button>
                   );
                 })
