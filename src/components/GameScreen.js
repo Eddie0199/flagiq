@@ -1624,8 +1624,7 @@ export default function GameScreen({
                   const isSelected = selectedAnswer === opt;
                   const isWrong = wrongAnswers.includes(opt);
                   const isCorrect = current.correct.name === opt;
-                  const revealState = selectedAnswer !== null;
-                  const showCorrectReveal = revealState && isCorrect;
+                  const showCorrectReveal = isSelected && isCorrect;
                   let border = "1px solid #e2e8f0";
                   let bg = "#fff";
                   let color = "#0f172a";
