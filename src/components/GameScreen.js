@@ -2,9 +2,12 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { clamp, flagSrc, shuffle } from "../App";
 import { submitTimeTrialResult } from "../timeTrialResultsApi";
-import { createFlagFallbackPlaceholder } from "../flagAssets";
 import { HINT_ICON_BY_TYPE } from "../uiIcons";
 import { getHintTranslation, HINT_IDS } from "../hints";
+import {
+  PERMANENTLY_EXCLUDED_FLAGS,
+  normalizeFlagCode,
+} from "../flagExclusions";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -111,8 +114,15 @@ export default function GameScreen({
   const [preloadReady, setPreloadReady] = useState(false);
   const [preloadError, setPreloadError] = useState("");
   const [flagImageCache, setFlagImageCache] = useState({});
-  const [flagLoadFailed, setFlagLoadFailed] = useState(false);
+  const [currentFlagLoaded, setCurrentFlagLoaded] = useState(false);
+  const [brokenFlagCodesState, setBrokenFlagCodesState] = useState([]);
   const loggedMissingFlagKeysRef = useRef(new Set());
+  const brokenFlagsRef = useRef(new Set());
+  const lastFailedFlagCodeRef = useRef("");
+  const lastFailedFlagUrlRef = useRef("");
+  const lastResolvedFlagUrlRef = useRef("");
+  const currentFlagRequestIdRef = useRef(0);
+  const [currentFlagRequestId, setCurrentFlagRequestId] = useState(0);
   const preloadStatsRef = useRef({
     startedAt: 0,
     completedAt: 0,
@@ -135,13 +145,20 @@ export default function GameScreen({
   }, [onGameplayDiagnostics]);
 
   const noteGameplayDiagnostic = useCallback(() => {
-    const snapshot = { ...preloadStatsRef.current };
+    const snapshot = {
+      ...preloadStatsRef.current,
+      totalFlags: Number(FLAGS?.length || 0),
+      excludedPermanent: PERMANENTLY_EXCLUDED_FLAGS.length,
+      excludedBrokenSession: brokenFlagsRef.current.size,
+      lastFailedFlagCode: lastFailedFlagCodeRef.current,
+      lastFailedFlagUrl: lastFailedFlagUrlRef.current,
+    };
     if (process.env.NODE_ENV !== "production") {
       console.debug("[gameplay-diag]", snapshot);
     }
     if (!gameplayDiagnosticsCallbackRef.current) return;
     gameplayDiagnosticsCallbackRef.current(snapshot);
-  }, []);
+  }, [FLAGS]);
 
   // show hint popup once per user per device
   useEffect(() => {
@@ -203,9 +220,16 @@ export default function GameScreen({
   }
 
   // helper that actually builds random questions
-  function buildQuestions(ld, qc) {
+  function buildQuestions(ld, qc, brokenSet = new Set()) {
     if (!ld) return [];
-    const pool = ld.pool || [];
+    const pool = (ld.pool || []).filter((flag) => {
+      const code = normalizeFlagCode(flag?.code);
+      return (
+        code &&
+        !PERMANENTLY_EXCLUDED_FLAGS.includes(code) &&
+        !brokenSet.has(code)
+      );
+    });
     if (!pool.length) return [];
 
     const shuffledPool = shuffle(pool);
@@ -273,12 +297,14 @@ export default function GameScreen({
 
   // initial questions
   const [questions, setQuestions] = useState(() =>
-    buildQuestions(levelDef, questionCount)
+    buildQuestions(levelDef, questionCount, brokenFlagsRef.current)
   );
 
   // rebuild when level / count changes
   useEffect(() => {
-    setQuestions(buildQuestions(levelDef, questionCount));
+    brokenFlagsRef.current = new Set();
+    setBrokenFlagCodesState([]);
+    setQuestions(buildQuestions(levelDef, questionCount, brokenFlagsRef.current));
   }, [levelDef, questionCount]);
 
   // ---------- STATE ----------
@@ -315,6 +341,11 @@ export default function GameScreen({
     setTtPaused(false);
     setShowCoinReward(false);
     setRunStars(0);
+    brokenFlagsRef.current = new Set();
+    setBrokenFlagCodesState([]);
+    lastFailedFlagCodeRef.current = "";
+    lastFailedFlagUrlRef.current = "";
+    lastResolvedFlagUrlRef.current = "";
     runStartedRef.current = false;
     runEndedRef.current = false;
     lifeLostRef.current = false;
@@ -347,6 +378,7 @@ export default function GameScreen({
   useEffect(() => {
     if (mode !== "timetrial") return;
     if (!preloadReady) return;
+    if (!currentFlagLoaded) return;
     if (done || fail) return;
     if (ttPaused) return;
 
@@ -367,7 +399,7 @@ export default function GameScreen({
 
     return () => clearInterval(timer);
     
-  }, [mode, preloadReady, done, fail, ttPaused]);
+  }, [mode, preloadReady, currentFlagLoaded, done, fail, ttPaused]);
 
   const current = questions[qIndex];
   const isLocalFlag = (flag) =>
@@ -655,9 +687,51 @@ export default function GameScreen({
       currentFlagSrc ||
       localFallbackSrc
     : currentFlagSrc;
+
+  const regenerateCurrentQuestion = useCallback(
+    (excludeSet) => {
+      if (!levelDef) return;
+
+      setQuestions((prev) => {
+        if (!prev.length) return prev;
+        const replacement = buildQuestions(levelDef, 1, excludeSet)[0];
+        if (!replacement) {
+          return prev.filter((_, idx) => idx !== qIndex);
+        }
+        return prev.map((q, idx) => (idx === qIndex ? replacement : q));
+      });
+    },
+    [levelDef, qIndex]
+  );
+
   useEffect(() => {
-    setFlagLoadFailed(false);
-  }, [displayFlagSrc, current?.correct?.code]);
+    if (!current?.correct?.code) {
+      setCurrentFlagLoaded(false);
+      return;
+    }
+    currentFlagRequestIdRef.current += 1;
+    setCurrentFlagRequestId(currentFlagRequestIdRef.current);
+    setCurrentFlagLoaded(false);
+    if (process.env.NODE_ENV !== "production") {
+      const url = displayFlagSrc || flagSrc(current.correct, 320);
+      lastResolvedFlagUrlRef.current = url;
+      console.debug("[flags] requesting", {
+        code: current.correct.code,
+        url,
+      });
+    }
+  }, [current?.correct?.code, displayFlagSrc, current?.correct]);
+
+  useEffect(() => {
+    if (!questions.length && !done && !fail) {
+      markRunEnded();
+      setDone(true);
+    }
+  }, [questions.length, done, fail]);
+
+  useEffect(() => {
+    noteGameplayDiagnostic();
+  }, [brokenFlagCodesState, noteGameplayDiagnostic]);
 
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
@@ -738,7 +812,7 @@ export default function GameScreen({
 
   // ---------- ANSWER HANDLER ----------
   function handleAnswer(answer, { fromHint = false } = {}) {
-    if (!preloadReady || !current || done || fail) return;
+    if (!preloadReady || !current || done || fail || !currentFlagLoaded) return;
     // normal clicks shouldn't work while we show colours
     if (!fromHint && selectedAnswer !== null) return;
 
@@ -921,7 +995,12 @@ export default function GameScreen({
 
   // reusable reset that ALSO rebuilds questions
   const resetAndRebuild = () => {
-    setQuestions(buildQuestions(levelDef, questionCount));
+    brokenFlagsRef.current = new Set();
+    setBrokenFlagCodesState([]);
+    lastFailedFlagCodeRef.current = "";
+    lastFailedFlagUrlRef.current = "";
+    lastResolvedFlagUrlRef.current = "";
+    setQuestions(buildQuestions(levelDef, questionCount, brokenFlagsRef.current));
     setQIndex(0);
     setSkulls(0);
     setDone(false);
@@ -1561,29 +1640,20 @@ export default function GameScreen({
             }}
           >
             {current ? (
-              flagLoadFailed ? (
-                <img
-                  src={createFlagFallbackPlaceholder(
-                    `${current?.correct?.name || "Unknown"} (${current?.correct?.code || "?"})`
-                  )}
-                  alt={`${current.correct.name} unavailable`}
-                  style={{
-                    maxWidth: 256,
-                    maxHeight: 160,
-                    width: "auto",
-                    height: "auto",
-                    objectFit: "contain",
-                    borderRadius: 12,
-                    border: "1px solid rgba(0, 0, 0, 0.12)",
-                    display: "block",
-                  }}
-                />
-              ) : (
               <img
                 src={displayFlagSrc || flagSrc(current.correct, 320)}
                 alt={current.correct.name}
+                data-request-id={currentFlagRequestId}
+                onLoad={(event) => {
+                  const requestId = Number(event.currentTarget.dataset.requestId || 0);
+                  if (requestId !== currentFlagRequestIdRef.current) return;
+                  setCurrentFlagLoaded(true);
+                }}
                 onError={(event) => {
-                  const fallback = current?.correct?.fallbackImg;
+                  const requestId = Number(event.currentTarget.dataset.requestId || 0);
+                  if (requestId !== currentFlagRequestIdRef.current) return;
+                  const failedCode = normalizeFlagCode(current?.correct?.code);
+                  const failedUrl = event.currentTarget.currentSrc || event.currentTarget.src || "";
                   const missingKey = `${current?.correct?.name || "Unknown"}:${
                     current?.correct?.code || "?"
                   }`;
@@ -1591,13 +1661,17 @@ export default function GameScreen({
                     loggedMissingFlagKeysRef.current.add(missingKey);
                     console.warn("[flags] Missing flag asset", {
                       key: missingKey,
-                      src: event.currentTarget.src,
+                      src: failedUrl,
                     });
                   }
-                  if (fallback && event.currentTarget.src !== fallback) {
-                    event.currentTarget.src = fallback;
-                  } else {
-                    setFlagLoadFailed(true);
+
+                  if (failedCode) {
+                    brokenFlagsRef.current.add(failedCode);
+                    setBrokenFlagCodesState(Array.from(brokenFlagsRef.current));
+                    lastFailedFlagCodeRef.current = failedCode;
+                    lastFailedFlagUrlRef.current = failedUrl;
+                    setCurrentFlagLoaded(false);
+                    regenerateCurrentQuestion(brokenFlagsRef.current);
                   }
                 }}
                 style={{
@@ -1611,7 +1685,6 @@ export default function GameScreen({
                   display: "block",
                 }}
               />
-              )
             ) : (
               <div className="game-preload-spinner" aria-label="Loading" />
             )}

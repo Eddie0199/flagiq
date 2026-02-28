@@ -2823,6 +2823,12 @@ export default function App() {
                   <div>Time to first question: {Math.round(gameplayDiagnostics.firstQuestionMs || 0)} ms</div>
                   <div>Network calls during preload: {Number(gameplayDiagnostics.preloadNetworkCalls) || 0}</div>
                   <div>Network calls during level: {Number(gameplayDiagnostics.gameplayNetworkCalls) || 0}</div>
+                  <div style={{ marginTop: 8, fontWeight: 700 }}>Flag Diagnostics</div>
+                  <div>totalFlags: {Number(gameplayDiagnostics.totalFlags) || 0}</div>
+                  <div>excludedPermanent: {Number(gameplayDiagnostics.excludedPermanent) || 0}</div>
+                  <div>excludedBrokenSession: {Number(gameplayDiagnostics.excludedBrokenSession) || 0}</div>
+                  <div>lastFailedFlagCode: {gameplayDiagnostics.lastFailedFlagCode || "-"}</div>
+                  <div>lastFailedFlagUrl: {gameplayDiagnostics.lastFailedFlagUrl || "-"}</div>
                 </div>
               ) : (
                 <div style={{ fontSize: 12, color: "#cbd5f5" }}>No gameplay run recorded yet.</div>
