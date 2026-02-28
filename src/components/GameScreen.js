@@ -28,7 +28,7 @@ const nextFrame = (fn) => {
 };
 
 const WRONG_ANSWER_RESET_MS = 120;
-const CORRECT_ANSWER_HOLD_MS = 150;
+const CORRECT_ANSWER_HOLD_MS = 260;
 const PAUSE_HINT_MS = 1500;
 const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
 const NEXT_FLAG_WARMUP_COUNT = 4;
