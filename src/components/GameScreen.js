@@ -8,6 +8,7 @@ import {
   PERMANENTLY_EXCLUDED_FLAGS,
   normalizeFlagCode,
 } from "../flagExclusions";
+import { IS_DEBUG_BUILD } from "../debugTools";
 
 const QUESTION_COUNT_FALLBACK = 10;
 
@@ -157,7 +158,7 @@ export default function GameScreen({
       lastFailedFlagUrl: lastFailedFlagUrlRef.current,
     };
     if (process.env.NODE_ENV !== "production") {
-      console.debug("[gameplay-diag]", snapshot);
+      if (IS_DEBUG_BUILD) console.debug("[gameplay-diag]", snapshot);
     }
     if (!gameplayDiagnosticsCallbackRef.current) return;
     gameplayDiagnosticsCallbackRef.current(snapshot);
@@ -321,7 +322,7 @@ export default function GameScreen({
       }
 
       if (hasPreviousCorrect) {
-        console.debug("[question-options] previous correct exclusion", {
+        if (IS_DEBUG_BUILD) console.debug("[question-options] previous correct exclusion", {
           prevCorrect: previousCorrect?.code || previousCorrect?.name || "none",
           nextQuestionId: correct?.code || correct?.name || `index-${i}`,
           excludedOption,
@@ -848,7 +849,7 @@ export default function GameScreen({
     if (process.env.NODE_ENV !== "production") {
       const url = displayFlagSrc || flagSrc(current.correct, 320);
       lastResolvedFlagUrlRef.current = url;
-      console.debug("[flags] requesting", {
+      if (IS_DEBUG_BUILD) console.debug("[flags] requesting", {
         code: current.correct.code,
         url,
       });
@@ -1974,7 +1975,7 @@ export default function GameScreen({
         </div>
       )}
 
-      {process.env.NODE_ENV !== "production" && (
+      {IS_DEBUG_BUILD && (
         <div
           style={{
             marginTop: 12,

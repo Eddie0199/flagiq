@@ -7,8 +7,9 @@ import {
 } from "../purchases";
 import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getProductCurrencyDiagnostics } from "../storePriceDisplay";
+import { IS_DEBUG_BUILD } from "../debugTools";
 
-const JS_BUILD_MARKER = "2026-02-19-B45";
+const JS_BUILD_MARKER = "2026-02-19-B53";
 
 function toPretty(value) {
   try {
@@ -42,6 +43,12 @@ export default function IapDiagnosticsPanel({ visible }) {
     configuredHeaderTopPadding: "unknown",
     currentHeaderTopPadding: "unknown",
   });
+
+  useEffect(() => {
+    if (!IS_DEBUG_BUILD) {
+      console.warn("[debug-tools] IapDiagnosticsPanel mounted in production; suppressing render.");
+    }
+  }, []);
   const nativeBuildInfo = useMemo(() => {
     if (typeof window === "undefined") return null;
     return window.__NATIVE_BUILD_INFO__ || window.NATIVE_BUILD_INFO || null;
@@ -234,7 +241,7 @@ export default function IapDiagnosticsPanel({ visible }) {
     [refresh]
   );
 
-  if (!visible) return null;
+  if (!visible || !IS_DEBUG_BUILD) return null;
 
   return (
     <div

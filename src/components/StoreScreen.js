@@ -11,6 +11,7 @@ import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getUiPricePresentation } from "../storePriceDisplay";
 import { HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 import { getHintTranslation, HINT_IDS } from "../hints";
+import { IS_DEBUG_BUILD } from "../debugTools";
 
 const BOOSTER_ITEMS = [
   {
@@ -132,7 +133,7 @@ export default function StoreScreen({
   hearts,
   maxHearts,
   onBuyHeartWithCoins,
-  showPriceDebugOverlay = false,
+  showPriceDebugOverlay = IS_DEBUG_BUILD,
 }) {
   const [message, setMessage] = useState("");
   const [storeStatus, setStoreStatus] = useState("loading");
