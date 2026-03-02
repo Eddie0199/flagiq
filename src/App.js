@@ -18,6 +18,7 @@ import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import { registerPurchaseRewardHandler, runIapStartupDiagnostics } from "./purchases";
 import IapDiagnosticsPanel from "./components/IapDiagnosticsPanel";
+import { IS_DEBUG_BUILD } from "./debugTools";
 import {
   LOCAL_PACKS,
   buildLocalPackLevels,
@@ -898,9 +899,7 @@ export default function App() {
     return <ConfigMissingScreen missingKeys={missingSupabaseEnv} />;
   }
 
-  const debugOverlayEnabled =
-    String(process.env.REACT_APP_DEBUG_OVERLAY || "true").toLowerCase() !==
-    "false";
+  const debugOverlayEnabled = IS_DEBUG_BUILD;
   const initialDebugLogs = useMemo(
     () => (debugOverlayEnabled ? readDebugLogs() : []),
     [debugOverlayEnabled]
@@ -1157,6 +1156,15 @@ export default function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (IS_DEBUG_BUILD) return;
+    if (showDebugScreen || showDebugOverlay) {
+      console.warn("[debug-tools] Debug UI attempted to mount in production; force-disabling.");
+      setShowDebugScreen(false);
+      setShowDebugOverlay(false);
+    }
+  }, [showDebugOverlay, showDebugScreen]);
 
   const [users, setUsers] = useLocalStorage("flagiq:users", {});
   const [activeUser, setActiveUser] = useLocalStorage("flagiq:activeUser", "");
@@ -2182,26 +2190,30 @@ export default function App() {
     let navigationFired = false;
 
     if (!authReady) {
-      console.debug("[home-cta] blocked", {
-        eventType,
-        targetTag,
-        targetLabel,
-        currentRoute: screen,
-        navigationFired,
-        reason: "auth-not-ready",
-      });
+      if (IS_DEBUG_BUILD) {
+        console.debug("[home-cta] blocked", {
+          eventType,
+          targetTag,
+          targetLabel,
+          currentRoute: screen,
+          navigationFired,
+          reason: "auth-not-ready",
+        });
+      }
       return;
     }
     if (!loggedIn) {
       openAuth("login");
       navigationFired = true;
-      console.debug("[home-cta] auth-gate", {
-        eventType,
-        targetTag,
-        targetLabel,
-        currentRoute: screen,
-        navigationFired,
-      });
+      if (IS_DEBUG_BUILD) {
+        console.debug("[home-cta] auth-gate", {
+          eventType,
+          targetTag,
+          targetLabel,
+          currentRoute: screen,
+          navigationFired,
+        });
+      }
       return;
     }
     if (nextMode === "local") {
@@ -2211,27 +2223,31 @@ export default function App() {
       setMode("local");
       setScreen(pack ? "local-pack-levels" : "local-packs");
       navigationFired = true;
+      if (IS_DEBUG_BUILD) {
+        console.debug("[home-cta] navigate", {
+          eventType,
+          targetTag,
+          targetLabel,
+          currentRoute: screen,
+          navigationFired,
+          destination: pack ? "local-pack-levels" : "local-packs",
+        });
+      }
+      return;
+    }
+    setMode(nextMode || "classic");
+    setScreen("levels");
+    navigationFired = true;
+    if (IS_DEBUG_BUILD) {
       console.debug("[home-cta] navigate", {
         eventType,
         targetTag,
         targetLabel,
         currentRoute: screen,
         navigationFired,
-        destination: pack ? "local-pack-levels" : "local-packs",
+        destination: "levels",
       });
-      return;
     }
-    setMode(nextMode || "classic");
-    setScreen("levels");
-    navigationFired = true;
-    console.debug("[home-cta] navigate", {
-      eventType,
-      targetTag,
-      targetLabel,
-      currentRoute: screen,
-      navigationFired,
-      destination: "levels",
-    });
   };
 
   const handleLocalPackSelect = useCallback(
