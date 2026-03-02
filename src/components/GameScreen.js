@@ -360,6 +360,8 @@ export default function GameScreen({
   // ⭐ this run's stars (what we show on the success screen)
   const [runStars, setRunStars] = useState(0);
 
+  const current = questions[qIndex];
+
   // reset base state on level/mode change
   useEffect(() => {
     setQIndex(0);
@@ -452,7 +454,6 @@ export default function GameScreen({
     
   }, [mode, preloadReady, currentFlagLoaded, done, fail, ttPaused]);
 
-  const current = questions[qIndex];
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
   const loadLocalFlagImage = async (flag) => {
