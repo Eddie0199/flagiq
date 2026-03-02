@@ -2171,12 +2171,37 @@ export default function App() {
   const classicStats = deriveModeStatsFromProgress(progress, "classic");
   const timetrialStats = deriveModeStatsFromProgress(progress, "timetrial");
 
-  const handleHomeStart = (nextMode, pack) => {
+  const handleHomeStart = (nextMode, pack, interactionMeta = {}) => {
+    const eventType = interactionMeta?.eventType || "unknown";
+    const eventTarget = interactionMeta?.event?.target;
+    const targetTag = eventTarget?.tagName || "unknown";
+    const targetLabel =
+      eventTarget?.getAttribute?.("aria-label") ||
+      eventTarget?.textContent?.trim?.()?.slice(0, 60) ||
+      "none";
+    let navigationFired = false;
+
     if (!authReady) {
+      console.debug("[home-cta] blocked", {
+        eventType,
+        targetTag,
+        targetLabel,
+        currentRoute: screen,
+        navigationFired,
+        reason: "auth-not-ready",
+      });
       return;
     }
     if (!loggedIn) {
       openAuth("login");
+      navigationFired = true;
+      console.debug("[home-cta] auth-gate", {
+        eventType,
+        targetTag,
+        targetLabel,
+        currentRoute: screen,
+        navigationFired,
+      });
       return;
     }
     if (nextMode === "local") {
@@ -2185,10 +2210,28 @@ export default function App() {
       }
       setMode("local");
       setScreen(pack ? "local-pack-levels" : "local-packs");
+      navigationFired = true;
+      console.debug("[home-cta] navigate", {
+        eventType,
+        targetTag,
+        targetLabel,
+        currentRoute: screen,
+        navigationFired,
+        destination: pack ? "local-pack-levels" : "local-packs",
+      });
       return;
     }
     setMode(nextMode || "classic");
     setScreen("levels");
+    navigationFired = true;
+    console.debug("[home-cta] navigate", {
+      eventType,
+      targetTag,
+      targetLabel,
+      currentRoute: screen,
+      navigationFired,
+      destination: "levels",
+    });
   };
 
   const handleLocalPackSelect = useCallback(
