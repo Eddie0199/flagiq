@@ -46,9 +46,11 @@ const successSummaryTextStyle = {
 
 const afterCorrectHighlight = (fn) => {
   nextFrame(() => {
-    setTimeout(fn, CORRECT_ANSWER_HOLD_MS);
+    fn();
   });
 };
+
+const normalizeOptionValue = (value) => String(value || "").trim().toLowerCase();
 
 // small stars row
 function StarsInline({ count }) {
@@ -235,14 +237,33 @@ export default function GameScreen({
 
     const shuffledPool = shuffle(pool);
     const qs = [];
+    let previousCorrect = null;
 
     for (let i = 0; i < qc; i++) {
       const correct = shuffledPool[i % shuffledPool.length];
       const correctName = correct.name;
       const others = shuffledPool.filter((f) => f.code !== correct.code);
 
+      const previousCorrectCode = normalizeFlagCode(previousCorrect?.code);
+      const previousCorrectName = normalizeOptionValue(previousCorrect?.name);
+      const hasPreviousCorrect = Boolean(previousCorrectCode || previousCorrectName);
+      const othersWithoutPrevCorrect = hasPreviousCorrect
+        ? others.filter((flag) => {
+            const candidateCode = normalizeFlagCode(flag?.code);
+            const candidateName = normalizeOptionValue(flag?.name);
+            if (previousCorrectCode && candidateCode === previousCorrectCode) return false;
+            if (!previousCorrectCode && previousCorrectName && candidateName === previousCorrectName)
+              return false;
+            return true;
+          })
+        : others;
+      const excludedOption =
+        hasPreviousCorrect && othersWithoutPrevCorrect.length !== others.length
+          ? previousCorrect?.code || previousCorrect?.name || null
+          : null;
+
       // score how similar each candidate is to the correct flag
-      const scored = others.map((f) => ({
+      const scored = othersWithoutPrevCorrect.map((f) => ({
         flag: f,
         score: flagSimilarity(correct, f),
       }));
@@ -261,7 +282,7 @@ export default function GameScreen({
       } else {
         // fallback: use whatever we have, then pad with random others
         const base = similar;
-        const remaining = others.filter(
+        const remaining = othersWithoutPrevCorrect.filter(
           (f) => !base.some((s) => s.code === f.code)
         );
         wrongs = [...base, ...shuffle(remaining)].slice(0, 3);
@@ -281,16 +302,36 @@ export default function GameScreen({
 
       // if dedupe removed some wrongs, top up with extra distinct flags
       let idxGuard = 0;
-      while (uniqueNames.length < 4 && idxGuard < others.length) {
-        const extra = others[idxGuard++];
+      while (uniqueNames.length < 4 && idxGuard < othersWithoutPrevCorrect.length) {
+        const extra = othersWithoutPrevCorrect[idxGuard++];
         if (extra && !seen.has(extra.name)) {
           seen.add(extra.name);
           uniqueNames.push(extra.name);
         }
       }
 
+      const fallbackUsed = uniqueNames.length < 4;
+      let fallbackIdxGuard = 0;
+      while (uniqueNames.length < 4 && fallbackIdxGuard < others.length) {
+        const extra = others[fallbackIdxGuard++];
+        if (extra && !seen.has(extra.name)) {
+          seen.add(extra.name);
+          uniqueNames.push(extra.name);
+        }
+      }
+
+      if (hasPreviousCorrect) {
+        console.debug("[question-options] previous correct exclusion", {
+          prevCorrect: previousCorrect?.code || previousCorrect?.name || "none",
+          nextQuestionId: correct?.code || correct?.name || `index-${i}`,
+          excludedOption,
+          fallbackUsed,
+        });
+      }
+
       const opts = shuffle(uniqueNames);
       qs.push({ correct, options: opts });
+      previousCorrect = correct;
     }
 
     return qs;
@@ -323,6 +364,30 @@ export default function GameScreen({
   const [lastTapTimestamp, setLastTapTimestamp] = useState(null);
   const [lastTapTarget, setLastTapTarget] = useState("none");
   const inputLockSinceRef = useRef(0);
+  const pendingCorrectTransitionTimeoutRef = useRef(null);
+  const pendingWrongResetTimeoutRef = useRef(null);
+  const pendingPauseTimeoutRef = useRef(null);
+
+  const clearPendingTransitionTimeout = useCallback(() => {
+    if (pendingCorrectTransitionTimeoutRef.current) {
+      clearTimeout(pendingCorrectTransitionTimeoutRef.current);
+      pendingCorrectTransitionTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearPendingWrongResetTimeout = useCallback(() => {
+    if (pendingWrongResetTimeoutRef.current) {
+      clearTimeout(pendingWrongResetTimeoutRef.current);
+      pendingWrongResetTimeoutRef.current = null;
+    }
+  }, []);
+
+  const clearPendingPauseTimeout = useCallback(() => {
+    if (pendingPauseTimeoutRef.current) {
+      clearTimeout(pendingPauseTimeoutRef.current);
+      pendingPauseTimeoutRef.current = null;
+    }
+  }, []);
 
   const lockInput = useCallback(() => {
     inputLockSinceRef.current = Date.now();
@@ -376,6 +441,9 @@ export default function GameScreen({
     setTtPaused(false);
     setShowCoinReward(false);
     setRunStars(0);
+    clearPendingTransitionTimeout();
+    clearPendingWrongResetTimeout();
+    clearPendingPauseTimeout();
     brokenFlagsRef.current = new Set();
     setBrokenFlagCodesState([]);
     lastFailedFlagCodeRef.current = "";
@@ -384,7 +452,20 @@ export default function GameScreen({
     runStartedRef.current = false;
     runEndedRef.current = false;
     lifeLostRef.current = false;
-  }, [levelId, mode, unlockInput]);
+  }, [
+    levelId,
+    mode,
+    unlockInput,
+    clearPendingTransitionTimeout,
+    clearPendingWrongResetTimeout,
+    clearPendingPauseTimeout,
+  ]);
+
+  useEffect(() => {
+    clearPendingTransitionTimeout();
+    clearPendingWrongResetTimeout();
+    setSelectedAnswer(null);
+  }, [qIndex, clearPendingTransitionTimeout, clearPendingWrongResetTimeout]);
 
   useEffect(() => {
     if (!isInputLocked || !current || done || fail) return;
@@ -845,7 +926,9 @@ export default function GameScreen({
       ...prev,
       pause: Math.max(0, (prev?.pause ?? 0) - 1),
     }));
-    setTimeout(() => {
+    clearPendingPauseTimeout();
+    pendingPauseTimeoutRef.current = setTimeout(() => {
+      pendingPauseTimeoutRef.current = null;
       setTtPaused(false);
     }, PAUSE_HINT_MS);
   }
@@ -885,8 +968,11 @@ export default function GameScreen({
         lockInput();
         setIsAnimatingTransition(true);
 
+        clearPendingTransitionTimeout();
         afterCorrectHighlight(() => {
-          try {
+          pendingCorrectTransitionTimeoutRef.current = setTimeout(() => {
+            pendingCorrectTransitionTimeoutRef.current = null;
+            try {
             if (lastQ) {
               const livesLeft = clamp(3 - skulls, 0, 3);
               const stars = starsFromLives
@@ -920,6 +1006,7 @@ export default function GameScreen({
           } finally {
             unlockInput();
           }
+          }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
         soundWrong && soundWrong();
@@ -932,7 +1019,11 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
+        clearPendingWrongResetTimeout();
+        pendingWrongResetTimeoutRef.current = setTimeout(() => {
+          pendingWrongResetTimeoutRef.current = null;
+          setSelectedAnswer(null);
+        }, WRONG_ANSWER_RESET_MS);
       }
       return;
     }
@@ -947,8 +1038,11 @@ export default function GameScreen({
         lockInput();
         setIsAnimatingTransition(true);
 
+        clearPendingTransitionTimeout();
         afterCorrectHighlight(() => {
-          try {
+          pendingCorrectTransitionTimeoutRef.current = setTimeout(() => {
+            pendingCorrectTransitionTimeoutRef.current = null;
+            try {
             if (lastQ) {
               // stars based on score AND mistakes
               const maxByMistakes = clamp(3 - skulls, 0, 3);
@@ -986,6 +1080,7 @@ export default function GameScreen({
           } finally {
             unlockInput();
           }
+          }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
         soundWrong && soundWrong();
@@ -998,7 +1093,11 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
+        clearPendingWrongResetTimeout();
+        pendingWrongResetTimeoutRef.current = setTimeout(() => {
+          pendingWrongResetTimeoutRef.current = null;
+          setSelectedAnswer(null);
+        }, WRONG_ANSWER_RESET_MS);
       }
     }
   }
@@ -1006,6 +1105,10 @@ export default function GameScreen({
   // if player leaves the GameScreen mid-run, count it as a lost life ONCE
   useEffect(() => {
     return () => {
+      clearPendingTransitionTimeout();
+      clearPendingWrongResetTimeout();
+      clearPendingPauseTimeout();
+
       if (
         runStartedRef.current &&
         !runEndedRef.current &&
@@ -1025,8 +1128,13 @@ export default function GameScreen({
         });
       }
     };
-    
-  }, [mode, levelId]);
+  }, [
+    mode,
+    levelId,
+    clearPendingTransitionTimeout,
+    clearPendingWrongResetTimeout,
+    clearPendingPauseTimeout,
+  ]);
 
   // submit Time Trial results once when the run is completed
   useEffect(() => {
@@ -1772,7 +1880,7 @@ export default function GameScreen({
           {/* ANSWERS */}
           <div className="game-answers">
             {current
-              ? current.options.map((opt) => {
+              ? current.options.map((opt, optIndex) => {
                   const isSelected = selectedAnswer === opt;
                   const isWrong = wrongAnswers.includes(opt);
                   const isCorrect = current.correct.name === opt;
@@ -1818,7 +1926,7 @@ export default function GameScreen({
 
                   return (
                     <button
-                      key={opt}
+                      key={`${current?.correct?.code || `q${qIndex}`}-${optIndex}`}
                       onPointerDown={(event) => handleAnswer(opt, { event })}
                       disabled={isWrong || selectedAnswer !== null || isInputLocked}
                       style={{
