@@ -749,6 +749,22 @@ export default function HomeScreen({
   ];
 
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
+    const pointerHandledRef = useRef(false);
+
+    const handlePointerDown = (event) => {
+      if (disabled || typeof onClick !== "function") return;
+      pointerHandledRef.current = true;
+      onClick(event, "pointerdown");
+      window.setTimeout(() => {
+        pointerHandledRef.current = false;
+      }, 0);
+    };
+
+    const handleClick = (event) => {
+      if (disabled || typeof onClick !== "function") return;
+      if (pointerHandledRef.current) return;
+      onClick(event, "click");
+    };
     const completedLevels = Number(stats?.completedLevels ?? 0);
     const stars = Number(stats?.stars ?? 0);
     const showProgress = !disabled;
@@ -764,7 +780,8 @@ export default function HomeScreen({
     return (
       <button
         disabled={disabled}
-        onClick={disabled ? undefined : onClick}
+        onPointerDown={disabled ? undefined : handlePointerDown}
+        onClick={disabled ? undefined : handleClick}
         style={{
           width: "85%",
           maxWidth: 520,
@@ -1383,7 +1400,9 @@ export default function HomeScreen({
             icon="🚩"
             title={text("classic", "Classic")}
             stats={classicFromStore}
-            onClick={() => onStart && onStart("classic")}
+            onClick={(event, eventType) =>
+              onStart && onStart("classic", null, { event, eventType })
+            }
             mode="classic"
           />
           <Card
@@ -1391,7 +1410,9 @@ export default function HomeScreen({
             icon="⏱️"
             title={text("timeTrial", "Time Trial")}
             stats={timetrialFromStore}
-            onClick={() => onStart && onStart("timetrial")}
+            onClick={(event, eventType) =>
+              onStart && onStart("timetrial", null, { event, eventType })
+            }
             mode="timetrial"
           />
           <Card
@@ -1399,7 +1420,9 @@ export default function HomeScreen({
             icon="💀"
             title={text("localFlags", "Local Flags")}
             stats={localFromStore}
-            onClick={() => onStart && onStart("local")}
+            onClick={(event, eventType) =>
+              onStart && onStart("local", null, { event, eventType })
+            }
             mode="local"
             disabled={localDisabled}
           />
