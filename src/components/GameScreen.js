@@ -33,6 +33,7 @@ const nextFrame = (fn) => {
 const WRONG_ANSWER_RESET_MS = 120;
 const CORRECT_ANSWER_HOLD_MS = 260;
 const PAUSE_HINT_MS = 1500;
+const INPUT_LOCK_WATCHDOG_MS = 1500;
 const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
 const NEXT_FLAG_WARMUP_COUNT = 4;
 const PRELOAD_MAX_WAIT_MS = 1800;
@@ -316,6 +317,37 @@ export default function GameScreen({
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [wrongAnswers, setWrongAnswers] = useState([]);
   const [hintError, setHintError] = useState("");
+  const [isInputLocked, setIsInputLocked] = useState(false);
+  const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
+  const [isFetchingNextQuestion, setIsFetchingNextQuestion] = useState(false);
+  const [lastTapTimestamp, setLastTapTimestamp] = useState(null);
+  const [lastTapTarget, setLastTapTarget] = useState("none");
+  const inputLockSinceRef = useRef(0);
+
+  const lockInput = useCallback(() => {
+    inputLockSinceRef.current = Date.now();
+    setIsInputLocked(true);
+  }, []);
+
+  const unlockInput = useCallback(() => {
+    inputLockSinceRef.current = 0;
+    setIsInputLocked(false);
+    setIsAnimatingTransition(false);
+    setIsFetchingNextQuestion(false);
+  }, []);
+
+  const describeTapTarget = useCallback((target) => {
+    if (!target || !(target instanceof Element)) return "unknown";
+    const idPart = target.id ? `#${target.id}` : "";
+    const classPart = target.className
+      ? `.${String(target.className)
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .join(".")}`
+      : "";
+    return `${target.tagName.toLowerCase()}${idPart}${classPart}`;
+  }, []);
 
   // time trial
   const [ttScore, setTtScore] = useState(0);
@@ -328,6 +360,8 @@ export default function GameScreen({
   // ⭐ this run's stars (what we show on the success screen)
   const [runStars, setRunStars] = useState(0);
 
+  const current = questions[qIndex];
+
   // reset base state on level/mode change
   useEffect(() => {
     setQIndex(0);
@@ -336,6 +370,7 @@ export default function GameScreen({
     setFail(false);
     setSelectedAnswer(null);
     setWrongAnswers([]);
+    unlockInput();
     setTtScore(0);
     setTtRemaining(TT_MS_PER_Q);
     setTtPaused(false);
@@ -349,7 +384,25 @@ export default function GameScreen({
     runStartedRef.current = false;
     runEndedRef.current = false;
     lifeLostRef.current = false;
-  }, [levelId, mode]);
+  }, [levelId, mode, unlockInput]);
+
+  useEffect(() => {
+    if (!isInputLocked || !current || done || fail) return;
+    const timer = setTimeout(() => {
+      if (!inputLockSinceRef.current) return;
+      const lockAge = Date.now() - inputLockSinceRef.current;
+      if (lockAge < INPUT_LOCK_WATCHDOG_MS) return;
+      console.warn("[input] Lock watchdog force-unlocked input", {
+        lockAge,
+        qIndex,
+        questionCode: current?.correct?.code,
+      });
+      unlockInput();
+      setSelectedAnswer(null);
+    }, INPUT_LOCK_WATCHDOG_MS + 50);
+    return () => clearTimeout(timer);
+  }, [isInputLocked, current, done, fail, qIndex, unlockInput]);
+
 
   // mark run as started once they interact (move question / answer / wrong)
   useEffect(() => {
@@ -401,7 +454,6 @@ export default function GameScreen({
     
   }, [mode, preloadReady, currentFlagLoaded, done, fail, ttPaused]);
 
-  const current = questions[qIndex];
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
   const loadLocalFlagImage = async (flag) => {
@@ -811,8 +863,11 @@ export default function GameScreen({
   }
 
   // ---------- ANSWER HANDLER ----------
-  function handleAnswer(answer, { fromHint = false } = {}) {
+  function handleAnswer(answer, { fromHint = false, event } = {}) {
+    setLastTapTimestamp(Date.now());
+    setLastTapTarget(describeTapTarget(event?.target));
     if (!preloadReady || !current || done || fail || !currentFlagLoaded) return;
+    if (isInputLocked) return;
     // normal clicks shouldn't work while we show colours
     if (!fromHint && selectedAnswer !== null) return;
 
@@ -827,36 +882,43 @@ export default function GameScreen({
       if (isCorrect) {
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
+        lockInput();
+        setIsAnimatingTransition(true);
 
         afterCorrectHighlight(() => {
-          if (lastQ) {
-            const livesLeft = clamp(3 - skulls, 0, 3);
-            const stars = starsFromLives
-              ? starsFromLives(livesLeft)
-              : clamp(livesLeft, 0, 3);
+          try {
+            if (lastQ) {
+              const livesLeft = clamp(3 - skulls, 0, 3);
+              const stars = starsFromLives
+                ? starsFromLives(livesLeft)
+                : clamp(livesLeft, 0, 3);
 
-            // ⭐ set stars for THIS run
-            setRunStars(stars);
+              // ⭐ set stars for THIS run
+              setRunStars(stars);
 
-            // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore = Number(storedStars || 0) > 0;
+              // check if this level had *any* stars before (per mode)
+              const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
-            // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
-            if (onProgressUpdate) {
-              onProgressUpdate(mode, levelId, stars);
+              // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
+              if (onProgressUpdate) {
+                onProgressUpdate(mode, levelId, stars);
+              }
+
+              // award coins ONLY if this is the first completion of this level+mode
+              if (!alreadyCompletedBefore && stars > 0) {
+                awardCoinsOnce();
+              }
+
+              markRunEnded();
+              setDone(true);
+            } else {
+              setIsFetchingNextQuestion(true);
+              setQIndex((p) => p + 1);
+              setSelectedAnswer(null);
+              setWrongAnswers([]);
             }
-
-            // award coins ONLY if this is the first completion of this level+mode
-            if (!alreadyCompletedBefore && stars > 0) {
-              awardCoinsOnce();
-            }
-
-            markRunEnded();
-            setDone(true);
-          } else {
-            setQIndex((p) => p + 1);
-            setSelectedAnswer(null);
-            setWrongAnswers([]);
+          } finally {
+            unlockInput();
           }
         });
       } else {
@@ -882,40 +944,47 @@ export default function GameScreen({
         const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
+        lockInput();
+        setIsAnimatingTransition(true);
 
         afterCorrectHighlight(() => {
-          if (lastQ) {
-            // stars based on score AND mistakes
-            const maxByMistakes = clamp(3 - skulls, 0, 3);
-            let stars = 1;
-            if (newTotal >= TT_STAR3) stars = 3;
-            else if (newTotal >= TT_STAR2) stars = 2;
-            stars = Math.min(stars, maxByMistakes);
+          try {
+            if (lastQ) {
+              // stars based on score AND mistakes
+              const maxByMistakes = clamp(3 - skulls, 0, 3);
+              let stars = 1;
+              if (newTotal >= TT_STAR3) stars = 3;
+              else if (newTotal >= TT_STAR2) stars = 2;
+              stars = Math.min(stars, maxByMistakes);
 
-            // ⭐ set stars for THIS run
-            setRunStars(stars);
+              // ⭐ set stars for THIS run
+              setRunStars(stars);
 
-            // check if this level had *any* stars before (per mode)
-            const alreadyCompletedBefore = Number(storedStars || 0) > 0;
+              // check if this level had *any* stars before (per mode)
+              const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
-            if (onProgressUpdate) {
-              onProgressUpdate(mode, levelId, stars);
+              if (onProgressUpdate) {
+                onProgressUpdate(mode, levelId, stars);
+              }
+
+              // award coins ONLY if this is the first completion of this level+mode
+              if (!alreadyCompletedBefore && stars > 0) {
+                awardCoinsOnce();
+              }
+
+              markRunEnded();
+              setTtScore(newTotal);
+              setDone(true);
+            } else {
+              setIsFetchingNextQuestion(true);
+              setTtScore(newTotal);
+              setQIndex((p) => p + 1);
+              setTtRemaining(TT_MS_PER_Q);
+              setSelectedAnswer(null);
+              setWrongAnswers([]);
             }
-
-            // award coins ONLY if this is the first completion of this level+mode
-            if (!alreadyCompletedBefore && stars > 0) {
-              awardCoinsOnce();
-            }
-
-            markRunEnded();
-            setTtScore(newTotal);
-            setDone(true);
-          } else {
-            setTtScore(newTotal);
-            setQIndex((p) => p + 1);
-            setTtRemaining(TT_MS_PER_Q);
-            setSelectedAnswer(null);
-            setWrongAnswers([]);
+          } finally {
+            unlockInput();
           }
         });
       } else {
@@ -1007,6 +1076,7 @@ export default function GameScreen({
     setFail(false);
     setSelectedAnswer(null);
     setWrongAnswers([]);
+    unlockInput();
     if (mode === "timetrial") {
       setTtScore(0);
       setTtRemaining(TT_MS_PER_Q);
@@ -1019,6 +1089,13 @@ export default function GameScreen({
     lifeLostRef.current = false;
     submittedTimeTrialResultRef.current = false;
   };
+
+  const reloadCurrentQuestion = useCallback(() => {
+    setSelectedAnswer(null);
+    setWrongAnswers([]);
+    unlockInput();
+    regenerateCurrentQuestion(brokenFlagsRef.current);
+  }, [regenerateCurrentQuestion, unlockInput]);
 
   const handleFailRetry = () => {
     if (typeof heartsCurrent === "number" && heartsCurrent <= 0) {
@@ -1637,6 +1714,7 @@ export default function GameScreen({
               justifyContent: "center",
               marginBottom: 16,
               position: "relative",
+              pointerEvents: "none",
             }}
           >
             {current ? (
@@ -1683,6 +1761,7 @@ export default function GameScreen({
                   borderRadius: 12,
                   border: "1px solid rgba(0, 0, 0, 0.12)",
                   display: "block",
+                  pointerEvents: "none",
                 }}
               />
             ) : (
@@ -1740,8 +1819,8 @@ export default function GameScreen({
                   return (
                     <button
                       key={opt}
-                      onPointerDown={() => handleAnswer(opt)}
-                      disabled={isWrong || selectedAnswer !== null}
+                      onPointerDown={(event) => handleAnswer(opt, { event })}
+                      disabled={isWrong || selectedAnswer !== null || isInputLocked}
                       style={{
                         background: bg,
                         border,
@@ -1752,7 +1831,7 @@ export default function GameScreen({
                         textAlign: "left",
                         fontWeight: 500,
                         cursor:
-                          isWrong || selectedAnswer !== null
+                          isWrong || selectedAnswer !== null || isInputLocked
                             ? "not-allowed"
                             : "pointer",
                         opacity: isWrong ? 0.5 : 1,
@@ -1784,6 +1863,48 @@ export default function GameScreen({
       {preloadError && (
         <div style={{ textAlign: "center", color: "#ef4444", marginTop: 10 }}>
           {preloadError}
+        </div>
+      )}
+
+      {process.env.NODE_ENV !== "production" && (
+        <div
+          style={{
+            marginTop: 12,
+            background: "rgba(15,23,42,0.7)",
+            color: "#fff",
+            borderRadius: 12,
+            padding: 10,
+            fontSize: 12,
+            display: "grid",
+            gap: 4,
+          }}
+        >
+          <strong>Input State (debug)</strong>
+          <div>isInputLocked: {String(isInputLocked)}</div>
+          <div>currentQuestionId: {current?.correct?.code || "none"}</div>
+          <div>selectedAnswerId: {selectedAnswer || "none"}</div>
+          <div>isAnimatingTransition: {String(isAnimatingTransition)}</div>
+          <div>isFetchingNextQuestion: {String(isFetchingNextQuestion)}</div>
+          <div>
+            lastTapTimestamp: {lastTapTimestamp ? new Date(lastTapTimestamp).toISOString() : "none"}
+          </div>
+          <div>tapTarget: {lastTapTarget}</div>
+          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={unlockInput}
+              style={{ borderRadius: 8, border: "none", padding: "6px 8px", cursor: "pointer" }}
+            >
+              Force unlock input
+            </button>
+            <button
+              type="button"
+              onClick={reloadCurrentQuestion}
+              style={{ borderRadius: 8, border: "none", padding: "6px 8px", cursor: "pointer" }}
+            >
+              Reload current question
+            </button>
+          </div>
         </div>
       )}
     </div>
