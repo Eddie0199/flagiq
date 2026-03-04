@@ -197,7 +197,7 @@ function formatLogValue(value) {
 }
 
 // ----- constants -----
-export const TOTAL_LEVELS = 50;
+export const TOTAL_LEVELS = 55;
 export const STARS_PER_LEVEL_MAX = 3;
 export const BATCH = 5;
 export const UNLOCK_THRESHOLD = 0.8;
@@ -212,6 +212,7 @@ export const BLOCK_REQUIRE = {
   40: 84,
   45: 96,
   50: 108,
+  55: 120,
 };
 
 export const MAX_HEARTS = 5;
@@ -377,7 +378,7 @@ function minDiffForLevel(i) {
   if (i <= 35) return 7;
   // 36–40: toughest pool
   if (i <= 40) return 8;
-  // 41–50: elite pool
+  // 41–55: elite pool
   return 9;
 }
 
