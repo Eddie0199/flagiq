@@ -1,6 +1,7 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import { App as CapacitorAppPlugin } from "@capacitor/app";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
 import { HINT_IDS, HINT_INVENTORY_KEYS } from "./hints";
@@ -52,6 +53,58 @@ const CapacitorApp = registerPlugin("App");
 const DEEP_LINK_SCHEME = "flagiq";
 const RESET_DEEP_LINK = `${DEEP_LINK_SCHEME}://reset-password`;
 const AUTH_CALLBACK_DEEP_LINK = `${DEEP_LINK_SCHEME}://auth-callback`;
+
+function parseSupabaseRecoveryUrl(url) {
+  const parsed = {
+    isResetRoute: false,
+    mode: "unknown",
+    type: "unknown",
+    code: "",
+    accessToken: "",
+    refreshToken: "",
+    hasCode: false,
+    hasAccessToken: false,
+    hasRefreshToken: false,
+  };
+  if (!url) return parsed;
+
+  try {
+    const normalized = String(url).replace(`${DEEP_LINK_SCHEME}://`, "https://flagiq.local/");
+    const u = new URL(normalized);
+    const routePath = `${u.host}${u.pathname}`.replace(/\/+$/, "");
+    parsed.isResetRoute = routePath === "reset-password";
+
+    const hashParams = new URLSearchParams((u.hash || "").replace(/^#/, ""));
+    const queryType = (u.searchParams.get("type") || "").toLowerCase();
+    const hashType = (hashParams.get("type") || "").toLowerCase();
+    const type = queryType || hashType;
+    parsed.type = type || "unknown";
+
+    parsed.code = u.searchParams.get("code") || u.searchParams.get("token") || "";
+    parsed.accessToken =
+      hashParams.get("access_token") ||
+      u.searchParams.get("access_token") ||
+      "";
+    parsed.refreshToken =
+      hashParams.get("refresh_token") ||
+      u.searchParams.get("refresh_token") ||
+      "";
+
+    parsed.hasCode = Boolean(parsed.code);
+    parsed.hasAccessToken = Boolean(parsed.accessToken);
+    parsed.hasRefreshToken = Boolean(parsed.refreshToken);
+
+    if (parsed.hasAccessToken && parsed.hasRefreshToken) {
+      parsed.mode = "tokens";
+    } else if (parsed.hasCode) {
+      parsed.mode = "code";
+    }
+  } catch (e) {
+    // ignore parse failures
+  }
+
+  return parsed;
+}
 
 function sanitizeDeepLink(url) {
   if (!url) return "";
@@ -935,9 +988,14 @@ export default function App() {
   const [resetDeepLinkUrl, setResetDeepLinkUrl] = useState("");
   const [resetDiagnostics, setResetDiagnostics] = useState({
     lastDeepLinkReceived: "",
-    detectedRecoveryMode: "none",
+    parsedType: "unknown",
+    hasAccessToken: false,
+    hasRefreshToken: false,
+    hasCode: false,
+    recoveryPath: "none",
     didExchangeOrSetSessionSucceed: false,
     sessionPresentAfterRecovery: false,
+    recoveryResult: "none",
     lastResetError: "",
   });
 
@@ -1035,18 +1093,60 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const routeFromUrl = (url) => {
-      if (!url) return false;
-      if (url.startsWith(RESET_DEEP_LINK) || url.startsWith(AUTH_CALLBACK_DEEP_LINK)) {
-        setResetDeepLinkUrl(url);
-        setResetDiagnostics((prev) => ({
-          ...prev,
-          lastDeepLinkReceived: sanitizeDeepLink(url),
-          lastResetError: "",
-        }));
-        return true;
+    const navigateToResetPassword = () => {
+      if (window.location.pathname !== "/reset-password") {
+        window.history.replaceState({}, "", "/reset-password");
       }
-      return false;
+    };
+
+    const processIncomingUrl = async (url) => {
+      if (!url) return false;
+      if (!url.startsWith(RESET_DEEP_LINK) && !url.startsWith(AUTH_CALLBACK_DEEP_LINK)) return false;
+
+      const parsed = parseSupabaseRecoveryUrl(url);
+      const next = {
+        lastDeepLinkReceived: sanitizeDeepLink(url),
+        parsedType: parsed.type,
+        hasAccessToken: parsed.hasAccessToken,
+        hasRefreshToken: parsed.hasRefreshToken,
+        hasCode: parsed.hasCode,
+        recoveryPath: parsed.mode,
+        didExchangeOrSetSessionSucceed: false,
+        sessionPresentAfterRecovery: false,
+        recoveryResult: "none",
+        lastResetError: "",
+      };
+
+      try {
+        if (parsed.mode === "tokens") {
+          const { error } = await supabase.auth.setSession({
+            access_token: parsed.accessToken,
+            refresh_token: parsed.refreshToken,
+          });
+          if (error) throw error;
+          next.didExchangeOrSetSessionSucceed = true;
+          next.recoveryResult = "success:setSession";
+        } else if (parsed.mode === "code") {
+          const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
+          if (error) throw error;
+          next.didExchangeOrSetSessionSucceed = true;
+          next.recoveryResult = "success:exchangeCodeForSession";
+        }
+
+        const { data } = await supabase.auth.getSession();
+        next.sessionPresentAfterRecovery = Boolean(data?.session);
+        if (next.recoveryResult === "none") {
+          next.recoveryResult = next.sessionPresentAfterRecovery ? "success:sessionExists" : "fail:noRecoveryParams";
+        }
+      } catch (e) {
+        next.recoveryResult = "fail";
+        next.lastResetError = e?.message || "Recovery handling failed";
+      }
+
+      navigateToResetPassword();
+      setResetDeepLinkUrl(url);
+      setResetDiagnostics(next);
+      return true;
     };
 
     if (isResetPasswordRoute()) {
@@ -1056,12 +1156,12 @@ export default function App() {
     }
 
     let listener;
-    CapacitorApp.getLaunchUrl()
-      .then((result) => routeFromUrl(result?.url || ""))
+    CapacitorAppPlugin.getLaunchUrl()
+      .then((result) => processIncomingUrl(result?.url || ""))
       .catch(() => {});
 
-    CapacitorApp.addListener("appUrlOpen", (data) => {
-      routeFromUrl(data?.url || "");
+    CapacitorAppPlugin.addListener("appUrlOpen", (data) => {
+      processIncomingUrl(data?.url || "");
     }).then((handle) => {
       listener = handle;
     });
@@ -2435,11 +2535,13 @@ export default function App() {
   if (resetDeepLinkUrl) {
     return (
       <ResetPasswordPage
-        deepLinkUrl={resetDeepLinkUrl}
         onDiagnosticsChange={(details) => {
           setResetDiagnostics((prev) => ({ ...prev, ...details }));
         }}
         onDone={() => {
+          if (typeof window !== "undefined" && window.location.pathname === "/reset-password") {
+            window.history.replaceState({}, "", "/");
+          }
           setResetDeepLinkUrl("");
           setAuthTab("login");
           setAuthOpen(true);
@@ -2989,18 +3091,26 @@ export default function App() {
               <div style={{ fontWeight: 700, marginBottom: 6 }}>Reset-password diagnostics</div>
               <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
                 <div>lastDeepLinkReceived: {resetDiagnostics.lastDeepLinkReceived || "-"}</div>
-                <div>detectedRecoveryMode: {resetDiagnostics.detectedRecoveryMode || "none"}</div>
+                <div>parsedType: {resetDiagnostics.parsedType || "unknown"}</div>
+                <div>paramsPresent: access_token={String(resetDiagnostics.hasAccessToken)}, refresh_token={String(resetDiagnostics.hasRefreshToken)}, code={String(resetDiagnostics.hasCode)}</div>
+                <div>recoveryPath: {resetDiagnostics.recoveryPath || "none"}</div>
                 <div>didExchangeOrSetSessionSucceed: {String(resetDiagnostics.didExchangeOrSetSessionSucceed)}</div>
                 <div>sessionPresentAfterRecovery: {String(resetDiagnostics.sessionPresentAfterRecovery)}</div>
+                <div>lastRecoveryHandlingResult: {resetDiagnostics.recoveryResult || "none"}</div>
                 <div>lastResetError: {resetDiagnostics.lastResetError || "-"}</div>
               </div>
               <button
                 onClick={() => {
                   const line = [
                     `lastDeepLinkReceived=${resetDiagnostics.lastDeepLinkReceived || ""}`,
-                    `detectedRecoveryMode=${resetDiagnostics.detectedRecoveryMode || "none"}`,
+                    `parsedType=${resetDiagnostics.parsedType || "unknown"}`,
+                    `hasAccessToken=${String(resetDiagnostics.hasAccessToken)}`,
+                    `hasRefreshToken=${String(resetDiagnostics.hasRefreshToken)}`,
+                    `hasCode=${String(resetDiagnostics.hasCode)}`,
+                    `recoveryPath=${resetDiagnostics.recoveryPath || "none"}`,
                     `didExchangeOrSetSessionSucceed=${String(resetDiagnostics.didExchangeOrSetSessionSucceed)}`,
                     `sessionPresentAfterRecovery=${String(resetDiagnostics.sessionPresentAfterRecovery)}`,
+                    `lastRecoveryHandlingResult=${resetDiagnostics.recoveryResult || "none"}`,
                     `lastResetError=${resetDiagnostics.lastResetError || ""}`,
                   ].join("; ");
                   navigator?.clipboard?.writeText?.(line).catch(() => {});
