@@ -48,6 +48,31 @@ const SUPPORTED_LANGUAGE_CODES = new Set(LANGS.map((l) => l.code));
 const DEBUG_LOGS_STORAGE_KEY = "flagiq:debugLogs";
 const DEBUG_LOGS_MAX = 100;
 const StoreKitPurchase = registerPlugin("StoreKitPurchase");
+const CapacitorApp = registerPlugin("App");
+const DEEP_LINK_SCHEME = "flagiq";
+const RESET_DEEP_LINK = `${DEEP_LINK_SCHEME}://reset-password`;
+const AUTH_CALLBACK_DEEP_LINK = `${DEEP_LINK_SCHEME}://auth-callback`;
+
+function sanitizeDeepLink(url) {
+  if (!url) return "";
+  try {
+    const normalized = String(url).replace(`${DEEP_LINK_SCHEME}://`, "https://flagiq.local/");
+    const parsed = new URL(normalized);
+    const mask = (value) => (value ? "***" : "");
+    parsed.searchParams.forEach((_, key) => {
+      if (/(token|code|refresh|access)/i.test(key)) parsed.searchParams.set(key, mask(parsed.searchParams.get(key)));
+    });
+    const hashParams = new URLSearchParams((parsed.hash || "").replace(/^#/, ""));
+    hashParams.forEach((value, key) => {
+      if (/(token|code|refresh|access)/i.test(key)) hashParams.set(key, mask(value));
+    });
+    const hash = hashParams.toString();
+    return `${DEEP_LINK_SCHEME}://${parsed.pathname.replace(/^\//,"")}${parsed.search}${hash ? `#${hash}` : ""}`;
+  } catch (e) {
+    return String(url);
+  }
+}
+
 
 function normalizeLanguageCode(code) {
   const raw = String(code || "").toLowerCase();
@@ -891,10 +916,6 @@ function AuthBootScreen() {
 }
 
 export default function App() {
-  // 🔐 Handle Supabase password reset redirect
-  if (isResetPasswordRoute()) {
-    return <ResetPasswordPage />;
-  }
   if (missingSupabaseEnv.length > 0) {
     return <ConfigMissingScreen missingKeys={missingSupabaseEnv} />;
   }
@@ -911,6 +932,14 @@ export default function App() {
   const debugTapRef = useRef({ count: 0, timer: null });
   const [appInfo, setAppInfo] = useState({ version: "", build: "" });
   const [gameplayDiagnostics, setGameplayDiagnostics] = useState(null);
+  const [resetDeepLinkUrl, setResetDeepLinkUrl] = useState("");
+  const [resetDiagnostics, setResetDiagnostics] = useState({
+    lastDeepLinkReceived: "",
+    detectedRecoveryMode: "none",
+    didExchangeOrSetSessionSucceed: false,
+    sessionPresentAfterRecovery: false,
+    lastResetError: "",
+  });
 
   // preferences
   const [lang, setLang] = useState(() => readLanguageFromStorage());
@@ -1001,6 +1030,44 @@ export default function App() {
     })();
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const routeFromUrl = (url) => {
+      if (!url) return false;
+      if (url.startsWith(RESET_DEEP_LINK) || url.startsWith(AUTH_CALLBACK_DEEP_LINK)) {
+        setResetDeepLinkUrl(url);
+        setResetDiagnostics((prev) => ({
+          ...prev,
+          lastDeepLinkReceived: sanitizeDeepLink(url),
+          lastResetError: "",
+        }));
+        return true;
+      }
+      return false;
+    };
+
+    if (isResetPasswordRoute()) {
+      const currentUrl = window.location.href;
+      setResetDeepLinkUrl(currentUrl);
+      setResetDiagnostics((prev) => ({ ...prev, lastDeepLinkReceived: sanitizeDeepLink(currentUrl) }));
+    }
+
+    let listener;
+    CapacitorApp.getLaunchUrl()
+      .then((result) => routeFromUrl(result?.url || ""))
+      .catch(() => {});
+
+    CapacitorApp.addListener("appUrlOpen", (data) => {
+      routeFromUrl(data?.url || "");
+    }).then((handle) => {
+      listener = handle;
+    });
+
+    return () => {
+      listener?.remove?.();
     };
   }, []);
 
@@ -2365,6 +2432,23 @@ export default function App() {
     }
   };
 
+  if (resetDeepLinkUrl) {
+    return (
+      <ResetPasswordPage
+        deepLinkUrl={resetDeepLinkUrl}
+        onDiagnosticsChange={(details) => {
+          setResetDiagnostics((prev) => ({ ...prev, ...details }));
+        }}
+        onDone={() => {
+          setResetDeepLinkUrl("");
+          setAuthTab("login");
+          setAuthOpen(true);
+          setScreen("home");
+        }}
+      />
+    );
+  }
+
   if (!authReady) {
     return <AuthBootScreen />;
   }
@@ -2892,6 +2976,39 @@ export default function App() {
               ) : (
                 <div style={{ fontSize: 12, color: "#cbd5f5" }}>No gameplay run recorded yet.</div>
               )}
+            </div>
+            <div
+              style={{
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                background: "rgba(15, 23, 42, 0.65)",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Reset-password diagnostics</div>
+              <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
+                <div>lastDeepLinkReceived: {resetDiagnostics.lastDeepLinkReceived || "-"}</div>
+                <div>detectedRecoveryMode: {resetDiagnostics.detectedRecoveryMode || "none"}</div>
+                <div>didExchangeOrSetSessionSucceed: {String(resetDiagnostics.didExchangeOrSetSessionSucceed)}</div>
+                <div>sessionPresentAfterRecovery: {String(resetDiagnostics.sessionPresentAfterRecovery)}</div>
+                <div>lastResetError: {resetDiagnostics.lastResetError || "-"}</div>
+              </div>
+              <button
+                onClick={() => {
+                  const line = [
+                    `lastDeepLinkReceived=${resetDiagnostics.lastDeepLinkReceived || ""}`,
+                    `detectedRecoveryMode=${resetDiagnostics.detectedRecoveryMode || "none"}`,
+                    `didExchangeOrSetSessionSucceed=${String(resetDiagnostics.didExchangeOrSetSessionSucceed)}`,
+                    `sessionPresentAfterRecovery=${String(resetDiagnostics.sessionPresentAfterRecovery)}`,
+                    `lastResetError=${resetDiagnostics.lastResetError || ""}`,
+                  ].join("; ");
+                  navigator?.clipboard?.writeText?.(line).catch(() => {});
+                }}
+                style={{ marginTop: 8 }}
+              >
+                Copy diagnostics
+              </button>
             </div>
             {debugLogs.length === 0 && (
               <div style={{ color: "#cbd5f5" }}>
