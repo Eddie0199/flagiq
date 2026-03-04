@@ -956,6 +956,7 @@ export default function App() {
   const debugTapRef = useRef({ count: 0, timer: null });
   const [appInfo, setAppInfo] = useState({ version: "", build: "" });
   const [gameplayDiagnostics, setGameplayDiagnostics] = useState(null);
+  const [inputAnswerState, setInputAnswerState] = useState(null);
 
   // preferences
   const [lang, setLang] = useState(() => readLanguageFromStorage());
@@ -2188,6 +2189,10 @@ export default function App() {
   const handleGameplayDiagnostics = useCallback((stats) => {
     setGameplayDiagnostics(stats);
   }, []);
+
+  const handleInputAnswerState = useCallback((state) => {
+    setInputAnswerState(state);
+  }, []);
   const handleNextLevel = () => {
     if (mode === "local") {
       const idx = localPackLevels.findIndex((lvl) => lvl.id === levelId);
@@ -2457,6 +2462,14 @@ export default function App() {
               })
             }
             onGameplayDiagnostics={handleGameplayDiagnostics}
+            onInputAnswerState={handleInputAnswerState}
+            externalOverlayFlags={{
+              settings: settingsOpen,
+              noLives: noLivesOpen,
+              lockInfo: Boolean(lockInfo),
+              debugScreen: showDebugScreen,
+            }}
+            showInlineDebugToggle={debugOverlayEnabled}
           />
         </>
       )}
@@ -2632,6 +2645,24 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ fontSize: 12, color: "#cbd5f5" }}>No gameplay run recorded yet.</div>
+              )}
+            </div>
+            <div
+              style={{
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                background: "rgba(15, 23, 42, 0.65)",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Input / Answer State</div>
+              {inputAnswerState ? (
+                <pre style={{ margin: 0, fontSize: 12, color: "#cbd5f5", whiteSpace: "pre-wrap" }}>
+                  {JSON.stringify(inputAnswerState, null, 2)}
+                </pre>
+              ) : (
+                <div style={{ fontSize: 12, color: "#cbd5f5" }}>No answer interaction captured yet.</div>
               )}
             </div>
             {debugLogs.length === 0 && (

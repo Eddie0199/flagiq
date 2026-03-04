@@ -16,14 +16,6 @@ const TT_STAR2 = 6000;
 const getHintSeenKey = (playerId) => `hasSeenHintInfo_${playerId || "default"}`;
 
 // schedule work on the next frame (falls back to micro-delay)
-const nextFrame = (fn) => {
-  if (typeof requestAnimationFrame === "function") {
-    requestAnimationFrame(fn);
-  } else {
-    setTimeout(fn, 0);
-  }
-};
-
 const WRONG_ANSWER_RESET_MS = 120;
 const CORRECT_ANSWER_HOLD_MS = 150;
 const PAUSE_HINT_MS = 1500;
@@ -41,12 +33,6 @@ const successSummaryTextStyle = {
   fontSize: 16,
   marginBottom: 6,
   color: "#ffffff",
-};
-
-const afterCorrectHighlight = (fn) => {
-  nextFrame(() => {
-    setTimeout(fn, CORRECT_ANSWER_HOLD_MS);
-  });
 };
 
 // small stars row
@@ -92,6 +78,9 @@ export default function GameScreen({
   activeUser,
   onCoinsChange,
   onGameplayDiagnostics,
+  onInputAnswerState,
+  externalOverlayFlags,
+  showInlineDebugToggle = false,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -111,6 +100,9 @@ export default function GameScreen({
   const [showHintInfo, setShowHintInfo] = useState(false);
   const [localFlagImages, setLocalFlagImages] = useState({});
   const mountedRef = useRef(true);
+  const answersContainerRef = useRef(null);
+  const inputTimeoutsRef = useRef(new Set());
+  const tapWatchdogTimeoutRef = useRef(null);
   const [preloadReady, setPreloadReady] = useState(false);
   const [preloadError, setPreloadError] = useState("");
   const [flagImageCache, setFlagImageCache] = useState({});
@@ -302,6 +294,13 @@ export default function GameScreen({
 
   // ⭐ this run's stars (what we show on the success screen)
   const [runStars, setRunStars] = useState(0);
+  const [isTransitioningToNextQuestion, setIsTransitioningToNextQuestion] = useState(false);
+  const [forceInputEnabledNonce, setForceInputEnabledNonce] = useState(0);
+  const [lastTapMeta, setLastTapMeta] = useState({ pointerType: null, timestamp: 0 });
+  const [showTapAgainToast, setShowTapAgainToast] = useState(false);
+  const [showInlineDebugOverlay, setShowInlineDebugOverlay] = useState(false);
+  const [pendingTimeoutsCount, setPendingTimeoutsCount] = useState(0);
+  const [answersPointerEvents, setAnswersPointerEvents] = useState("unknown");
 
   // reset base state on level/mode change
   useEffect(() => {
@@ -320,6 +319,30 @@ export default function GameScreen({
     runEndedRef.current = false;
     lifeLostRef.current = false;
   }, [levelId, mode]);
+
+  const registerManagedTimeout = useCallback((callback, delayMs) => {
+    const id = setTimeout(() => {
+      inputTimeoutsRef.current.delete(id);
+      setPendingTimeoutsCount(inputTimeoutsRef.current.size);
+      callback();
+    }, delayMs);
+    inputTimeoutsRef.current.add(id);
+    setPendingTimeoutsCount(inputTimeoutsRef.current.size);
+    return id;
+  }, []);
+
+  const clearManagedTimeout = useCallback((id) => {
+    if (!id) return;
+    clearTimeout(id);
+    inputTimeoutsRef.current.delete(id);
+    setPendingTimeoutsCount(inputTimeoutsRef.current.size);
+  }, []);
+
+  const clearAllManagedTimeouts = useCallback(() => {
+    inputTimeoutsRef.current.forEach((id) => clearTimeout(id));
+    inputTimeoutsRef.current.clear();
+    setPendingTimeoutsCount(0);
+  }, []);
 
   // mark run as started once they interact (move question / answer / wrong)
   useEffect(() => {
@@ -371,6 +394,21 @@ export default function GameScreen({
   }, [mode, preloadReady, done, fail, ttPaused]);
 
   const current = questions[qIndex];
+  const overlayFlags = useMemo(
+    () => ({
+      hintInfo: Boolean(showHintInfo),
+      ...externalOverlayFlags,
+    }),
+    [showHintInfo, externalOverlayFlags]
+  );
+  const overlayList = useMemo(
+    () => Object.entries(overlayFlags).filter(([, isOpen]) => Boolean(isOpen)).map(([name]) => name),
+    [overlayFlags]
+  );
+  const hasOverlayOpen = overlayList.length > 0;
+  const isShowingResult = selectedAnswer !== null;
+  const isLocked = isTransitioningToNextQuestion || isShowingResult;
+  const isInputDisabled = isLocked && forceInputEnabledNonce === 0;
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
   const loadLocalFlagImage = async (flag) => {
@@ -583,6 +621,95 @@ export default function GameScreen({
       img.src = src;
     });
   }, [preloadReady, questions, qIndex, current, flagImageCache]);
+
+  useEffect(() => {
+    const node = answersContainerRef.current;
+    if (!node || typeof window === "undefined") return;
+    const updatePointerEvents = () => {
+      const computed = window.getComputedStyle(node);
+      setAnswersPointerEvents(computed.pointerEvents || "unknown");
+    };
+    updatePointerEvents();
+    if (typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(updatePointerEvents);
+    observer.observe(node, { attributes: true, attributeFilter: ["style", "class"] });
+    return () => observer.disconnect();
+  }, [qIndex, done, fail]);
+
+  const inputAnswerDebugState = useMemo(
+    () => ({
+      currentQuestionId: current?.correct?.code || null,
+      questionIndex: qIndex + 1,
+      totalQuestions: questionCount,
+      isTransitioningToNextQuestion,
+      isLocked,
+      isInputDisabled,
+      isShowingResult,
+      selectedOptionId: selectedAnswer,
+      pendingTimeoutsCount,
+      activePointerEvents: lastTapMeta.pointerType || "unknown",
+      lastTapTimestamp: lastTapMeta.timestamp || 0,
+      answersPointerEvents,
+      overlayFlags,
+      overlayList,
+    }),
+    [
+      current,
+      qIndex,
+      questionCount,
+      isTransitioningToNextQuestion,
+      isLocked,
+      isInputDisabled,
+      isShowingResult,
+      selectedAnswer,
+      pendingTimeoutsCount,
+      lastTapMeta,
+      answersPointerEvents,
+      overlayFlags,
+      overlayList,
+    ]
+  );
+
+  useEffect(() => {
+    if (!onInputAnswerState) return;
+    onInputAnswerState(inputAnswerDebugState);
+  }, [onInputAnswerState, inputAnswerDebugState]);
+
+  const forceUnlockInput = useCallback((reason) => {
+    clearAllManagedTimeouts();
+    clearManagedTimeout(tapWatchdogTimeoutRef.current);
+    tapWatchdogTimeoutRef.current = null;
+    setIsTransitioningToNextQuestion(false);
+    setSelectedAnswer(null);
+    setForceInputEnabledNonce(1);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[input-state] force_unlock", { reason, ...inputAnswerDebugState });
+    }
+  }, [clearAllManagedTimeouts, clearManagedTimeout, inputAnswerDebugState]);
+
+  useEffect(() => {
+    if (!isLocked) return undefined;
+    const stuckTimer = registerManagedTimeout(() => {
+      console.error("stuck_state_detected", inputAnswerDebugState);
+      forceUnlockInput("watchdog");
+    }, 2500);
+    return () => clearManagedTimeout(stuckTimer);
+  }, [isLocked, registerManagedTimeout, clearManagedTimeout, inputAnswerDebugState, forceUnlockInput]);
+
+  useEffect(() => {
+    setSelectedAnswer(null);
+    setWrongAnswers([]);
+    setIsTransitioningToNextQuestion(false);
+    setForceInputEnabledNonce(0);
+    clearAllManagedTimeouts();
+    clearManagedTimeout(tapWatchdogTimeoutRef.current);
+    tapWatchdogTimeoutRef.current = null;
+  }, [qIndex, clearAllManagedTimeouts, clearManagedTimeout]);
+
+  useEffect(() => () => {
+    clearAllManagedTimeouts();
+    clearManagedTimeout(tapWatchdogTimeoutRef.current);
+  }, [clearAllManagedTimeouts, clearManagedTimeout]);
   const optionNameKeys = useMemo(() => {
     const map = new Map();
     (levelDef?.pool || []).forEach((flag) => {
@@ -735,10 +862,42 @@ export default function GameScreen({
   }
 
   // ---------- ANSWER HANDLER ----------
-  function handleAnswer(answer, { fromHint = false } = {}) {
-    if (!preloadReady || !current || done || fail) return;
-    // normal clicks shouldn't work while we show colours
-    if (!fromHint && selectedAnswer !== null) return;
+  async function handleAnswer(answer, { fromHint = false, event = null } = {}) {
+    setLastTapMeta({
+      pointerType: event?.pointerType || "programmatic",
+      timestamp: Date.now(),
+    });
+    const tapContext = {
+      questionId: current?.correct?.code || null,
+      optionId: answer,
+      isLocked,
+      isTransitioningToNextQuestion,
+      overlayFlags,
+      pointerEvents: answersPointerEvents,
+      culpritZIndex: overlayList[0] || null,
+    };
+    console.info("answer:tap", tapContext);
+
+    const ignoredReasons = [];
+    if (!preloadReady) ignoredReasons.push("preload_not_ready");
+    if (!current) ignoredReasons.push("missing_question");
+    if (done || fail) ignoredReasons.push("round_completed");
+    if (!fromHint && isInputDisabled) ignoredReasons.push("input_disabled");
+    if (hasOverlayOpen && !fromHint) ignoredReasons.push("overlay_open");
+
+    if (ignoredReasons.length > 0) {
+      console.warn("answer:tap_ignored", { ...tapContext, reasons: ignoredReasons });
+      clearManagedTimeout(tapWatchdogTimeoutRef.current);
+      tapWatchdogTimeoutRef.current = registerManagedTimeout(() => {
+        if (!hasOverlayOpen) {
+          setShowTapAgainToast(true);
+          registerManagedTimeout(() => setShowTapAgainToast(false), 1100);
+          forceUnlockInput("tap_ignored_watchdog");
+        }
+      }, 300);
+      return;
+    }
+    setForceInputEnabledNonce(0);
 
     const isCorrect =
       current.correct && current.correct.name === answer ? true : false;
@@ -752,7 +911,11 @@ export default function GameScreen({
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
 
-        afterCorrectHighlight(() => {
+        setIsTransitioningToNextQuestion(true);
+        try {
+          await new Promise((resolve) => {
+            registerManagedTimeout(resolve, CORRECT_ANSWER_HOLD_MS);
+          });
           if (lastQ) {
             const livesLeft = clamp(3 - skulls, 0, 3);
             const stars = starsFromLives
@@ -779,10 +942,10 @@ export default function GameScreen({
             setDone(true);
           } else {
             setQIndex((p) => p + 1);
-            setSelectedAnswer(null);
-            setWrongAnswers([]);
           }
-        });
+        } finally {
+          setIsTransitioningToNextQuestion(false);
+        }
       } else {
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -794,7 +957,7 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
+        registerManagedTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
       }
       return;
     }
@@ -807,7 +970,11 @@ export default function GameScreen({
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
 
-        afterCorrectHighlight(() => {
+        setIsTransitioningToNextQuestion(true);
+        try {
+          await new Promise((resolve) => {
+            registerManagedTimeout(resolve, CORRECT_ANSWER_HOLD_MS);
+          });
           if (lastQ) {
             // stars based on score AND mistakes
             const maxByMistakes = clamp(3 - skulls, 0, 3);
@@ -838,10 +1005,10 @@ export default function GameScreen({
             setTtScore(newTotal);
             setQIndex((p) => p + 1);
             setTtRemaining(TT_MS_PER_Q);
-            setSelectedAnswer(null);
-            setWrongAnswers([]);
           }
-        });
+        } finally {
+          setIsTransitioningToNextQuestion(false);
+        }
       } else {
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -853,7 +1020,7 @@ export default function GameScreen({
           return next;
         });
         setWrongAnswers((prev) => [...prev, answer]);
-        setTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
+        registerManagedTimeout(() => setSelectedAnswer(null), WRONG_ANSWER_RESET_MS);
       }
     }
   }
@@ -926,6 +1093,9 @@ export default function GameScreen({
     setFail(false);
     setSelectedAnswer(null);
     setWrongAnswers([]);
+    setIsTransitioningToNextQuestion(false);
+    setForceInputEnabledNonce(0);
+    clearAllManagedTimeouts();
     if (mode === "timetrial") {
       setTtScore(0);
       setTtRemaining(TT_MS_PER_Q);
@@ -1598,7 +1768,7 @@ export default function GameScreen({
           </div>
 
           {/* ANSWERS */}
-          <div className="game-answers">
+          <div className="game-answers" ref={answersContainerRef}>
             {current
               ? current.options.map((opt) => {
                   const isSelected = selectedAnswer === opt;
@@ -1632,8 +1802,8 @@ export default function GameScreen({
                   return (
                     <button
                       key={opt}
-                      onPointerDown={() => handleAnswer(opt)}
-                      disabled={isWrong || selectedAnswer !== null}
+                      onPointerDown={(event) => handleAnswer(opt, { event })}
+                      disabled={isWrong || isInputDisabled}
                       style={{
                         background: bg,
                         border,
@@ -1642,7 +1812,7 @@ export default function GameScreen({
                         textAlign: "left",
                         fontWeight: 500,
                         cursor:
-                          isWrong || selectedAnswer !== null
+                          isWrong || isInputDisabled
                             ? "not-allowed"
                             : "pointer",
                         opacity: isWrong ? 0.5 : 1,
@@ -1665,6 +1835,24 @@ export default function GameScreen({
         <div style={{ textAlign: "center", color: "#ef4444", marginTop: 10 }}>
           {preloadError}
         </div>
+      )}
+      {showTapAgainToast && (
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#0f172a", color: "#fff", borderRadius: 999, padding: "8px 14px", zIndex: 1200, fontSize: 12, fontWeight: 700 }}>
+          Tap again
+        </div>
+      )}
+      {showInlineDebugToggle && (
+        <button
+          type="button"
+          onClick={() => setShowInlineDebugOverlay((prev) => !prev)}
+          style={{ position: "fixed", right: 8, bottom: 8, width: 14, height: 14, borderRadius: 999, opacity: 0.08, border: "none", zIndex: 998 }}
+          aria-label="Toggle input debug overlay"
+        />
+      )}
+      {showInlineDebugOverlay && (
+        <pre style={{ position: "fixed", right: 12, bottom: 28, zIndex: 998, maxWidth: "92vw", maxHeight: "40vh", overflow: "auto", fontSize: 10, color: "#fff", background: "rgba(2,6,23,0.9)", border: "1px solid rgba(148,163,184,0.4)", borderRadius: 8, padding: 8 }}>
+          {JSON.stringify(inputAnswerDebugState, null, 2)}
+        </pre>
       )}
     </div>
   );
