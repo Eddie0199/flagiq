@@ -1509,7 +1509,7 @@ export default function HomeScreen({
         >
           <button
             onClick={() =>
-              openExternalLink("https://wildmoustachegames.com/terms.html")
+              window.location.href = "/terms"
             }
             style={footerLinkStyle}
           >
@@ -1518,7 +1518,7 @@ export default function HomeScreen({
           <span aria-hidden="true">•</span>
           <button
             onClick={() =>
-              openExternalLink("https://wildmoustachegames.com/privacy.html")
+              window.location.href = "/privacy"
             }
             style={footerLinkStyle}
           >
