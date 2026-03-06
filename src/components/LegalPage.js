@@ -2,6 +2,7 @@ import React from "react";
 
 const pageBackground = "#0b74ff";
 const cardBackground = "rgba(255,255,255,0.96)";
+const legalPageTopInset = "calc(24px + env(safe-area-inset-top, 0px))";
 
 function handleBackNavigation() {
   if (typeof window === "undefined") return;
@@ -19,7 +20,7 @@ function LegalLayout({ title, children }) {
         minHeight: "100vh",
         background: pageBackground,
         color: "#0f172a",
-        padding: "24px 16px 40px",
+        padding: `${legalPageTopInset} 16px 40px`,
         boxSizing: "border-box",
       }}
     >
@@ -29,7 +30,16 @@ function LegalLayout({ title, children }) {
           margin: "0 auto",
         }}
       >
-        <div style={{ marginBottom: 12 }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: 32,
+            marginBottom: 16,
+          }}
+        >
           <button
             onClick={handleBackNavigation}
             style={{
@@ -44,23 +54,27 @@ function LegalLayout({ title, children }) {
               color: "#0f172a",
               cursor: "pointer",
               fontWeight: 500,
+              position: "absolute",
+              left: 0,
+              top: "50%",
+              transform: "translateY(-50%)",
             }}
           >
             ← Back
           </button>
-        </div>
 
-        <header
-          style={{
-            color: "#fff",
-            fontWeight: 800,
-            fontSize: 26,
-            marginBottom: 16,
-            textAlign: "center",
-          }}
-        >
-          FlagIQ
-        </header>
+          <header
+            style={{
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 26,
+              margin: 0,
+              textAlign: "center",
+            }}
+          >
+            FlagIQ
+          </header>
+        </div>
 
         <article
           style={{
