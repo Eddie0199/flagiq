@@ -12,6 +12,7 @@ import { getUiPricePresentation } from "../storePriceDisplay";
 import { HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 import { getHintTranslation, HINT_IDS } from "../hints";
 import { IS_DEBUG_BUILD } from "../debugTools";
+import { getPlatformShopMode, isNativeAppRuntime } from "../platformRuntime";
 
 const BOOSTER_ITEMS = [
   {
@@ -148,6 +149,8 @@ export default function StoreScreen({
   const coinPurchaseInFlightRef = useRef({});
   const ctaState = useCtaStateMachine(1200);
   const [purchaseInFlightByProduct, setPurchaseInFlightByProduct] = useState({});
+  const nativeIapEnabled = isNativeAppRuntime();
+  const platformShopMode = getPlatformShopMode();
 
   const text = (key, fallback) => {
     if (t && lang) {
@@ -168,6 +171,13 @@ export default function StoreScreen({
   const storeUnavailableMessage = "Store unavailable, please try again.";
 
   const loadStoreProducts = async () => {
+    if (!nativeIapEnabled) {
+      setStoreStatus("hidden");
+      setStoreProductsById({});
+      setMessage("");
+      return;
+    }
+
     const requestId = ++loadRequestIdRef.current;
     setStoreStatus("loading");
     ctaState.resetAll();
@@ -223,10 +233,10 @@ export default function StoreScreen({
 
   useEffect(() => {
     loadStoreProducts();
-  }, []);
+  }, [nativeIapEnabled]);
 
   useEffect(() => {
-    if (!showPriceDebugOverlay) return;
+    if (!nativeIapEnabled || !showPriceDebugOverlay) return;
     getIapDiagnosticsState()
       .then((diagnostics) => {
         setNativeStoreSummary({
@@ -237,7 +247,7 @@ export default function StoreScreen({
         });
       })
       .catch(() => {});
-  }, [showPriceDebugOverlay]);
+  }, [nativeIapEnabled, showPriceDebugOverlay]);
 
   const ensureHintsShape = (prev) => {
     const base = prev || {};
@@ -364,6 +374,7 @@ export default function StoreScreen({
 
   const heartsFull = typeof hearts === "number" && hearts >= maxHearts;
   const storeUnavailable = storeStatus === "unavailable";
+  const shouldShowNativeIapSection = nativeIapEnabled;
   const storeLoading = storeStatus === "loading";
   const storeReady = storeStatus === "loaded";
   const storeProducts = Object.values(storeProductsById);
@@ -416,7 +427,7 @@ export default function StoreScreen({
   }, [storeProductsById, storeReady, storeStatus]);
 
   useEffect(() => {
-    if (!showPriceDebugOverlay) return;
+    if (!nativeIapEnabled || !showPriceDebugOverlay) return;
 
     SHOP_PRODUCTS.forEach((product) => {
       const displayedPrice = getUiPricePresentation(product.id, storeProductsById?.[product.id] || null);
@@ -680,6 +691,7 @@ export default function StoreScreen({
         </div>
 
         {/* Coin packs */}
+        {shouldShowNativeIapSection && (
         <div
           style={{
             background: "#ffffff",
@@ -779,6 +791,7 @@ export default function StoreScreen({
                 </div>
                 <div>storeProductsLoaded: {String(storeProductsLoaded)}</div>
                 <div>mappedProductCount: {mappedProductCount}</div>
+                <div>platformShopMode: {platformShopMode}</div>
                 <div>
                   storekitStorefrontCountryCode: {nativeStoreSummary.storefrontCountryCode || "null"}
                 </div>
@@ -1010,6 +1023,7 @@ export default function StoreScreen({
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* system message */}

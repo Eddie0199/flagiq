@@ -194,6 +194,7 @@ export default function IapDiagnosticsPanel({ visible }) {
       `Native Build Info: ${toPretty(nativeBuildInfo || "missing")}`,
       `App Version: ${String(state.appVersion || "unknown")}`,
       `Build: ${String(state.buildNumber || "unknown")}`,
+      `platformShopMode: ${String(state.platformShopMode || "unknown")}`,
       `safeAreaInsetTop: ${String(safeAreaInfo.safeAreaInsetTop || "unknown")}`,
       `configuredHeaderTopPadding(--header-top-padding): ${String(
         safeAreaInfo.configuredHeaderTopPadding || "unknown"
