@@ -3,6 +3,15 @@ import React from "react";
 const pageBackground = "#0b74ff";
 const cardBackground = "rgba(255,255,255,0.96)";
 
+function handleBackNavigation() {
+  if (typeof window === "undefined") return;
+  if (window.history.length > 1) {
+    window.history.back();
+    return;
+  }
+  window.location.href = "/";
+}
+
 function LegalLayout({ title, children }) {
   return (
     <div
@@ -20,6 +29,27 @@ function LegalLayout({ title, children }) {
           margin: "0 auto",
         }}
       >
+        <div style={{ marginBottom: 12 }}>
+          <button
+            onClick={handleBackNavigation}
+            style={{
+              padding: "0 10px",
+              height: 30,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              borderRadius: 12,
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              color: "#0f172a",
+              cursor: "pointer",
+              fontWeight: 500,
+            }}
+          >
+            ← Back
+          </button>
+        </div>
+
         <header
           style={{
             color: "#fff",
