@@ -30,7 +30,16 @@ function LegalLayout({ title, children }) {
           margin: "0 auto",
         }}
       >
-        <div style={{ marginBottom: 12 }}>
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: 32,
+            marginBottom: 16,
+          }}
+        >
           <button
             onClick={handleBackNavigation}
             style={{
@@ -45,23 +54,25 @@ function LegalLayout({ title, children }) {
               color: "#0f172a",
               cursor: "pointer",
               fontWeight: 500,
+              position: "absolute",
+              left: 0,
             }}
           >
             ← Back
           </button>
-        </div>
 
-        <header
-          style={{
-            color: "#fff",
-            fontWeight: 800,
-            fontSize: 26,
-            marginBottom: 16,
-            textAlign: "center",
-          }}
-        >
-          FlagIQ
-        </header>
+          <header
+            style={{
+              color: "#fff",
+              fontWeight: 800,
+              fontSize: 26,
+              margin: 0,
+              textAlign: "center",
+            }}
+          >
+            FlagIQ
+          </header>
+        </div>
 
         <article
           style={{
