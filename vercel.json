@@ -1,5 +1,43 @@
 {
   "env": {
     "NODE_VERSION": "18"
-  }
+  },
+  "redirects": [
+    {
+      "source": "/flagiq",
+      "destination": "/flagiq/",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/flagiq/static/:path*",
+      "destination": "/static/:path*"
+    },
+    {
+      "source": "/flagiq/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/flagiq/manifest.json",
+      "destination": "/manifest.json"
+    },
+    {
+      "source": "/flagiq/service-worker.js",
+      "destination": "/service-worker.js"
+    },
+    {
+      "source": "/flagiq/icon-:size.png",
+      "destination": "/icon-:size.png"
+    },
+    {
+      "source": "/flagiq/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/",
+      "destination": "/hub.html"
+    }
+  ],
+  "buildCommand": "npm run build:web"
 }
