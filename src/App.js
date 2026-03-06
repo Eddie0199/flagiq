@@ -2547,7 +2547,7 @@ export default function App() {
     }
   };
 
-  if (resetDeepLinkUrl) {
+  if (isResetPasswordRoute() || resetDeepLinkUrl) {
     return (
       <ResetPasswordPage
         onDiagnosticsChange={(details) => {

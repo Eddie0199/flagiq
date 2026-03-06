@@ -207,8 +207,8 @@ export default function AuthModal({
       return;
     }
 
-    // Ensure the email always redirects to your app reset page
-    const redirectTo = "flagiq://reset-password";
+    // Ensure the email always redirects to the web reset page
+    const redirectTo = "https://flagiq.wildmoustachegames.com/reset-password";
 
     try {
       setResetLoading(true);
