@@ -34,7 +34,8 @@
     "validate:local-flags": "node scripts/validateLocalFlags.mjs",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
-    "capacitor:versions": "node scripts/reportCapacitorVersions.mjs"
+    "capacitor:versions": "node scripts/reportCapacitorVersions.mjs",
+    "build:web": "cross-env PUBLIC_URL=/flagiq ESLINT_NO_DEV_ERRORS=true react-scripts build"
   },
   "browserslist": [
     ">0.2%",

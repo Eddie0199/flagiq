@@ -1,6 +1,11 @@
 // App.js — FlagIQ v4.25.2 (per-user persistence + store screen)
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor, registerPlugin } from "@capacitor/core";
+import {
+  getPathWithoutWebBase,
+  getPublicAssetUrl,
+  withWebBasePath,
+} from "./webBasePath";
 import { App as CapacitorAppPlugin } from "@capacitor/app";
 import FLAGS from "./flags";
 import { LANGS, t } from "./i18n";
@@ -833,7 +838,7 @@ function usePerUserHints(username) {
 
 // ================= Main App =================
 function isResetPasswordRoute() {
-  return window.location.pathname === "/reset-password";
+  return getPathWithoutWebBase(window.location.pathname) === "/reset-password";
 }
 
 function ConfigMissingScreen({ missingKeys }) {
@@ -911,7 +916,7 @@ function AuthBootScreen() {
           }}
         >
           <img
-            src="/icon-512.png"
+            src={getPublicAssetUrl("/icon-512.png")}
             alt="FlagIQ"
             style={{
               width: 90,
@@ -1095,8 +1100,9 @@ export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const navigateToResetPassword = () => {
-      if (window.location.pathname !== "/reset-password") {
-        window.history.replaceState({}, "", "/reset-password");
+      const resetPath = withWebBasePath("/reset-password");
+      if (window.location.pathname !== resetPath) {
+        window.history.replaceState({}, "", resetPath);
       }
     };
 
@@ -2540,8 +2546,9 @@ export default function App() {
           setResetDiagnostics((prev) => ({ ...prev, ...details }));
         }}
         onDone={() => {
-          if (typeof window !== "undefined" && window.location.pathname === "/reset-password") {
-            window.history.replaceState({}, "", "/");
+          const resetPath = withWebBasePath("/reset-password");
+          if (typeof window !== "undefined" && window.location.pathname === resetPath) {
+            window.history.replaceState({}, "", withWebBasePath("/"));
           }
           setResetDeepLinkUrl("");
           setAuthTab("login");

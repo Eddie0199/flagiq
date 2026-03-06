@@ -1,4 +1,5 @@
 // HomeScreen.js — homepage + daily 3×3 booster grid
+import { getPublicAssetUrl } from "../webBasePath";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { fetchTimeTrialLeaderboard } from "../leaderboardApi";
 import { ti, tp } from "../i18n";
@@ -1035,7 +1036,7 @@ export default function HomeScreen({
           }}
         >
           <img
-            src="/icon-512.png"
+            src={getPublicAssetUrl("/icon-512.png")}
             alt={text("appTitle", "FlagIQ")}
             style={{
               width: 96,

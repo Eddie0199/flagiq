@@ -1,3 +1,4 @@
+import { getPublicAssetUrl } from "../webBasePath";
 import React, { useEffect, useState } from "react";
 import { MAX_HEARTS, REGEN_MS } from "../App";
 import { getCoinsByUser } from "./ProgressByUser"; // persistent coins
@@ -51,7 +52,7 @@ function HeartsPill({ hearts, t, lang }) {
             heartsLow ? "low" : ""
           }`.trim()}
         >
-          <img src="/assets/heart.svg" alt="lives" className="heart-icon" />
+          <img src={getPublicAssetUrl("/assets/heart.svg")} alt="lives" className="heart-icon" />
           <span className="heart-count">{count}</span>
         </div>
       </div>
