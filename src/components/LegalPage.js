@@ -2,6 +2,7 @@ import React from "react";
 
 const pageBackground = "#0b74ff";
 const cardBackground = "rgba(255,255,255,0.96)";
+const legalPageTopInset = "calc(24px + env(safe-area-inset-top, 0px))";
 
 function handleBackNavigation() {
   if (typeof window === "undefined") return;
@@ -19,7 +20,7 @@ function LegalLayout({ title, children }) {
         minHeight: "100vh",
         background: pageBackground,
         color: "#0f172a",
-        padding: "24px 16px 40px",
+        padding: `${legalPageTopInset} 16px 40px`,
         boxSizing: "border-box",
       }}
     >
