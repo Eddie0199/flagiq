@@ -17,6 +17,7 @@ import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
+import LegalPage from "./components/LegalPage";
 import { registerPurchaseRewardHandler, runIapStartupDiagnostics } from "./purchases";
 import IapDiagnosticsPanel from "./components/IapDiagnosticsPanel";
 import { IS_DEBUG_BUILD } from "./debugTools";
@@ -836,6 +837,14 @@ function isResetPasswordRoute() {
   return window.location.pathname === "/reset-password";
 }
 
+function getLegalRoute() {
+  if (typeof window === "undefined") return "";
+  const path = window.location.pathname;
+  if (path === "/terms") return "terms";
+  if (path === "/privacy") return "privacy";
+  return "";
+}
+
 function ConfigMissingScreen({ missingKeys }) {
   return (
     <div
@@ -970,6 +979,11 @@ function AuthBootScreen() {
 }
 
 export default function App() {
+  const legalRoute = getLegalRoute();
+  if (legalRoute) {
+    return <LegalPage page={legalRoute} />;
+  }
+
   if (missingSupabaseEnv.length > 0) {
     return <ConfigMissingScreen missingKeys={missingSupabaseEnv} />;
   }
