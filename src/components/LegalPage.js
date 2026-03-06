@@ -278,8 +278,6 @@ function PrivacyContent() {
         WildMoustacheGames
         <br />
         Email: <a href="mailto:support@wildmoustachegames.com">support@wildmoustachegames.com</a>
-        <br />
-        Website: <a href="https://wildmoustachegames.com">wildmoustachegames.com</a>
       </p>
     </>
   );
