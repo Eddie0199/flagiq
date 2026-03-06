@@ -4,6 +4,10 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { supabase } from "./supabaseClient";
 import { getProductDefinition, SHOP_PRODUCTS } from "./shopProducts";
+import {
+  getPlatformShopMode,
+  getRuntimePlatform,
+} from "./platformRuntime";
 
 let rewardHandler = null;
 const DEV_MODE_ENABLED = process.env.NODE_ENV !== "production";
@@ -51,7 +55,7 @@ function recordIapFailure({ productId, errorDomain, errorCode, message, raw }) {
 }
 
 export async function runIapStartupDiagnostics() {
-  if (detectPlatform() !== "ios") {
+  if (getRuntimePlatform() !== "ios") {
     iapPluginEcho = null;
     iapPluginEchoResult = null;
     iapPluginEchoError = null;
@@ -99,6 +103,7 @@ export async function clearIapDiagnostics() {
 
 export async function getIapDiagnosticsState() {
   const base = {
+    platformShopMode: getPlatformShopMode(),
     canMakePayments: null,
     deviceLocaleCurrentIdentifier: null,
     currencySourceNote:
@@ -122,7 +127,7 @@ export async function getIapDiagnosticsState() {
     pluginEchoError: iapPluginEchoError,
   };
 
-  if (detectPlatform() !== "ios") return base;
+  if (getRuntimePlatform() !== "ios") return base;
 
   if (typeof StoreKitPurchase?.iapDiagnosticsGetState === "function") {
     try {
@@ -159,23 +164,6 @@ export async function getIapDiagnosticsState() {
 
 export function registerPurchaseRewardHandler(handler) {
   rewardHandler = handler;
-}
-
-function detectPlatform() {
-  try {
-    if (Capacitor && typeof Capacitor.isNativePlatform === "function") {
-      const isNative = Capacitor.isNativePlatform();
-      if (isNative) {
-        const platform =
-          typeof Capacitor.getPlatform === "function"
-            ? Capacitor.getPlatform()
-            : "unknown";
-        if (platform === "ios" || platform === "android") return platform;
-        return "unknown";
-      }
-    }
-  } catch (e) {}
-  return "web";
 }
 
 async function persistPurchase(product, platform, rewardResult, purchaseMeta = {}) {
@@ -361,7 +349,7 @@ async function purchaseWithStoreKit(productId) {
 }
 
 export async function fetchStoreProducts() {
-  const platform = detectPlatform();
+  const platform = getRuntimePlatform();
   const productIds = SHOP_PRODUCTS.map((product) => product.id);
   iapLog("product fetch start", { platform, requestedProductIds: productIds });
 
@@ -445,7 +433,7 @@ export async function purchaseProduct(productId) {
     return { success: false, error: "Unknown product" };
   }
 
-  const platform = detectPlatform();
+  const platform = getRuntimePlatform();
   iapLog("purchase requested", { productId: product.id, platform });
 
   if (platform === "ios") {
