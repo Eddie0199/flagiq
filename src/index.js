@@ -25,49 +25,28 @@ root.render(
   </StrictMode>
 );
 
-// Register the service worker from /public with aggressive update checks.
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", async () => {
-    const swPath = process.env.PUBLIC_URL
-      ? `${process.env.PUBLIC_URL}/service-worker.js`
-      : "/service-worker.js";
+// Safety-first production behavior: disable SW registration and aggressively
+// unregister any previously installed workers/caches to avoid stale bundles.
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) =>
+        Promise.all(registrations.map((registration) => registration.unregister()))
+      )
+      .catch(() => null);
 
-    let hasRefreshedForServiceWorker = false;
-
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (hasRefreshedForServiceWorker) return;
-      hasRefreshedForServiceWorker = true;
-      window.location.reload();
-    });
-
-    try {
-      const reg = await navigator.serviceWorker.register(swPath, {
-        updateViaCache: "none",
-      });
-      console.log("Service worker registered:", reg.scope);
-
-      if (reg.waiting) {
-        reg.waiting.postMessage({ type: "SKIP_WAITING" });
-      }
-
-      reg.addEventListener("updatefound", () => {
-        const nextWorker = reg.installing;
-        if (!nextWorker) return;
-        nextWorker.addEventListener("statechange", () => {
-          if (
-            nextWorker.state === "installed" &&
-            navigator.serviceWorker.controller
-          ) {
-            nextWorker.postMessage({ type: "SKIP_WAITING" });
-          }
-        });
-      });
-
-      setInterval(() => {
-        reg.update().catch(() => {});
-      }, 60 * 1000);
-    } catch (err) {
-      console.log("Service worker registration failed:", err);
+    if (window.caches?.keys) {
+      window.caches
+        .keys()
+        .then((keys) =>
+          Promise.all(
+            keys
+              .filter((key) => key.startsWith("flagiq-"))
+              .map((key) => window.caches.delete(key))
+          )
+        )
+        .catch(() => null);
     }
   });
 }
