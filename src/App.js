@@ -129,7 +129,7 @@ function isRecoveryCandidateUrl(url) {
   const isRecoveryType = parsed.type === "recovery";
   return {
     parsed,
-    isRecoveryFlow: parsed.isResetRoute || (isRecoveryType && hasRecoveryParams),
+    isRecoveryFlow: parsed.isResetRoute || hasRecoveryParams || (isRecoveryType && hasRecoveryParams),
   };
 }
 
@@ -1410,10 +1410,7 @@ export default function App() {
             isRecoveryFlow,
             isResetRoute: isResetPasswordRoute(),
           });
-          if (!cancelled) {
-            setActiveUser("");
-            setActiveUserLabel("");
-          }
+          if (!cancelled) setAuthReady(true);
           return;
         }
         await restoreSupabaseSession();
