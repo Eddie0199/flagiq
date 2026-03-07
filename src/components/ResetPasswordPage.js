@@ -15,9 +15,12 @@ const normalizeLang = (raw) => {
 function getRecoveryParams(urlValue) {
   const parsed = {
     type: "unknown",
+    tokenType: "",
     code: "",
     accessToken: "",
     refreshToken: "",
+    expiresAt: "",
+    expiresIn: "",
     tokenHash: "",
     hasCode: false,
     hasAccessToken: false,
@@ -30,8 +33,11 @@ function getRecoveryParams(urlValue) {
     const url = new URL(urlValue);
     const hashParams = new URLSearchParams((url.hash || "").replace(/^#/, ""));
 
-    const type = (url.searchParams.get("type") || hashParams.get("type") || "").toLowerCase();
+    const type = (hashParams.get("type") || url.searchParams.get("type") || "").toLowerCase();
     parsed.type = type || "unknown";
+    parsed.tokenType = hashParams.get("token_type") || url.searchParams.get("token_type") || "";
+    parsed.expiresAt = hashParams.get("expires_at") || url.searchParams.get("expires_at") || "";
+    parsed.expiresIn = hashParams.get("expires_in") || url.searchParams.get("expires_in") || "";
 
     parsed.code =
       url.searchParams.get("code") ||
@@ -161,15 +167,33 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
       setError("");
 
       try {
-        const parsed = getRecoveryParams(recoveryUrl || window.location.href);
+        const locationHref = typeof window !== "undefined" ? window.location.href : "";
+        const locationPathname = typeof window !== "undefined" ? window.location.pathname : "";
+        const locationSearch = typeof window !== "undefined" ? window.location.search : "";
+        const locationHash = typeof window !== "undefined" ? window.location.hash : "";
+        const parsed = getRecoveryParams(recoveryUrl || locationHref);
+        const parsedHashParams = Object.fromEntries(new URLSearchParams((locationHash || "").replace(/^#/, "")).entries());
+        console.log("[reset-password] window.location.href", locationHref);
+        console.log("[reset-password] window.location.pathname", locationPathname);
+        console.log("[reset-password] window.location.search", locationSearch);
+        console.log("[reset-password] window.location.hash", locationHash);
+        console.log("[reset-password] parsed hash params", parsedHashParams);
         const paramFlags = [];
         if (parsed.hasAccessToken) paramFlags.push("access_token");
         if (parsed.hasRefreshToken) paramFlags.push("refresh_token");
         if (parsed.hasCode) paramFlags.push("code");
         if (parsed.hasTokenHash) paramFlags.push("token_hash");
+        if (parsed.expiresAt) paramFlags.push("expires_at");
+        if (parsed.expiresIn) paramFlags.push("expires_in");
+        if (parsed.tokenType) paramFlags.push("token_type");
+        if (parsed.type && parsed.type !== "unknown") paramFlags.push("type");
         nextDiagnostics.paramsDetected = paramFlags.length ? paramFlags.join(",") : "none";
 
-        if (parsed.mode === "tokens") {
+        const isHashTokenRecovery =
+          parsed.type === "recovery" && parsed.hasAccessToken && parsed.hasRefreshToken;
+        console.log("[reset-password] recovery mode activated", isHashTokenRecovery || parsed.mode !== "none");
+
+        if (isHashTokenRecovery || parsed.mode === "tokens") {
           nextDiagnostics.recoveryModeUsed = "setSession";
           const { error: setSessionError } = await withTimeout(supabase.auth.setSession({
             access_token: parsed.accessToken,
@@ -194,6 +218,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
 
         const { data } = await supabase.auth.getSession();
         const sessionPresent = Boolean(data?.session);
+        console.log("[reset-password] session established from recovery tokens", sessionPresent);
         nextDiagnostics.sessionEstablished = sessionPresent;
 
         if (!sessionPresent) {
