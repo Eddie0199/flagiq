@@ -416,11 +416,12 @@ export default function AuthModal({
 
               <button
                 type="button"
+                className="app-back-button"
                 onClick={closeResetMode}
                 style={{
                   width: "100%",
                   background: "#e2e8f0",
-                  color: "#0f172a",
+                  color: "#000",
                   border: "none",
                   borderRadius: 14,
                   padding: "8px 12px",

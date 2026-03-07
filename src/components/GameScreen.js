@@ -368,6 +368,8 @@ export default function GameScreen({
   const pendingCorrectTransitionTimeoutRef = useRef(null);
   const pendingWrongResetTimeoutRef = useRef(null);
   const pendingPauseTimeoutRef = useRef(null);
+  const questionTokenRef = useRef(0);
+  const actionInFlightRef = useRef(false);
 
   const clearPendingTransitionTimeout = useCallback(() => {
     if (pendingCorrectTransitionTimeoutRef.current) {
@@ -397,6 +399,7 @@ export default function GameScreen({
 
   const unlockInput = useCallback(() => {
     inputLockSinceRef.current = 0;
+    actionInFlightRef.current = false;
     setIsInputLocked(false);
     setIsAnimatingTransition(false);
     setIsFetchingNextQuestion(false);
@@ -453,6 +456,7 @@ export default function GameScreen({
     runStartedRef.current = false;
     runEndedRef.current = false;
     lifeLostRef.current = false;
+    actionInFlightRef.current = false;
   }, [
     levelId,
     mode,
@@ -463,6 +467,8 @@ export default function GameScreen({
   ]);
 
   useEffect(() => {
+    questionTokenRef.current += 1;
+    actionInFlightRef.current = false;
     clearPendingTransitionTimeout();
     clearPendingWrongResetTimeout();
     setSelectedAnswer(null);
@@ -904,8 +910,11 @@ export default function GameScreen({
     }
     if (!current) return;
 
-    // act as if we clicked the correct answer
-    handleAnswer(current.correct.name, { fromHint: true });
+    // consume only if progression action accepted
+    const actionAccepted = handleAnswer(current.correct.name, { fromHint: true });
+    if (!actionAccepted) {
+      return;
+    }
     setHints((prev) => ({
       ...prev,
       autoPass: Math.max(0, (prev?.autoPass ?? 0) - 1),
@@ -921,7 +930,9 @@ export default function GameScreen({
       return;
     }
 
-    // pause for 3 seconds
+    if (ttPaused) return;
+
+    // pause for a short window
     setTtPaused(true);
     setHints((prev) => ({
       ...prev,
@@ -950,10 +961,13 @@ export default function GameScreen({
   function handleAnswer(answer, { fromHint = false, event } = {}) {
     setLastTapTimestamp(Date.now());
     setLastTapTarget(describeTapTarget(event?.target));
-    if (!preloadReady || !current || done || fail || !currentFlagLoaded) return;
-    if (isInputLocked) return;
+    if (!preloadReady || !current || done || fail || !currentFlagLoaded) return false;
+    if (isInputLocked || actionInFlightRef.current) return false;
     // normal clicks shouldn't work while we show colours
-    if (!fromHint && selectedAnswer !== null) return;
+    if (!fromHint && selectedAnswer !== null) return false;
+
+    actionInFlightRef.current = true;
+    const questionToken = questionTokenRef.current;
 
     const isCorrect =
       current.correct && current.correct.name === answer ? true : false;
@@ -974,6 +988,7 @@ export default function GameScreen({
           pendingCorrectTransitionTimeoutRef.current = setTimeout(() => {
             pendingCorrectTransitionTimeoutRef.current = null;
             try {
+            if (questionToken !== questionTokenRef.current) return;
             if (lastQ) {
               const livesLeft = clamp(3 - skulls, 0, 3);
               const stars = starsFromLives
@@ -1005,11 +1020,13 @@ export default function GameScreen({
               setWrongAnswers([]);
             }
           } finally {
+            actionInFlightRef.current = false;
             unlockInput();
           }
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
+        actionInFlightRef.current = false;
         soundWrong && soundWrong();
         setSkulls((prev) => {
           const next = prev + 1;
@@ -1026,7 +1043,7 @@ export default function GameScreen({
           setSelectedAnswer(null);
         }, WRONG_ANSWER_RESET_MS);
       }
-      return;
+      return true;
     }
 
     // ----- TIME TRIAL -----
@@ -1044,6 +1061,7 @@ export default function GameScreen({
           pendingCorrectTransitionTimeoutRef.current = setTimeout(() => {
             pendingCorrectTransitionTimeoutRef.current = null;
             try {
+            if (questionToken !== questionTokenRef.current) return;
             if (lastQ) {
               // stars based on score AND mistakes
               const maxByMistakes = clamp(3 - skulls, 0, 3);
@@ -1079,11 +1097,13 @@ export default function GameScreen({
               setWrongAnswers([]);
             }
           } finally {
+            actionInFlightRef.current = false;
             unlockInput();
           }
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
+        actionInFlightRef.current = false;
         soundWrong && soundWrong();
         setSkulls((prev) => {
           const next = prev + 1;
@@ -1100,7 +1120,11 @@ export default function GameScreen({
           setSelectedAnswer(null);
         }, WRONG_ANSWER_RESET_MS);
       }
+      return true;
     }
+
+    actionInFlightRef.current = false;
+    return false;
   }
 
   // if player leaves the GameScreen mid-run, count it as a lost life ONCE

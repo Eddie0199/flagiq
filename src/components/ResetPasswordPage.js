@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { IS_DEBUG_BUILD } from "../debugTools";
 import { LANGS, t as translate } from "../i18n";
+import { getLocalizedLanguageName } from "../languageDisplay";
 
 const SUPPORTED_LANG_CODES = new Set(LANGS.map((l) => l.code));
 const INVALID_RESET_MESSAGE = "Reset link invalid or expired. Please request a new link.";
@@ -68,7 +69,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
     return normalizeLang(window.localStorage.getItem("flagLang") || "en");
   }, []);
 
-  const [lang] = useState(initialLang);
+  const [lang, setLang] = useState(initialLang);
   const tr = useMemo(
     () => (key, fallback) => {
       const val = translate(lang, key);
@@ -90,6 +91,33 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
     sessionEstablished: false,
     lastResetError: "",
   });
+
+  const langList = useMemo(
+    () =>
+      LANGS.map((entry) => ({
+        ...entry,
+        localizedName: getLocalizedLanguageName(entry.code, lang),
+      })),
+    [lang]
+  );
+
+  const normalizeAuthErrorCode = (error) => {
+    const code = String(error?.code || "").toLowerCase();
+    const message = String(error?.message || "").toLowerCase();
+    const status = String(error?.status || "").toLowerCase();
+    const name = String(error?.name || "").toLowerCase();
+    if (
+      code === "same_password" ||
+      message.includes("same password") ||
+      message.includes("previous password") ||
+      message.includes("new password should be different") ||
+      name.includes("same_password") ||
+      status === "same_password"
+    ) {
+      return "password_reused";
+    }
+    return "generic";
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -184,7 +212,14 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
     const { error: updateError } = await supabase.auth.updateUser({ password: pwd1 });
 
     if (updateError) {
-      const message = updateError.message || "Could not reset password.";
+      const authErrorType = normalizeAuthErrorCode(updateError);
+      const message =
+        authErrorType === "password_reused"
+          ? tr(
+              "auth.passwordReuseError",
+              "You cannot use a previous password. Please choose a new password."
+            )
+          : updateError.message || tr("auth.resetError", "Could not reset password.");
       setDiagnostics((prev) => ({ ...prev, lastResetError: message }));
       onDiagnosticsChange && onDiagnosticsChange({ lastResetError: message });
       setError(message);
@@ -225,42 +260,63 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
           boxShadow: "0 20px 45px rgba(2, 31, 86, 0.25)",
         }}
       >
-        <h1 style={{ marginTop: 0, marginBottom: 10, color: "#0f172a" }}>Reset Password</h1>
-        <p style={{ marginTop: 0, marginBottom: 16, color: "#334155" }}>
-          Choose a new password for your FlagIQ account.
+        <h1 style={{ marginTop: 0, marginBottom: 10, color: "#0f172a" }}>{tr("auth.resetTitle", "Reset your password")}</h1>
+        <p style={{ marginTop: 0, marginBottom: 10, color: "#334155" }}>
+          {tr("auth.resetIntro", "Choose a new password for your FlagIQ account.")}
         </p>
+
+        <div style={{ marginBottom: 16 }}>
+          <label
+            htmlFor="reset-language-select"
+            style={{ display: "block", marginBottom: 6, fontWeight: 600, color: "#0f172a" }}
+          >
+            {tr("language", "Language")}
+          </label>
+          <select
+            id="reset-language-select"
+            value={lang}
+            onChange={(event) => setLang(normalizeLang(event.target.value))}
+            style={{ width: "100%", height: 40, borderRadius: 10, border: "1px solid #cbd5e1", padding: "0 10px" }}
+          >
+            {langList.map((entry) => (
+              <option key={entry.code} value={entry.code}>
+                {entry.localizedName}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {error && <div style={{ color: "#b91c1c", marginBottom: 10 }}>{error}</div>}
 
         {success ? (
           <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ color: "#15803d", fontWeight: 700 }}>Password updated successfully.</div>
-            <button type="button" onClick={() => onDone && onDone()} style={{ width: "100%" }}>
-              Back to Login / Game
+            <div style={{ color: "#15803d", fontWeight: 700 }}>{tr("auth.resetSuccess", "Your password has been updated. You can now return to the app and log in.")}</div>
+            <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={{ width: "100%" }}>
+              {tr("auth.backToLogin", "Back to login")}
             </button>
           </div>
         ) : !hasSession ? (
-          <button type="button" onClick={() => onDone && onDone()} style={{ width: "100%" }}>
-            Back to Login / Game
+          <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={{ width: "100%" }}>
+            {tr("auth.backToLogin", "Back to login")}
           </button>
         ) : (
           <>
             <input
               type="password"
-              placeholder="New password"
+              placeholder={tr("auth.password", "Password")}
               value={pwd1}
               onChange={(e) => setPwd1(e.target.value)}
               style={{ width: "100%", marginBottom: 10, height: 42, padding: "0 12px", boxSizing: "border-box" }}
             />
             <input
               type="password"
-              placeholder="Confirm password"
+              placeholder={tr("auth.passwordConfirm", "Confirm password")}
               value={pwd2}
               onChange={(e) => setPwd2(e.target.value)}
               style={{ width: "100%", marginBottom: 12, height: 42, padding: "0 12px", boxSizing: "border-box" }}
             />
             <button disabled={loading} type="submit" style={{ width: "100%", height: 42 }}>
-              {loading ? "Updating…" : "Update password"}
+              {loading ? tr("loading", "Loading…") : tr("auth.resetSubmit", "Save new password")}
             </button>
           </>
         )}
