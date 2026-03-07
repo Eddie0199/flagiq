@@ -331,6 +331,7 @@ const STRINGS = {
 "auth.resetSuccess": "Your password has been updated. You can now return to the app and log in.",
 "auth.resetMismatch": "Passwords do not match.",
 "auth.resetError": "Could not update your password. The link may have expired.",
+"auth.passwordReuseError": "You cannot use a previous password. Please choose a new password.",
     "auth.resetInvalid": "This reset link is invalid or has expired.",
     "auth.passwordPlaceholder2": "Re-enter your new password",
 
@@ -819,6 +820,7 @@ const STRINGS = {
 "auth.resetSuccess": "Tu contraseña se ha actualizado. Ahora puedes volver a la app e iniciar sesión.",
 "auth.resetMismatch": "Las contraseñas no coinciden.",
 "auth.resetError": "No se pudo actualizar tu contraseña. Es posible que el enlace haya caducado.",
+"auth.passwordReuseError": "No puedes usar una contraseña anterior. Elige una contraseña nueva.",
     "auth.resetInvalid": "Este enlace de restablecimiento no es válido o ha caducado.",
     "auth.passwordPlaceholder2": "Vuelve a introducir tu nueva contraseña",
 
@@ -1306,6 +1308,7 @@ const STRINGS = {
 "auth.resetSuccess": "A sua palavra-passe foi atualizada. Já pode voltar à aplicação e iniciar sessão.",
 "auth.resetMismatch": "As palavras-passe não coincidem.",
 "auth.resetError": "Não foi possível atualizar a palavra-passe. O link pode ter expirado.",
+"auth.passwordReuseError": "Não pode reutilizar uma palavra-passe anterior. Escolha uma nova palavra-passe.",
         "auth.resetInvalid": "Este link de redefinição é inválido ou expirou.",
 
 
@@ -1795,6 +1798,7 @@ const STRINGS = {
 "auth.resetSuccess": "Dein Passwort wurde aktualisiert. Du kannst jetzt zur App zurückkehren und dich einloggen.",
 "auth.resetMismatch": "Die Passwörter stimmen nicht überein.",
 "auth.resetError": "Dein Passwort konnte nicht aktualisiert werden. Der Link ist möglicherweise abgelaufen.",
+"auth.passwordReuseError": "Du kannst kein früheres Passwort verwenden. Bitte wähle ein neues Passwort.",
         "auth.resetInvalid": "Dieser Zurücksetzungslink ist ungültig oder abgelaufen.",
     "auth.passwordPlaceholder2": "Gib dein neues Passwort erneut ein",
 
@@ -2289,6 +2293,7 @@ const STRINGS = {
 "auth.resetSuccess": "Votre mot de passe a été mis à jour. Vous pouvez maintenant revenir à l’application et vous connecter.",
 "auth.resetMismatch": "Les mots de passe ne correspondent pas.",
 "auth.resetError": "Impossible de mettre à jour votre mot de passe. Le lien a peut-être expiré.",
+"auth.passwordReuseError": "Vous ne pouvez pas réutiliser un ancien mot de passe. Veuillez en choisir un nouveau.",
         "auth.resetInvalid": "Ce lien de réinitialisation est invalide ou a expiré.",
     "auth.passwordPlaceholder2": "Saisissez à nouveau votre nouveau mot de passe",
 
@@ -2777,6 +2782,7 @@ const STRINGS = {
 "auth.resetSuccess": "Je wachtwoord is bijgewerkt. Je kunt nu terug naar de app en inloggen.",
 "auth.resetMismatch": "De wachtwoorden komen niet overeen.",
 "auth.resetError": "Je wachtwoord kon niet worden bijgewerkt. De link is mogelijk verlopen.",
+"auth.passwordReuseError": "Je kunt geen eerder wachtwoord gebruiken. Kies een nieuw wachtwoord.",
         "auth.resetInvalid": "Deze resetlink is ongeldig of verlopen.",
   "auth.passwordPlaceholder2": "Voer je nieuwe wachtwoord opnieuw in",
 

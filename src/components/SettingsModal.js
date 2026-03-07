@@ -1,15 +1,7 @@
 // src/components/SettingsModal.js
 import React, { useEffect, useMemo, useState } from "react";
 import { clearSupabaseSession, supabase } from "../supabaseClient";
-
-const LANG_DISPLAY = {
-  en: "English",
-  es: "Spanish",
-  pt: "Portuguese",
-  de: "German",
-  fr: "French",
-  nl: "Dutch",
-};
+import { getLocalizedLanguageName } from "../languageDisplay";
 
 export default function SettingsModal({
   onClose,
@@ -172,12 +164,15 @@ export default function SettingsModal({
   const avatarLetter =
     displayLabel.replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
 
-  const langList = Array.isArray(LANGS)
+  const langList = (Array.isArray(LANGS)
     ? LANGS
     : Object.keys(LANGS || {}).map((code) => ({
         code,
-        name: LANG_DISPLAY[code] || LANGS[code]?.name || code,
-      }));
+      }))
+  ).map((entry) => ({
+    ...entry,
+    name: getLocalizedLanguageName(entry.code, lang),
+  }));
 
   return (
     <div

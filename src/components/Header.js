@@ -169,7 +169,7 @@ export default function Header({
           {showBack ? (
             <button
               onClick={onBack}
-              className="header-back-button"
+              className="header-back-button app-back-button"
               style={{
                 padding: "0 10px",
                 height: 30,
@@ -181,6 +181,7 @@ export default function Header({
                 background: "#fff",
                 cursor: "pointer",
                 fontWeight: 500,
+                color: "#000",
               }}
             >
               ← {t && lang ? t(lang, "back") : "Back"}

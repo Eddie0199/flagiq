@@ -73,6 +73,15 @@ body {
   min-width: 0;
 }
 
+
+.app-back-button {
+  color: #000000 !important;
+}
+
+.app-back-button:disabled {
+  color: #000000 !important;
+}
+
 .header-back-button {
   max-width: 45vw;
   white-space: nowrap;

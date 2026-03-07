@@ -42,6 +42,7 @@ function LegalLayout({ title, children }) {
         >
           <button
             onClick={handleBackNavigation}
+            className="app-back-button"
             style={{
               padding: "0 10px",
               height: 30,
@@ -51,7 +52,7 @@ function LegalLayout({ title, children }) {
               borderRadius: 12,
               border: "1px solid #e2e8f0",
               background: "#fff",
-              color: "#0f172a",
+              color: "#000",
               cursor: "pointer",
               fontWeight: 500,
               position: "absolute",
