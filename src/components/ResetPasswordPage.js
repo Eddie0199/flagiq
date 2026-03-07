@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import { IS_DEBUG_BUILD } from "../debugTools";
 import { LANGS, t as translate } from "../i18n";
@@ -6,6 +6,8 @@ import { getLocalizedLanguageName } from "../languageDisplay";
 
 const SUPPORTED_LANG_CODES = new Set(LANGS.map((l) => l.code));
 const INVALID_RESET_MESSAGE = "Reset link invalid or expired. Please request a new link.";
+const handledRecoveryBootstrapKeys = new Set();
+const handledRecoverySessionKeys = new Set();
 
 const normalizeLang = (raw) => {
   const normalized = String(raw || "").toLowerCase();
@@ -76,6 +78,9 @@ function getRecoveryParams(urlValue) {
 }
 
 export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recoveryUrl }) {
+  const onDiagnosticsChangeRef = useRef(onDiagnosticsChange);
+  const trRef = useRef((key, fallback) => fallback);
+
   const initialLang = useMemo(() => {
     try {
       const queryLang = new URLSearchParams(window.location.search).get("lang");
@@ -133,6 +138,14 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
     }
     return "generic";
   };
+
+  useEffect(() => {
+    onDiagnosticsChangeRef.current = onDiagnosticsChange;
+  }, [onDiagnosticsChange]);
+
+  useEffect(() => {
+    trRef.current = tr;
+  }, [tr]);
 
   useEffect(() => {
     try {
@@ -193,27 +206,63 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           parsed.type === "recovery" && parsed.hasAccessToken && parsed.hasRefreshToken;
         console.log("[reset-password] recovery mode activated", isHashTokenRecovery || parsed.mode !== "none");
 
-        if (isHashTokenRecovery || parsed.mode === "tokens") {
-          nextDiagnostics.recoveryModeUsed = "setSession";
-          const { error: setSessionError } = await withTimeout(supabase.auth.setSession({
-            access_token: parsed.accessToken,
-            refresh_token: parsed.refreshToken,
-          }));
-          if (setSessionError) throw setSessionError;
-        } else if (parsed.mode === "code") {
-          nextDiagnostics.recoveryModeUsed = "exchangeCodeForSession";
-          const { error: exchangeError } = await withTimeout(
-            supabase.auth.exchangeCodeForSession(parsed.code)
-          );
-          if (exchangeError) throw exchangeError;
-        } else if (parsed.mode === "otp" && parsed.type === "recovery") {
-          nextDiagnostics.recoveryModeUsed = "verifyOtp";
-          const { error: verifyError } = await withTimeout(
-            supabase.auth.verifyOtp({ type: "recovery", token_hash: parsed.tokenHash })
-          );
-          if (verifyError) throw verifyError;
+        const bootstrapKey = [
+          parsed.mode,
+          parsed.type,
+          parsed.code || "",
+          parsed.tokenHash || "",
+          parsed.accessToken || "",
+          parsed.refreshToken || "",
+          recoveryUrl || locationHref,
+        ].join("::");
+        if (handledRecoveryBootstrapKeys.has(bootstrapKey)) {
+          console.log("[reset-password] bootstrap skipped because already handled", {
+            mode: parsed.mode,
+            type: parsed.type,
+          });
         } else {
-          nextDiagnostics.recoveryModeUsed = "none";
+          handledRecoveryBootstrapKeys.add(bootstrapKey);
+          console.log("[reset-password] bootstrap start", {
+            mode: parsed.mode,
+            type: parsed.type,
+          });
+
+          if (isHashTokenRecovery || parsed.mode === "tokens") {
+            nextDiagnostics.recoveryModeUsed = "setSession";
+            const sessionKey = `${parsed.accessToken || ""}::${parsed.refreshToken || ""}`;
+            const { data: currentSessionData } = await withTimeout(supabase.auth.getSession());
+            const hasSameSession =
+              currentSessionData?.session?.access_token &&
+              currentSessionData?.session?.access_token === parsed.accessToken;
+            if (hasSameSession || handledRecoverySessionKeys.has(sessionKey)) {
+              console.log("[reset-password] setSession skipped because session already exists / already handled", {
+                hasSameSession,
+                alreadyHandled: handledRecoverySessionKeys.has(sessionKey),
+              });
+            } else {
+              console.log("[reset-password] setSession called");
+              handledRecoverySessionKeys.add(sessionKey);
+              const { error: setSessionError } = await withTimeout(supabase.auth.setSession({
+                access_token: parsed.accessToken,
+                refresh_token: parsed.refreshToken,
+              }));
+              if (setSessionError) throw setSessionError;
+            }
+          } else if (parsed.mode === "code") {
+            nextDiagnostics.recoveryModeUsed = "exchangeCodeForSession";
+            const { error: exchangeError } = await withTimeout(
+              supabase.auth.exchangeCodeForSession(parsed.code)
+            );
+            if (exchangeError) throw exchangeError;
+          } else if (parsed.mode === "otp" && parsed.type === "recovery") {
+            nextDiagnostics.recoveryModeUsed = "verifyOtp";
+            const { error: verifyError } = await withTimeout(
+              supabase.auth.verifyOtp({ type: "recovery", token_hash: parsed.tokenHash })
+            );
+            if (verifyError) throw verifyError;
+          } else {
+            nextDiagnostics.recoveryModeUsed = "none";
+          }
         }
 
         const { data } = await supabase.auth.getSession();
@@ -222,8 +271,8 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         nextDiagnostics.sessionEstablished = sessionPresent;
 
         if (!sessionPresent) {
-          nextDiagnostics.lastResetError = tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
-          if (!cancelled) setError(tr("auth.resetInvalid", INVALID_RESET_MESSAGE));
+          nextDiagnostics.lastResetError = trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE);
+          if (!cancelled) setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
         }
 
         if (!cancelled) {
@@ -231,16 +280,16 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           setDiagnostics(nextDiagnostics);
         }
       } catch (e) {
-        nextDiagnostics.lastResetError = e?.message || tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
+        nextDiagnostics.lastResetError = e?.message || trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE);
         if (!cancelled) {
           setHasSession(false);
-          setError(tr("auth.resetInvalid", INVALID_RESET_MESSAGE));
+          setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
           setDiagnostics(nextDiagnostics);
         }
       } finally {
         if (!cancelled) {
-          onDiagnosticsChange &&
-            onDiagnosticsChange({
+          onDiagnosticsChangeRef.current &&
+            onDiagnosticsChangeRef.current({
               recoveryPath: nextDiagnostics.recoveryModeUsed,
               sessionPresentAfterRecovery: nextDiagnostics.sessionEstablished,
               lastResetError: nextDiagnostics.lastResetError,
@@ -253,7 +302,21 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
     return () => {
       cancelled = true;
     };
-  }, [onDiagnosticsChange, recoveryUrl, tr]);
+  }, [recoveryUrl]);
+
+  const invalid = Boolean(error) && !hasSession;
+  const showForm = ready && hasSession && !success;
+
+  useEffect(() => {
+    console.log("[reset-password] final render state", {
+      loading,
+      ready,
+      invalid,
+      isRecoveryFlow: true,
+      hasSession,
+      showForm,
+    });
+  }, [hasSession, invalid, loading, ready, showForm]);
 
   useEffect(() => {
     if (!success) return;

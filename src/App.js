@@ -1405,19 +1405,25 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
+        if (isRecoveryFlow || isResetPasswordRoute()) {
+          console.log("[reset-password] user/profile fetch blocked because recovery flow is active", {
+            isRecoveryFlow,
+            isResetRoute: isResetPasswordRoute(),
+          });
+          if (!cancelled) {
+            setActiveUser("");
+            setActiveUserLabel("");
+          }
+          return;
+        }
         await restoreSupabaseSession();
         if (cancelled) return;
         const { data, error } = await supabase.auth.getUser();
         if (error) throw error;
         const user = data?.user;
         if (user && !cancelled) {
-          if (isRecoveryFlow || isResetPasswordRoute()) {
-            setActiveUser("");
-            setActiveUserLabel("");
-          } else {
-            setActiveUser(user.id || user.email || "");
-            setActiveUserLabel(getAuthUserLabel(user));
-          }
+          setActiveUser(user.id || user.email || "");
+          setActiveUserLabel(getAuthUserLabel(user));
         } else if (!cancelled) {
           setActiveUser("");
           setActiveUserLabel("");
