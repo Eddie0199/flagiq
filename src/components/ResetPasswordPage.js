@@ -9,6 +9,19 @@ const INVALID_RESET_MESSAGE = "Reset link invalid or expired. Please request a n
 const handledRecoveryBootstrapKeys = new Set();
 const handledRecoverySessionKeys = new Set();
 
+const getInvalidReasonMessage = (tr, reason) => {
+  if (reason === "no_recovery_params") {
+    return tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
+  }
+  if (reason === "recovery_session_missing") {
+    return tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
+  }
+  if (reason === "recovery_error") {
+    return tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
+  }
+  return "";
+};
+
 const normalizeLang = (raw) => {
   const normalized = String(raw || "").toLowerCase();
   return SUPPORTED_LANG_CODES.has(normalized) ? normalized : "en";
@@ -110,6 +123,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
     recoveryModeUsed: "none",
     sessionEstablished: false,
     lastResetError: "",
+    invalidReason: "",
   });
 
   const langList = useMemo(
@@ -174,6 +188,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         recoveryModeUsed: "none",
         sessionEstablished: false,
         lastResetError: "",
+        invalidReason: "",
       };
 
       setReady(false);
@@ -215,6 +230,9 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           parsed.refreshToken || "",
           recoveryUrl || locationHref,
         ].join("::");
+        const hasRecoveryParams = parsed.mode !== "none";
+        let recoveryHandledSuccessfully = false;
+
         if (handledRecoveryBootstrapKeys.has(bootstrapKey)) {
           console.log("[reset-password] bootstrap skipped because already handled", {
             mode: parsed.mode,
@@ -239,26 +257,35 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
                 hasSameSession,
                 alreadyHandled: handledRecoverySessionKeys.has(sessionKey),
               });
+              recoveryHandledSuccessfully = hasSameSession;
             } else {
               console.log("[reset-password] setSession called");
-              handledRecoverySessionKeys.add(sessionKey);
-              const { error: setSessionError } = await withTimeout(supabase.auth.setSession({
+              const { data: setSessionData, error: setSessionError } = await withTimeout(supabase.auth.setSession({
                 access_token: parsed.accessToken,
                 refresh_token: parsed.refreshToken,
               }));
+              console.log("[reset-password] setSession result", {
+                success: !setSessionError,
+                hasSessionInResponse: Boolean(setSessionData?.session),
+                error: setSessionError?.message || "",
+              });
               if (setSessionError) throw setSessionError;
+              handledRecoverySessionKeys.add(sessionKey);
+              recoveryHandledSuccessfully = Boolean(setSessionData?.session);
             }
           } else if (parsed.mode === "code") {
             nextDiagnostics.recoveryModeUsed = "exchangeCodeForSession";
-            const { error: exchangeError } = await withTimeout(
+            const { data: exchangeData, error: exchangeError } = await withTimeout(
               supabase.auth.exchangeCodeForSession(parsed.code)
             );
+            recoveryHandledSuccessfully = Boolean(exchangeData?.session);
             if (exchangeError) throw exchangeError;
           } else if (parsed.mode === "otp" && parsed.type === "recovery") {
             nextDiagnostics.recoveryModeUsed = "verifyOtp";
-            const { error: verifyError } = await withTimeout(
+            const { data: verifyData, error: verifyError } = await withTimeout(
               supabase.auth.verifyOtp({ type: "recovery", token_hash: parsed.tokenHash })
             );
+            recoveryHandledSuccessfully = Boolean(verifyData?.session);
             if (verifyError) throw verifyError;
           } else {
             nextDiagnostics.recoveryModeUsed = "none";
@@ -267,12 +294,28 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
 
         const { data } = await supabase.auth.getSession();
         const sessionPresent = Boolean(data?.session);
-        console.log("[reset-password] session established from recovery tokens", sessionPresent);
+        console.log("[reset-password] session after recovery bootstrap", {
+          sessionPresent,
+          recoveryHandledSuccessfully,
+          hasRecoveryParams,
+        });
         nextDiagnostics.sessionEstablished = sessionPresent;
 
-        if (!sessionPresent) {
-          nextDiagnostics.lastResetError = trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE);
-          if (!cancelled) setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
+        let invalidReason = "";
+        if (!hasRecoveryParams && !sessionPresent) invalidReason = "no_recovery_params";
+        else if (hasRecoveryParams && !sessionPresent) invalidReason = "recovery_session_missing";
+
+        if (invalidReason) {
+          nextDiagnostics.invalidReason = invalidReason;
+          nextDiagnostics.lastResetError = getInvalidReasonMessage(trRef.current, invalidReason);
+          console.log("[reset-password] invalid=true", {
+            reason: invalidReason,
+            recoveryModeUsed: nextDiagnostics.recoveryModeUsed,
+            hasRecoveryParams,
+            recoveryHandledSuccessfully,
+            sessionPresent,
+          });
+          if (!cancelled) setError(getInvalidReasonMessage(trRef.current, invalidReason));
         }
 
         if (!cancelled) {
@@ -281,6 +324,11 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         }
       } catch (e) {
         nextDiagnostics.lastResetError = e?.message || trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE);
+        nextDiagnostics.invalidReason = "recovery_error";
+        console.log("[reset-password] invalid=true", {
+          reason: "recovery_error",
+          error: e?.message || String(e),
+        });
         if (!cancelled) {
           setHasSession(false);
           setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
@@ -308,7 +356,9 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
   const showForm = ready && hasSession && !success;
 
   useEffect(() => {
+    const renderBranch = !ready ? "loading" : success ? "success" : showForm ? "form" : invalid ? "invalid" : "unknown";
     console.log("[reset-password] final render state", {
+      renderBranch,
       loading,
       ready,
       invalid,
@@ -366,49 +416,37 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
 
   if (!ready) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0b74ff", color: "#fff", display: "grid", placeItems: "center" }}>
-        {tr("auth.loadingRecoveryLink", "Loading recovery link…")}
+      <div className="min-h-screen bg-[#0b74ff] px-4 py-10 text-white">
+        <div className="mx-auto flex min-h-[70vh] w-full max-w-lg items-center justify-center">
+          <div className="rounded-3xl border border-white/20 bg-white/10 px-8 py-6 text-center shadow-2xl backdrop-blur-sm">
+            {tr("auth.loadingRecoveryLink", "Loading recovery link…")}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #0b74ff 0%, #0859c3 100%)",
-        display: "grid",
-        placeItems: "center",
-        padding: 20,
-      }}
-    >
+    <div className="min-h-screen bg-[#0b74ff] px-4 py-8">
+      <div className="mx-auto w-full max-w-lg pb-8 pt-4">
       <form
         onSubmit={handleSubmit}
-        style={{
-          background: "#ffffff",
-          borderRadius: 20,
-          padding: 24,
-          width: "min(460px, 100%)",
-          boxShadow: "0 20px 45px rgba(2, 31, 86, 0.25)",
-        }}
+        className="w-full rounded-[20px] border border-slate-200 bg-white p-6 shadow-[0_20px_45px_rgba(2,31,86,0.25)]"
       >
-        <h1 style={{ marginTop: 0, marginBottom: 10, color: "#0f172a" }}>{tr("auth.resetTitle", "Reset your password")}</h1>
-        <p style={{ marginTop: 0, marginBottom: 10, color: "#334155" }}>
+        <h1 className="mb-2 mt-0 text-2xl font-extrabold text-slate-900">{tr("auth.resetTitle", "Reset your password")}</h1>
+        <p className="mb-4 mt-0 text-sm font-medium text-slate-600">
           {tr("auth.resetIntro", "Choose a new password for your FlagIQ account.")}
         </p>
 
-        <div style={{ marginBottom: 16 }}>
-          <label
-            htmlFor="reset-language-select"
-            style={{ display: "block", marginBottom: 6, fontWeight: 600, color: "#0f172a" }}
-          >
+        <div className="mb-4">
+          <label htmlFor="reset-language-select" className="mb-1.5 block text-sm font-semibold text-slate-900">
             {tr("language", "Language")}
           </label>
           <select
             id="reset-language-select"
             value={lang}
             onChange={(event) => setLang(normalizeLang(event.target.value))}
-            style={{ width: "100%", height: 40, borderRadius: 10, border: "1px solid #cbd5e1", padding: "0 10px" }}
+            className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-[#0b74ff] focus:ring-2 focus:ring-[#0b74ff]/20"
           >
             {langList.map((entry) => (
               <option key={entry.code} value={entry.code}>
@@ -418,17 +456,17 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           </select>
         </div>
 
-        {error && <div style={{ color: "#b91c1c", marginBottom: 10 }}>{error}</div>}
+        {error && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</div>}
 
         {success ? (
-          <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ color: "#15803d", fontWeight: 700 }}>{tr("auth.resetSuccess", "Your password has been updated. You can now return to the app and log in.")}</div>
-            <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={{ width: "100%" }}>
+          <div className="grid gap-3">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">{tr("auth.resetSuccess", "Your password has been updated. You can now return to the app and log in.")}</div>
+            <button type="button" onClick={() => onDone && onDone()} className="app-back-button h-11 w-full rounded-xl border border-slate-900 bg-white px-4 text-sm font-bold">
               {tr("auth.backToLogin", "Back to login")}
             </button>
           </div>
         ) : !hasSession ? (
-          <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={{ width: "100%" }}>
+          <button type="button" onClick={() => onDone && onDone()} className="app-back-button h-11 w-full rounded-xl border border-slate-900 bg-white px-4 text-sm font-bold">
             {tr("auth.backToLogin", "Back to login")}
           </button>
         ) : (
@@ -438,16 +476,16 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
               placeholder={tr("auth.password", "Password")}
               value={pwd1}
               onChange={(e) => setPwd1(e.target.value)}
-              style={{ width: "100%", marginBottom: 10, height: 42, padding: "0 12px", boxSizing: "border-box" }}
+              className="mb-2.5 h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-[#0b74ff] focus:ring-2 focus:ring-[#0b74ff]/20"
             />
             <input
               type="password"
               placeholder={tr("auth.passwordConfirm", "Confirm password")}
               value={pwd2}
               onChange={(e) => setPwd2(e.target.value)}
-              style={{ width: "100%", marginBottom: 12, height: 42, padding: "0 12px", boxSizing: "border-box" }}
+              className="mb-3 h-11 w-full rounded-xl border border-slate-300 px-3 text-sm text-slate-900 outline-none focus:border-[#0b74ff] focus:ring-2 focus:ring-[#0b74ff]/20"
             />
-            <button disabled={loading} type="submit" style={{ width: "100%", height: 42 }}>
+            <button disabled={loading} type="submit" className="h-11 w-full rounded-xl border border-[#0859c3] bg-[#0b74ff] px-4 text-sm font-bold text-white shadow-sm transition enabled:hover:bg-[#0a68e4] disabled:cursor-not-allowed disabled:opacity-70">
               {loading ? tr("loading", "Loading…") : tr("auth.resetSubmit", "Save new password")}
             </button>
           </>
@@ -469,9 +507,11 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
             <div>recoveryModeUsed: {diagnostics.recoveryModeUsed}</div>
             <div>sessionEstablished: {String(diagnostics.sessionEstablished)}</div>
             <div>lastResetError: {diagnostics.lastResetError || "-"}</div>
+            <div>invalidReason: {diagnostics.invalidReason || "-"}</div>
           </div>
         )}
       </form>
+      </div>
     </div>
   );
 }
