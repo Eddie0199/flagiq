@@ -18,9 +18,11 @@ function getRecoveryParams(urlValue) {
     code: "",
     accessToken: "",
     refreshToken: "",
+    tokenHash: "",
     hasCode: false,
     hasAccessToken: false,
     hasRefreshToken: false,
+    hasTokenHash: false,
     mode: "none",
   };
 
@@ -37,6 +39,11 @@ function getRecoveryParams(urlValue) {
       hashParams.get("code") ||
       "";
 
+    parsed.tokenHash =
+      url.searchParams.get("token_hash") ||
+      hashParams.get("token_hash") ||
+      "";
+
     parsed.accessToken =
       hashParams.get("access_token") ||
       url.searchParams.get("access_token") ||
@@ -50,9 +57,11 @@ function getRecoveryParams(urlValue) {
     parsed.hasCode = Boolean(parsed.code);
     parsed.hasAccessToken = Boolean(parsed.accessToken);
     parsed.hasRefreshToken = Boolean(parsed.refreshToken);
+    parsed.hasTokenHash = Boolean(parsed.tokenHash);
 
     if (parsed.hasAccessToken && parsed.hasRefreshToken) parsed.mode = "tokens";
     else if (parsed.hasCode) parsed.mode = "code";
+    else if (parsed.hasTokenHash) parsed.mode = "otp";
   } catch (e) {
     // no-op
   }
@@ -60,7 +69,7 @@ function getRecoveryParams(urlValue) {
   return parsed;
 }
 
-export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
+export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recoveryUrl }) {
   const initialLang = useMemo(() => {
     try {
       const queryLang = new URLSearchParams(window.location.search).get("lang");
@@ -120,7 +129,25 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
   };
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem("flagLang", lang);
+    } catch (e) {}
+  }, [lang]);
+
+  useEffect(() => {
     let cancelled = false;
+
+    const withTimeout = async (promise, timeoutMs = 10000) => {
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("recovery_timeout")), timeoutMs);
+      });
+      try {
+        return await Promise.race([promise, timeoutPromise]);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
 
     (async () => {
       const nextDiagnostics = {
@@ -134,24 +161,33 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
       setError("");
 
       try {
-        const parsed = getRecoveryParams(window.location.href);
+        const parsed = getRecoveryParams(recoveryUrl || window.location.href);
         const paramFlags = [];
         if (parsed.hasAccessToken) paramFlags.push("access_token");
         if (parsed.hasRefreshToken) paramFlags.push("refresh_token");
         if (parsed.hasCode) paramFlags.push("code");
+        if (parsed.hasTokenHash) paramFlags.push("token_hash");
         nextDiagnostics.paramsDetected = paramFlags.length ? paramFlags.join(",") : "none";
 
         if (parsed.mode === "tokens") {
           nextDiagnostics.recoveryModeUsed = "setSession";
-          const { error: setSessionError } = await supabase.auth.setSession({
+          const { error: setSessionError } = await withTimeout(supabase.auth.setSession({
             access_token: parsed.accessToken,
             refresh_token: parsed.refreshToken,
-          });
+          }));
           if (setSessionError) throw setSessionError;
         } else if (parsed.mode === "code") {
           nextDiagnostics.recoveryModeUsed = "exchangeCodeForSession";
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(parsed.code);
+          const { error: exchangeError } = await withTimeout(
+            supabase.auth.exchangeCodeForSession(parsed.code)
+          );
           if (exchangeError) throw exchangeError;
+        } else if (parsed.mode === "otp" && parsed.type === "recovery") {
+          nextDiagnostics.recoveryModeUsed = "verifyOtp";
+          const { error: verifyError } = await withTimeout(
+            supabase.auth.verifyOtp({ type: "recovery", token_hash: parsed.tokenHash })
+          );
+          if (verifyError) throw verifyError;
         } else {
           nextDiagnostics.recoveryModeUsed = "none";
         }
@@ -161,8 +197,8 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
         nextDiagnostics.sessionEstablished = sessionPresent;
 
         if (!sessionPresent) {
-          nextDiagnostics.lastResetError = INVALID_RESET_MESSAGE;
-          if (!cancelled) setError(INVALID_RESET_MESSAGE);
+          nextDiagnostics.lastResetError = tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
+          if (!cancelled) setError(tr("auth.resetInvalid", INVALID_RESET_MESSAGE));
         }
 
         if (!cancelled) {
@@ -170,10 +206,10 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
           setDiagnostics(nextDiagnostics);
         }
       } catch (e) {
-        nextDiagnostics.lastResetError = e?.message || INVALID_RESET_MESSAGE;
+        nextDiagnostics.lastResetError = e?.message || tr("auth.resetInvalid", INVALID_RESET_MESSAGE);
         if (!cancelled) {
           setHasSession(false);
-          setError(INVALID_RESET_MESSAGE);
+          setError(tr("auth.resetInvalid", INVALID_RESET_MESSAGE));
           setDiagnostics(nextDiagnostics);
         }
       } finally {
@@ -192,7 +228,15 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
     return () => {
       cancelled = true;
     };
-  }, [onDiagnosticsChange]);
+  }, [onDiagnosticsChange, recoveryUrl, tr]);
+
+  useEffect(() => {
+    if (!success) return;
+    const id = setTimeout(() => {
+      onDone && onDone();
+    }, 1200);
+    return () => clearTimeout(id);
+  }, [success, onDone]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -235,7 +279,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange }) {
   if (!ready) {
     return (
       <div style={{ minHeight: "100vh", background: "#0b74ff", color: "#fff", display: "grid", placeItems: "center" }}>
-        Loading recovery link…
+        {tr("auth.loadingRecoveryLink", "Loading recovery link…")}
       </div>
     );
   }
