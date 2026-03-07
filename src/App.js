@@ -60,9 +60,12 @@ function parseSupabaseRecoveryUrl(url) {
     isResetRoute: false,
     mode: "unknown",
     type: "unknown",
+    tokenType: "",
     code: "",
     accessToken: "",
     refreshToken: "",
+    expiresAt: "",
+    expiresIn: "",
     tokenHash: "",
     hasCode: false,
     hasAccessToken: false,
@@ -81,8 +84,11 @@ function parseSupabaseRecoveryUrl(url) {
     const hashParams = new URLSearchParams((u.hash || "").replace(/^#/, ""));
     const queryType = (u.searchParams.get("type") || "").toLowerCase();
     const hashType = (hashParams.get("type") || "").toLowerCase();
-    const type = queryType || hashType;
+    const type = hashType || queryType;
     parsed.type = type || "unknown";
+    parsed.tokenType = hashParams.get("token_type") || u.searchParams.get("token_type") || "";
+    parsed.expiresAt = hashParams.get("expires_at") || u.searchParams.get("expires_at") || "";
+    parsed.expiresIn = hashParams.get("expires_in") || u.searchParams.get("expires_in") || "";
 
     parsed.code = u.searchParams.get("code") || u.searchParams.get("token") || hashParams.get("code") || "";
     parsed.accessToken =
@@ -1144,6 +1150,16 @@ export default function App() {
       if (!url) return false;
       const isDeepLink = url.startsWith(RESET_DEEP_LINK) || url.startsWith(AUTH_CALLBACK_DEEP_LINK);
       const { parsed, isRecoveryFlow: isRecoveryCandidate } = isRecoveryCandidateUrl(url);
+      console.log("[reset-password] appUrlOpen launch url", sanitizeDeepLink(url));
+      console.log("[reset-password] appUrlOpen parsed", {
+        type: parsed.type,
+        mode: parsed.mode,
+        hasAccessToken: parsed.hasAccessToken,
+        hasRefreshToken: parsed.hasRefreshToken,
+        expiresAt: Boolean(parsed.expiresAt),
+        expiresIn: Boolean(parsed.expiresIn),
+        tokenType: Boolean(parsed.tokenType),
+      });
       if (!isDeepLink && !isRecoveryCandidate) return false;
 
       const next = {
@@ -2587,7 +2603,7 @@ export default function App() {
     }
   };
 
-  if (isResetPasswordRoute() || resetDeepLinkUrl) {
+  if (isRecoveryFlow || isResetPasswordRoute() || resetDeepLinkUrl) {
     return (
       <ResetPasswordPage
         recoveryUrl={resetDeepLinkUrl || (typeof window !== "undefined" ? window.location.href : "")}
