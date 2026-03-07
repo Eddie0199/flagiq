@@ -74,8 +74,9 @@ function parseSupabaseRecoveryUrl(url) {
   try {
     const normalized = String(url).replace(`${DEEP_LINK_SCHEME}://`, "https://flagiq.local/");
     const u = new URL(normalized);
-    const routePath = `${u.host}${u.pathname}`.replace(/\/+$/, "");
-    parsed.isResetRoute = routePath === "reset-password";
+    const routePath = (u.pathname || "").replace(/\/+$/, "");
+    const deepLinkRoutePath = `${u.host}${routePath}`.replace(/^\/+/, "");
+    parsed.isResetRoute = routePath === "/reset-password" || deepLinkRoutePath === "reset-password";
 
     const hashParams = new URLSearchParams((u.hash || "").replace(/^#/, ""));
     const queryType = (u.searchParams.get("type") || "").toLowerCase();
@@ -114,6 +115,16 @@ function parseSupabaseRecoveryUrl(url) {
   }
 
   return parsed;
+}
+
+function isRecoveryCandidateUrl(url) {
+  const parsed = parseSupabaseRecoveryUrl(url);
+  const hasRecoveryParams = parsed.mode !== "none" && parsed.mode !== "unknown";
+  const isRecoveryType = parsed.type === "recovery";
+  return {
+    parsed,
+    isRecoveryFlow: parsed.isResetRoute || (isRecoveryType && hasRecoveryParams),
+  };
 }
 
 function sanitizeDeepLink(url) {
@@ -843,6 +854,7 @@ function usePerUserHints(username) {
 
 // ================= Main App =================
 function isResetPasswordRoute() {
+  if (typeof window === "undefined") return false;
   return window.location.pathname === "/reset-password";
 }
 
@@ -1010,7 +1022,10 @@ export default function App() {
   const [appInfo, setAppInfo] = useState({ version: "", build: "" });
   const [gameplayDiagnostics, setGameplayDiagnostics] = useState(null);
   const [resetDeepLinkUrl, setResetDeepLinkUrl] = useState("");
-  const [isRecoveryFlow, setIsRecoveryFlow] = useState(isResetPasswordRoute());
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return isRecoveryCandidateUrl(window.location.href).isRecoveryFlow;
+  });
   const [resetDiagnostics, setResetDiagnostics] = useState({
     lastDeepLinkReceived: "",
     parsedType: "unknown",
@@ -1127,9 +1142,10 @@ export default function App() {
 
     const processIncomingUrl = async (url) => {
       if (!url) return false;
-      if (!url.startsWith(RESET_DEEP_LINK) && !url.startsWith(AUTH_CALLBACK_DEEP_LINK)) return false;
+      const isDeepLink = url.startsWith(RESET_DEEP_LINK) || url.startsWith(AUTH_CALLBACK_DEEP_LINK);
+      const { parsed, isRecoveryFlow: isRecoveryCandidate } = isRecoveryCandidateUrl(url);
+      if (!isDeepLink && !isRecoveryCandidate) return false;
 
-      const parsed = parseSupabaseRecoveryUrl(url);
       const next = {
         lastDeepLinkReceived: sanitizeDeepLink(url),
         parsedType: parsed.type,
@@ -1144,50 +1160,26 @@ export default function App() {
         lastResetError: "",
       };
 
-      try {
-        if (parsed.mode === "tokens") {
-          const { error } = await supabase.auth.setSession({
-            access_token: parsed.accessToken,
-            refresh_token: parsed.refreshToken,
-          });
-          if (error) throw error;
-          next.didExchangeOrSetSessionSucceed = true;
-          next.recoveryResult = "success:setSession";
-        } else if (parsed.mode === "code") {
-          const { error } = await supabase.auth.exchangeCodeForSession(parsed.code);
-          if (error) throw error;
-          next.didExchangeOrSetSessionSucceed = true;
-          next.recoveryResult = "success:exchangeCodeForSession";
-        } else if (parsed.mode === "otp" && parsed.type === "recovery") {
-          const { error } = await supabase.auth.verifyOtp({
-            type: "recovery",
-            token_hash: parsed.tokenHash,
-          });
-          if (error) throw error;
-          next.didExchangeOrSetSessionSucceed = true;
-          next.recoveryResult = "success:verifyOtp";
-        }
-
-        const { data } = await supabase.auth.getSession();
-        next.sessionPresentAfterRecovery = Boolean(data?.session);
-        if (next.recoveryResult === "none") {
-          next.recoveryResult = next.sessionPresentAfterRecovery ? "success:sessionExists" : "fail:noRecoveryParams";
-        }
-      } catch (e) {
-        next.recoveryResult = "fail";
-        next.lastResetError = e?.message || "Recovery handling failed";
+      if (isRecoveryCandidate) {
+        next.recoveryResult = "pending:handledByResetPage";
+      } else {
+        next.recoveryResult = "ignored:notRecovery";
       }
 
-      navigateToResetPassword();
-      setIsRecoveryFlow(true);
-      setResetDeepLinkUrl(url);
+      if (isRecoveryCandidate) {
+        navigateToResetPassword();
+        setIsRecoveryFlow(true);
+        setResetDeepLinkUrl(url);
+      }
       setResetDiagnostics(next);
       return true;
     };
 
-    if (isResetPasswordRoute()) {
+    const currentCandidate = isRecoveryCandidateUrl(window.location.href);
+    if (currentCandidate.isRecoveryFlow) {
       const currentUrl = window.location.href;
-      const parsedCurrentUrl = parseSupabaseRecoveryUrl(currentUrl);
+      const parsedCurrentUrl = currentCandidate.parsed;
+      navigateToResetPassword();
       setIsRecoveryFlow(true);
       setResetDeepLinkUrl(currentUrl);
       setResetDiagnostics((prev) => ({
@@ -1199,6 +1191,7 @@ export default function App() {
         hasCode: parsedCurrentUrl.hasCode,
         hasTokenHash: parsedCurrentUrl.hasTokenHash,
         recoveryPath: parsedCurrentUrl.mode,
+        recoveryResult: "pending:handledByResetPage",
       }));
     }
 
@@ -1435,13 +1428,16 @@ export default function App() {
       const isRecoveryEvent = event === "PASSWORD_RECOVERY";
       if (isRecoveryEvent) {
         setIsRecoveryFlow(true);
+        if (typeof window !== "undefined" && window.location.pathname !== "/reset-password") {
+          window.history.replaceState({}, "", "/reset-password");
+        }
       }
       if (event === "SIGNED_OUT" || !session?.user) {
         setActiveUser("");
         setActiveUserLabel("");
         return;
       }
-      if (isRecoveryFlow || isRecoveryEvent) {
+      if (isRecoveryFlow || isRecoveryEvent || isResetPasswordRoute()) {
         return;
       }
       const user = session.user;
