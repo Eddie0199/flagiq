@@ -63,9 +63,11 @@ function parseSupabaseRecoveryUrl(url) {
     code: "",
     accessToken: "",
     refreshToken: "",
+    tokenHash: "",
     hasCode: false,
     hasAccessToken: false,
     hasRefreshToken: false,
+    hasTokenHash: false,
   };
   if (!url) return parsed;
 
@@ -81,7 +83,7 @@ function parseSupabaseRecoveryUrl(url) {
     const type = queryType || hashType;
     parsed.type = type || "unknown";
 
-    parsed.code = u.searchParams.get("code") || u.searchParams.get("token") || "";
+    parsed.code = u.searchParams.get("code") || u.searchParams.get("token") || hashParams.get("code") || "";
     parsed.accessToken =
       hashParams.get("access_token") ||
       u.searchParams.get("access_token") ||
@@ -90,15 +92,22 @@ function parseSupabaseRecoveryUrl(url) {
       hashParams.get("refresh_token") ||
       u.searchParams.get("refresh_token") ||
       "";
+    parsed.tokenHash =
+      u.searchParams.get("token_hash") ||
+      hashParams.get("token_hash") ||
+      "";
 
     parsed.hasCode = Boolean(parsed.code);
     parsed.hasAccessToken = Boolean(parsed.accessToken);
     parsed.hasRefreshToken = Boolean(parsed.refreshToken);
+    parsed.hasTokenHash = Boolean(parsed.tokenHash);
 
     if (parsed.hasAccessToken && parsed.hasRefreshToken) {
       parsed.mode = "tokens";
     } else if (parsed.hasCode) {
       parsed.mode = "code";
+    } else if (parsed.hasTokenHash) {
+      parsed.mode = "otp";
     }
   } catch (e) {
     // ignore parse failures
@@ -1001,12 +1010,14 @@ export default function App() {
   const [appInfo, setAppInfo] = useState({ version: "", build: "" });
   const [gameplayDiagnostics, setGameplayDiagnostics] = useState(null);
   const [resetDeepLinkUrl, setResetDeepLinkUrl] = useState("");
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(isResetPasswordRoute());
   const [resetDiagnostics, setResetDiagnostics] = useState({
     lastDeepLinkReceived: "",
     parsedType: "unknown",
     hasAccessToken: false,
     hasRefreshToken: false,
     hasCode: false,
+    hasTokenHash: false,
     recoveryPath: "none",
     didExchangeOrSetSessionSucceed: false,
     sessionPresentAfterRecovery: false,
@@ -1125,6 +1136,7 @@ export default function App() {
         hasAccessToken: parsed.hasAccessToken,
         hasRefreshToken: parsed.hasRefreshToken,
         hasCode: parsed.hasCode,
+        hasTokenHash: parsed.hasTokenHash,
         recoveryPath: parsed.mode,
         didExchangeOrSetSessionSucceed: false,
         sessionPresentAfterRecovery: false,
@@ -1146,6 +1158,14 @@ export default function App() {
           if (error) throw error;
           next.didExchangeOrSetSessionSucceed = true;
           next.recoveryResult = "success:exchangeCodeForSession";
+        } else if (parsed.mode === "otp" && parsed.type === "recovery") {
+          const { error } = await supabase.auth.verifyOtp({
+            type: "recovery",
+            token_hash: parsed.tokenHash,
+          });
+          if (error) throw error;
+          next.didExchangeOrSetSessionSucceed = true;
+          next.recoveryResult = "success:verifyOtp";
         }
 
         const { data } = await supabase.auth.getSession();
@@ -1159,6 +1179,7 @@ export default function App() {
       }
 
       navigateToResetPassword();
+      setIsRecoveryFlow(true);
       setResetDeepLinkUrl(url);
       setResetDiagnostics(next);
       return true;
@@ -1166,8 +1187,19 @@ export default function App() {
 
     if (isResetPasswordRoute()) {
       const currentUrl = window.location.href;
+      const parsedCurrentUrl = parseSupabaseRecoveryUrl(currentUrl);
+      setIsRecoveryFlow(true);
       setResetDeepLinkUrl(currentUrl);
-      setResetDiagnostics((prev) => ({ ...prev, lastDeepLinkReceived: sanitizeDeepLink(currentUrl) }));
+      setResetDiagnostics((prev) => ({
+        ...prev,
+        lastDeepLinkReceived: sanitizeDeepLink(currentUrl),
+        parsedType: parsedCurrentUrl.type,
+        hasAccessToken: parsedCurrentUrl.hasAccessToken,
+        hasRefreshToken: parsedCurrentUrl.hasRefreshToken,
+        hasCode: parsedCurrentUrl.hasCode,
+        hasTokenHash: parsedCurrentUrl.hasTokenHash,
+        recoveryPath: parsedCurrentUrl.mode,
+      }));
     }
 
     let listener;
@@ -1370,8 +1402,13 @@ export default function App() {
         if (error) throw error;
         const user = data?.user;
         if (user && !cancelled) {
-          setActiveUser(user.id || user.email || "");
-          setActiveUserLabel(getAuthUserLabel(user));
+          if (isRecoveryFlow || isResetPasswordRoute()) {
+            setActiveUser("");
+            setActiveUserLabel("");
+          } else {
+            setActiveUser(user.id || user.email || "");
+            setActiveUserLabel(getAuthUserLabel(user));
+          }
         } else if (!cancelled) {
           setActiveUser("");
           setActiveUserLabel("");
@@ -1390,14 +1427,21 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [setActiveUser, setActiveUserLabel, setAuthReady]);
+  }, [isRecoveryFlow, setActiveUser, setActiveUserLabel, setAuthReady]);
 
   useEffect(() => {
     if (!supabase) return;
     const unsubscribe = subscribeToSupabaseAuth((event, session) => {
+      const isRecoveryEvent = event === "PASSWORD_RECOVERY";
+      if (isRecoveryEvent) {
+        setIsRecoveryFlow(true);
+      }
       if (event === "SIGNED_OUT" || !session?.user) {
         setActiveUser("");
         setActiveUserLabel("");
+        return;
+      }
+      if (isRecoveryFlow || isRecoveryEvent) {
         return;
       }
       const user = session.user;
@@ -1407,7 +1451,7 @@ export default function App() {
     return () => {
       unsubscribe();
     };
-  }, [setActiveUser, setActiveUserLabel]);
+  }, [isRecoveryFlow, setActiveUser, setActiveUserLabel]);
 
   const handleLanguageChange = useCallback(
     (next) => {
@@ -2550,6 +2594,7 @@ export default function App() {
   if (isResetPasswordRoute() || resetDeepLinkUrl) {
     return (
       <ResetPasswordPage
+        recoveryUrl={resetDeepLinkUrl || (typeof window !== "undefined" ? window.location.href : "")}
         onDiagnosticsChange={(details) => {
           setResetDiagnostics((prev) => ({ ...prev, ...details }));
         }}
@@ -2558,6 +2603,7 @@ export default function App() {
             window.history.replaceState({}, "", "/");
           }
           setResetDeepLinkUrl("");
+          setIsRecoveryFlow(false);
           setAuthTab("login");
           setAuthOpen(true);
           setScreen("home");
@@ -3107,7 +3153,7 @@ export default function App() {
               <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
                 <div>lastDeepLinkReceived: {resetDiagnostics.lastDeepLinkReceived || "-"}</div>
                 <div>parsedType: {resetDiagnostics.parsedType || "unknown"}</div>
-                <div>paramsPresent: access_token={String(resetDiagnostics.hasAccessToken)}, refresh_token={String(resetDiagnostics.hasRefreshToken)}, code={String(resetDiagnostics.hasCode)}</div>
+                <div>paramsPresent: access_token={String(resetDiagnostics.hasAccessToken)}, refresh_token={String(resetDiagnostics.hasRefreshToken)}, code={String(resetDiagnostics.hasCode)}, token_hash={String(resetDiagnostics.hasTokenHash)}</div>
                 <div>recoveryPath: {resetDiagnostics.recoveryPath || "none"}</div>
                 <div>didExchangeOrSetSessionSucceed: {String(resetDiagnostics.didExchangeOrSetSessionSucceed)}</div>
                 <div>sessionPresentAfterRecovery: {String(resetDiagnostics.sessionPresentAfterRecovery)}</div>
@@ -3122,6 +3168,7 @@ export default function App() {
                     `hasAccessToken=${String(resetDiagnostics.hasAccessToken)}`,
                     `hasRefreshToken=${String(resetDiagnostics.hasRefreshToken)}`,
                     `hasCode=${String(resetDiagnostics.hasCode)}`,
+                    `hasTokenHash=${String(resetDiagnostics.hasTokenHash)}`,
                     `recoveryPath=${resetDiagnostics.recoveryPath || "none"}`,
                     `didExchangeOrSetSessionSucceed=${String(resetDiagnostics.didExchangeOrSetSessionSucceed)}`,
                     `sessionPresentAfterRecovery=${String(resetDiagnostics.sessionPresentAfterRecovery)}`,
