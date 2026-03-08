@@ -364,9 +364,50 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
     setSuccess(true);
   }
 
+  const inputStyle = {
+    width: "100%",
+    marginBottom: 10,
+    height: 44,
+    padding: "0 12px",
+    boxSizing: "border-box",
+    borderRadius: 12,
+    border: "1px solid #cbd5e1",
+    fontSize: 16,
+    color: "#1e293b",
+    background: "#ffffff",
+  };
+
+  const secondaryButtonStyle = {
+    width: "100%",
+    minHeight: 48,
+    borderRadius: 14,
+    border: "1px solid #cbd5e1",
+    background: "#f1f5f9",
+    fontSize: 16,
+    fontWeight: 700,
+    color: "#0f172a",
+    cursor: "pointer",
+  };
+
+  const primaryButtonStyle = {
+    ...secondaryButtonStyle,
+    border: "1px solid #0859c3",
+    background: "#0b74ff",
+    color: "#ffffff",
+  };
+
   if (!ready) {
     return (
-      <div style={{ minHeight: "100vh", background: "#0b74ff", color: "#fff", display: "grid", placeItems: "center" }}>
+      <div
+        style={{
+          minHeight: "100vh",
+          background: "#0b74ff",
+          color: "#fff",
+          display: "grid",
+          placeItems: "center",
+          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        }}
+      >
         {tr("auth.loadingRecoveryLink", "Loading recovery link…")}
       </div>
     );
@@ -380,6 +421,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         display: "grid",
         placeItems: "center",
         padding: 20,
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
       <form
@@ -390,17 +432,20 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           padding: 24,
           width: "min(460px, 100%)",
           boxShadow: "0 20px 45px rgba(2, 31, 86, 0.25)",
+          border: "1px solid #d6dee9",
         }}
       >
-        <h1 style={{ marginTop: 0, marginBottom: 10, color: "#0f172a" }}>{tr("auth.resetTitle", "Reset your password")}</h1>
-        <p style={{ marginTop: 0, marginBottom: 10, color: "#334155" }}>
+        <h1 style={{ marginTop: 0, marginBottom: 10, color: "#0f172a", fontSize: 20, lineHeight: 1.2, fontWeight: 700 }}>
+          {tr("auth.resetTitle", "Reset your password")}
+        </h1>
+        <p style={{ marginTop: 0, marginBottom: 14, color: "#334155", fontSize: 16 }}>
           {tr("auth.resetIntro", "Choose a new password for your FlagIQ account.")}
         </p>
 
         <div style={{ marginBottom: 16 }}>
           <label
             htmlFor="reset-language-select"
-            style={{ display: "block", marginBottom: 6, fontWeight: 600, color: "#0f172a" }}
+            style={{ display: "block", marginBottom: 8, fontWeight: 700, color: "#0f172a", fontSize: 16 }}
           >
             {tr("language", "Language")}
           </label>
@@ -408,7 +453,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
             id="reset-language-select"
             value={lang}
             onChange={(event) => setLang(normalizeLang(event.target.value))}
-            style={{ width: "100%", height: 40, borderRadius: 10, border: "1px solid #cbd5e1", padding: "0 10px" }}
+            style={{ ...inputStyle, marginBottom: 0, appearance: "auto" }}
           >
             {langList.map((entry) => (
               <option key={entry.code} value={entry.code}>
@@ -418,17 +463,17 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           </select>
         </div>
 
-        {error && <div style={{ color: "#b91c1c", marginBottom: 10 }}>{error}</div>}
+        {error && <div style={{ color: "#b91c1c", marginBottom: 10, fontSize: 17 }}>{error}</div>}
 
         {success ? (
           <div style={{ display: "grid", gap: 10 }}>
-            <div style={{ color: "#15803d", fontWeight: 700 }}>{tr("auth.resetSuccess", "Your password has been updated. You can now return to the app and log in.")}</div>
-            <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={{ width: "100%" }}>
+            <div style={{ color: "#15803d", fontWeight: 700, fontSize: 17 }}>{tr("auth.resetSuccess", "Your password has been updated. You can now return to the app and log in.")}</div>
+            <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={secondaryButtonStyle}>
               {tr("auth.backToLogin", "Back to login")}
             </button>
           </div>
         ) : !hasSession ? (
-          <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={{ width: "100%" }}>
+          <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={secondaryButtonStyle}>
             {tr("auth.backToLogin", "Back to login")}
           </button>
         ) : (
@@ -438,16 +483,16 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
               placeholder={tr("auth.password", "Password")}
               value={pwd1}
               onChange={(e) => setPwd1(e.target.value)}
-              style={{ width: "100%", marginBottom: 10, height: 42, padding: "0 12px", boxSizing: "border-box" }}
+              style={inputStyle}
             />
             <input
               type="password"
               placeholder={tr("auth.passwordConfirm", "Confirm password")}
               value={pwd2}
               onChange={(e) => setPwd2(e.target.value)}
-              style={{ width: "100%", marginBottom: 12, height: 42, padding: "0 12px", boxSizing: "border-box" }}
+              style={{ ...inputStyle, marginBottom: 12 }}
             />
-            <button disabled={loading} type="submit" style={{ width: "100%", height: 42 }}>
+            <button disabled={loading} type="submit" style={{ ...primaryButtonStyle, opacity: loading ? 0.7 : 1 }}>
               {loading ? tr("loading", "Loading…") : tr("auth.resetSubmit", "Save new password")}
             </button>
           </>
