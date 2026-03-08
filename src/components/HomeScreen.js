@@ -61,6 +61,7 @@ function getLocalStats(progress) {
 const GRID_ROWS = 3;
 const GRID_COLS = 3;
 const TILE_SIZE = 86;
+const TILE_GAP = 20;
 
 // helper
 function formatMs(ms) {
@@ -366,19 +367,18 @@ function DailySpinButton({
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
-            padding: "max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))",
+            padding: 16,
             overflowY: "auto",
           }}
         >
           <div
             className="daily-spin-modal"
             style={{
-              width: "min(420px, 100%)",
+              width: 360,
               maxWidth: "100%",
-              maxHeight: "min(92dvh, 760px)",
               background: "#eef2ff",
               borderRadius: 22,
-              padding: "16px clamp(12px, 3.6vw, 20px) clamp(14px, 3vw, 18px)",
+              padding: 18,
               boxShadow: "0 10px 30px rgba(15,23,42,0.25)",
               position: "relative",
               overflowY: "auto",
@@ -399,13 +399,13 @@ function DailySpinButton({
               className="daily-spin-info-button"
               style={{
                 position: "absolute",
-                top: 14,
-                left: 14,
+                top: 10,
+                left: 10,
                 border: "none",
                 background: "#fff",
                 borderRadius: 999,
-                width: 30,
-                height: 30,
+                width: 26,
+                height: 26,
                 cursor: "pointer",
                 fontWeight: 600,
               }}
@@ -417,13 +417,13 @@ function DailySpinButton({
               <div
                 style={{
                   position: "absolute",
-                  top: 52,
+                  top: 44,
                   left: 12,
                   right: 12,
                   background: "#fff",
                   borderRadius: 14,
                   padding: "10px 12px",
-                  fontSize: "clamp(12px, 2.8vw, 13px)",
+                  fontSize: 12,
                   color: "#0f172a",
                   boxShadow: "0 8px 16px rgba(15,23,42,0.15)",
                   zIndex: 50,
@@ -442,11 +442,9 @@ function DailySpinButton({
               style={{
                 textAlign: "center",
                 fontWeight: 700,
-                fontSize: "clamp(18px, 4.4vw, 22px)",
+                fontSize: 20,
                 color: "#0f172a",
-                marginTop: 8,
-                marginBottom: 8,
-                paddingInline: 28,
+                marginTop: 6,
               }}
             >
               {titleText}
@@ -455,10 +453,9 @@ function DailySpinButton({
               className="daily-spin-subtitle"
               style={{
                 textAlign: "center",
-                fontSize: "clamp(12px, 3vw, 14px)",
+                fontSize: 13,
                 color: "#475569",
-                marginBottom: 14,
-                marginTop: 0,
+                marginBottom: 12,
               }}
             >
               {subtitleText}
@@ -471,9 +468,9 @@ function DailySpinButton({
                 marginTop: 8,
                 marginBottom: 16,
                 display: "grid",
-                gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, var(--daily-spin-tile-size, ${TILE_SIZE}px)))`,
+                gridTemplateColumns: `repeat(${GRID_COLS}, var(--daily-spin-tile-size, ${TILE_SIZE}px))`,
                 gridTemplateRows: `repeat(${GRID_ROWS}, var(--daily-spin-tile-size, ${TILE_SIZE}px))`,
-                gap: "var(--daily-spin-grid-gap, 14px)",
+                gap: `var(--daily-spin-grid-gap, ${TILE_GAP}px)`,
                 justifyContent: "center",
               }}
             >
@@ -491,7 +488,7 @@ function DailySpinButton({
                     style={{
                       width: "var(--daily-spin-tile-size, 86px)",
                       height: "var(--daily-spin-tile-size, 86px)",
-                      borderRadius: "clamp(14px, 5vw, 24px)",
+                      borderRadius: 24,
                       border: "none",
                       background: isSelected ? selectedBg : baseBg,
                       boxShadow: isSelected
@@ -522,7 +519,7 @@ function DailySpinButton({
               className="daily-spin-timer"
               style={{
                 textAlign: "center",
-                fontSize: "clamp(12px, 3vw, 14px)",
+                fontSize: 13,
                 color: "#475569",
                 marginBottom: 4,
               }}
@@ -536,7 +533,7 @@ function DailySpinButton({
                   textAlign: "center",
                   fontWeight: 700,
                   marginTop: 4,
-                  fontSize: "clamp(12px, 3vw, 14px)",
+                  fontSize: 13,
                   color: "#0f172a",
                 }}
               >

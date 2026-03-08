@@ -354,7 +354,7 @@ body {
 }
 
 .daily-spin-modal {
-  --daily-spin-grid-gap: 14px;
+  --daily-spin-grid-gap: 20px;
   --daily-spin-tile-size: min(86px, calc((100vw - 96px) / 3));
 }
 
