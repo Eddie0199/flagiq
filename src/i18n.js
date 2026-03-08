@@ -209,8 +209,9 @@ const STRINGS = {
     termsAndConditions: "Terms & Conditions",
     deleteAccount: "Delete Account",
     deleteAccountBody:
-      "This will permanently delete your account and all associated data.",
-    deleteAccountConfirm: "Delete your account and all associated data?",
+      "This will permanently delete your account and all associated data, including your game progress (coins, levels, stars, and more).",
+    deleteAccountConfirmTitle: "Delete account permanently?",
+    deleteAccountConfirmAction: "Delete permanently",
     deleteAccountFailed: "Unable to delete your account right now.",
     areYouSure: "Are you sure?",
     close: "Close",
@@ -727,8 +728,9 @@ const STRINGS = {
     termsAndConditions: "Términos y condiciones",
     deleteAccount: "Eliminar cuenta",
     deleteAccountBody:
-      "Esto eliminará permanentemente tu cuenta y todos los datos asociados.",
-    deleteAccountConfirm: "¿Eliminar tu cuenta y todos los datos asociados?",
+      "Esto eliminará permanentemente tu cuenta y todos los datos asociados, incluido tu progreso del juego (monedas, niveles, estrellas y más).",
+    deleteAccountConfirmTitle: "¿Eliminar la cuenta de forma permanente?",
+    deleteAccountConfirmAction: "Eliminar permanentemente",
     deleteAccountFailed: "No se pudo eliminar tu cuenta en este momento.",
     areYouSure: "¿Estás seguro?",
     close: "Cerrar",
@@ -1192,8 +1194,9 @@ const STRINGS = {
     termsAndConditions: "Termos e condições",
     deleteAccount: "Eliminar conta",
     deleteAccountBody:
-      "Isto irá eliminar permanentemente a tua conta e todos os dados associados.",
-    deleteAccountConfirm: "Eliminar a tua conta e todos os dados associados?",
+      "Isto irá eliminar permanentemente a tua conta e todos os dados associados, incluindo o teu progresso no jogo (moedas, níveis, estrelas e mais).",
+    deleteAccountConfirmTitle: "Eliminar a conta permanentemente?",
+    deleteAccountConfirmAction: "Eliminar permanentemente",
     deleteAccountFailed: "Não foi possível eliminar a tua conta neste momento.",
     areYouSure: "Tens a certeza?",
     close: "Fechar",
@@ -1679,8 +1682,9 @@ const STRINGS = {
     termsAndConditions: "AGB",
     deleteAccount: "Konto löschen",
     deleteAccountBody:
-      "Dadurch wird dein Konto und alle zugehörigen Daten dauerhaft gelöscht.",
-    deleteAccountConfirm: "Dein Konto und alle zugehörigen Daten löschen?",
+      "Dadurch wird dein Konto und alle zugehörigen Daten dauerhaft gelöscht, einschließlich deines Spielfortschritts (Münzen, Level, Sterne und mehr).",
+    deleteAccountConfirmTitle: "Konto dauerhaft löschen?",
+    deleteAccountConfirmAction: "Dauerhaft löschen",
     deleteAccountFailed:
       "Dein Konto konnte gerade nicht gelöscht werden.",
     areYouSure: "Bist du sicher?",
@@ -2177,9 +2181,9 @@ const STRINGS = {
     termsAndConditions: "Conditions générales",
     deleteAccount: "Supprimer le compte",
     deleteAccountBody:
-      "Cela supprimera définitivement ton compte et toutes les données associées.",
-    deleteAccountConfirm:
-      "Supprimer ton compte et toutes les données associées ?",
+      "Cela supprimera définitivement ton compte et toutes les données associées, y compris ta progression dans le jeu (pièces, niveaux, étoiles et plus).",
+    deleteAccountConfirmTitle: "Supprimer le compte définitivement ?",
+    deleteAccountConfirmAction: "Supprimer définitivement",
     deleteAccountFailed:
       "Impossible de supprimer ton compte pour le moment.",
     areYouSure: "Es-tu sûr ?",
@@ -2677,9 +2681,9 @@ const STRINGS = {
     termsAndConditions: "Algemene voorwaarden",
     deleteAccount: "Account verwijderen",
     deleteAccountBody:
-      "Dit verwijdert je account en alle bijbehorende gegevens permanent.",
-    deleteAccountConfirm:
-      "Je account en alle bijbehorende gegevens verwijderen?",
+      "Dit verwijdert je account en alle bijbehorende gegevens permanent, inclusief je spelvoortgang (munten, levels, sterren en meer).",
+    deleteAccountConfirmTitle: "Account permanent verwijderen?",
+    deleteAccountConfirmAction: "Permanent verwijderen",
     deleteAccountFailed: "Je account kan momenteel niet worden verwijderd.",
     areYouSure: "Weet je het zeker?",
     close: "Sluiten",

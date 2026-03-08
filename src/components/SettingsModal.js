@@ -24,6 +24,8 @@ export default function SettingsModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const tx = (key) => (t ? t(lang, key) : key);
+
   const handleLogout = async () => {
     try {
       if (supabase) {
@@ -56,9 +58,7 @@ export default function SettingsModal({
     if (!loggedIn || isDeleting) return;
     if (!supabase) {
       setDeleteError(
-        t
-          ? t(lang, "deleteAccountFailed")
-          : "Unable to delete your account right now."
+        tx("deleteAccountFailed")
       );
       return;
     }
@@ -89,9 +89,7 @@ export default function SettingsModal({
     } catch (error) {
       console.error("Failed to delete account", error);
       setDeleteError(
-        t
-          ? t(lang, "deleteAccountFailed")
-          : "Unable to delete your account right now."
+        tx("deleteAccountFailed")
       );
     } finally {
       setIsDeleting(false);
@@ -203,14 +201,14 @@ export default function SettingsModal({
       >
         <button
           onClick={onClose}
-          aria-label={t ? t(lang, "close") : "Close"}
+          aria-label={tx("close")}
           className="modal-close-button"
         >
           ×
         </button>
 
         <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 14 }}>
-          {t ? t(lang, "profileSettings") : "Profile & Settings"}
+          {tx("profileSettings")}
         </h2>
 
         {loggedIn && (
@@ -449,7 +447,7 @@ export default function SettingsModal({
                 cursor: "pointer",
               }}
             >
-              {t ? t(lang, "logout") : "Log out"}
+              {tx("logout")}
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
@@ -469,7 +467,7 @@ export default function SettingsModal({
                 textAlign: "center",
               }}
             >
-              {t ? t(lang, "deleteAccount") : "Delete Account"}
+              {tx("deleteAccount")}
             </button>
             <div
               style={{
@@ -479,9 +477,7 @@ export default function SettingsModal({
                 textAlign: "center",
               }}
             >
-              {t
-                ? t(lang, "deleteAccountBody")
-                : "This will permanently delete your account and all associated data."}
+              {tx("deleteAccountBody")}
             </div>
             {deleteError ? (
               <div style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>
@@ -515,12 +511,10 @@ export default function SettingsModal({
             }}
           >
             <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
-              {t ? t(lang, "areYouSure") : "Are you sure?"}
+              {tx("deleteAccountConfirmTitle")}
             </h3>
             <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
-              {t
-                ? t(lang, "deleteAccountBody")
-                : "This will permanently delete your account and all associated data."}
+              {tx("deleteAccountBody")}
             </p>
             <div
               style={{
@@ -540,7 +534,7 @@ export default function SettingsModal({
                   cursor: "pointer",
                 }}
               >
-                {t ? t(lang, "close") : "Close"}
+                {tx("close")}
               </button>
               <button
                 onClick={handleDeleteAccount}
@@ -555,7 +549,7 @@ export default function SettingsModal({
                   cursor: isDeleting ? "not-allowed" : "pointer",
                 }}
               >
-                {t ? t(lang, "deleteAccount") : "Delete Account"}
+                {tx("deleteAccountConfirmAction")}
               </button>
             </div>
           </div>
