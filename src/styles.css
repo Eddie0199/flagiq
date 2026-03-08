@@ -359,6 +359,17 @@ body {
   backdrop-filter: blur(4px);
 }
 
+.daily-spin-header {
+  margin-bottom: 2px;
+}
+
+.daily-spin-close-button {
+  position: static;
+  justify-self: end;
+  width: 34px;
+  height: 34px;
+}
+
 .daily-spin-title {
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   letter-spacing: 0.01em;
@@ -400,18 +411,8 @@ body {
 
   .daily-spin-modal .modal-close-button,
   .daily-spin-info-button {
-    width: 32px;
-    height: 32px;
-  }
-
-  .daily-spin-modal .modal-close-button {
-    top: 12px;
-    right: 12px;
-  }
-
-  .daily-spin-info-button {
-    top: 12px !important;
-    left: 12px !important;
+    width: 34px;
+    height: 34px;
   }
 
   .daily-spin-title {

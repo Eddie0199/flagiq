@@ -386,36 +386,37 @@ function DailySpinButton({
               overflowY: "auto",
             }}
           >
-            {/* close */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="modal-close-button"
-              aria-label={text("close", "Close")}
-            >
-              ×
-            </button>
+            <div className="daily-spin-header" style={{ display: "grid", gridTemplateColumns: "34px 1fr 34px", alignItems: "center" }}>
+              {/* info */}
+              <button
+                onClick={() => setShowInfo((v) => !v)}
+                className="daily-spin-info-button"
+                style={{
+                  border: "none",
+                  background: "rgba(255, 255, 255, 0.9)",
+                  borderRadius: 999,
+                  width: 34,
+                  height: 34,
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  boxShadow: "0 6px 14px rgba(15,23,42,0.12)",
+                }}
+              >
+                i
+              </button>
 
-            {/* info */}
-            <button
-              onClick={() => setShowInfo((v) => !v)}
-              className="daily-spin-info-button"
-              style={{
-                position: "absolute",
-                top: 14,
-                left: 14,
-                border: "none",
-                background: "rgba(255, 255, 255, 0.9)",
-                borderRadius: 999,
-                width: 34,
-                height: 34,
-                cursor: "pointer",
-                fontWeight: 700,
-                color: "#0f172a",
-                boxShadow: "0 6px 14px rgba(15,23,42,0.12)",
-              }}
-            >
-              i
-            </button>
+              <span aria-hidden="true" />
+
+              {/* close */}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="modal-close-button daily-spin-close-button"
+                aria-label={text("close", "Close")}
+              >
+                ×
+              </button>
+            </div>
 
             {showInfo && (
               <div
@@ -448,9 +449,9 @@ function DailySpinButton({
                 fontWeight: 700,
                 fontSize: "clamp(18px, 4.4vw, 22px)",
                 color: "#0f172a",
-                marginTop: 12,
+                marginTop: 10,
                 marginBottom: 6,
-                paddingInline: 28,
+                paddingInline: 8,
               }}
             >
               {titleText}
