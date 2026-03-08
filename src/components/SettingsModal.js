@@ -21,9 +21,6 @@ export default function SettingsModal({
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
   const [userEmail, setUserEmail] = useState("");
   const [userCreatedAt, setUserCreatedAt] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const tx = (key) => (t ? t(lang, key) : key);
 
   const handleLogout = async () => {
@@ -38,61 +35,6 @@ export default function SettingsModal({
       setActiveUser("");
       setActiveUserLabel && setActiveUserLabel("");
       onClose();
-    }
-  };
-
-  const clearLocalUserData = (username) => {
-    if (!username || typeof window === "undefined") return;
-    const key = String(username).trim().toLowerCase();
-    try {
-      localStorage.removeItem(`flagiq:progress:${username}`);
-      localStorage.removeItem(`flagiq:u:${username}:hints`);
-      localStorage.removeItem(`flagiq:u:${username}:coins`);
-      localStorage.removeItem(`flag_progress_${key}`);
-    } catch (error) {
-      // ignore local storage errors
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!loggedIn || isDeleting) return;
-    if (!supabase) {
-      setDeleteError(
-        tx("deleteAccountFailed")
-      );
-      return;
-    }
-
-    setShowDeleteConfirm(false);
-    setIsDeleting(true);
-    setDeleteError("");
-    try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      const userId = data?.user?.id;
-      if (!userId) throw new Error("Missing user id.");
-
-      await Promise.allSettled([
-        supabase.from("player_state").delete().eq("user_id", userId),
-        supabase.from("purchases").delete().eq("user_id", userId),
-      ]);
-
-      if (supabase?.auth?.admin?.deleteUser) {
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(
-          userId
-        );
-        if (deleteError) throw deleteError;
-      }
-
-      clearLocalUserData(activeUser);
-      await handleLogout();
-    } catch (error) {
-      console.error("Failed to delete account", error);
-      setDeleteError(
-        tx("deleteAccountFailed")
-      );
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -430,131 +372,24 @@ export default function SettingsModal({
           </div>
         )}
 
-        <div style={{ marginTop: 12, marginBottom: 6 }} />
-
         {loggedIn && (
-          <>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: "100%",
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: 16,
-                padding: "10px 0",
-                fontWeight: 600,
-                marginTop: 14,
-                cursor: "pointer",
-              }}
-            >
-              {tx("logout")}
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isDeleting}
-              style={{
-                width: "100%",
-                background: "none",
-                border: "none",
-                borderRadius: 12,
-                padding: "6px 0",
-                fontWeight: 600,
-                marginTop: 14,
-                cursor: isDeleting ? "not-allowed" : "pointer",
-                color: "#ef4444",
-                textDecoration: "underline",
-                fontSize: 12,
-                textAlign: "center",
-              }}
-            >
-              {tx("deleteAccount")}
-            </button>
-            <div
-              style={{
-                marginTop: 6,
-                fontSize: 12,
-                color: "#64748b",
-                textAlign: "center",
-              }}
-            >
-              {tx("deleteAccountBody")}
-            </div>
-            {deleteError ? (
-              <div style={{ marginTop: 6, fontSize: 12, color: "#b91c1c" }}>
-                {deleteError}
-              </div>
-            ) : null}
-          </>
-        )}
-      </div>
-      {showDeleteConfirm && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 16,
-            zIndex: 999,
-          }}
-        >
-          <div
+          <button
+            onClick={handleLogout}
             style={{
-              background: "#fff",
-              borderRadius: 18,
-              width: "min(320px, 90vw)",
-              padding: "18px 16px",
-              boxShadow: "0 12px 28px rgba(15,23,42,0.25)",
-              textAlign: "center",
+              width: "100%",
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 600,
+              marginTop: 14,
+              cursor: "pointer",
             }}
           >
-            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
-              {tx("deleteAccountConfirmTitle")}
-            </h3>
-            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
-              {tx("deleteAccountBody")}
-            </p>
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-                justifyContent: "center",
-              }}
-            >
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 12,
-                  border: "1px solid #e2e8f0",
-                  background: "#fff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {tx("close")}
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: 12,
-                  border: "none",
-                  background: isDeleting ? "#fca5a5" : "#ef4444",
-                  color: "white",
-                  fontWeight: 700,
-                  cursor: isDeleting ? "not-allowed" : "pointer",
-                }}
-              >
-                {tx("deleteAccountConfirmAction")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            {tx("logout")}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
