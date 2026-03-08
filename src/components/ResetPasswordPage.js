@@ -360,7 +360,10 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
               "auth.passwordReuseError",
               "You cannot use a previous password. Please choose a new password."
             )
-          : updateError.message || tr("auth.resetError", "Could not reset password.");
+          : tr(
+              "auth.resetError",
+              "Could not update your password. The link may have expired."
+            );
       setDiagnostics((prev) => ({ ...prev, lastResetError: message }));
       onDiagnosticsChange && onDiagnosticsChange({ lastResetError: message });
       setError(message);
@@ -428,8 +431,10 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         minHeight: "100vh",
         background: "linear-gradient(180deg, #0b74ff 0%, #0859c3 100%)",
         display: "grid",
-        placeItems: "center",
-        padding: 20,
+        justifyItems: "center",
+        alignItems: "start",
+        padding: "48px 20px 20px",
+        boxSizing: "border-box",
         fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
@@ -440,6 +445,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           borderRadius: 20,
           padding: 24,
           width: "min(460px, 100%)",
+          minHeight: 420,
           boxShadow: "0 20px 45px rgba(2, 31, 86, 0.25)",
           border: "1px solid #d6dee9",
         }}
@@ -472,7 +478,19 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           </select>
         </div>
 
-        {error && <div style={{ color: "#b91c1c", marginBottom: 10, fontSize: 17 }}>{error}</div>}
+        <div
+          style={{
+            color: "#b91c1c",
+            marginBottom: 10,
+            fontSize: 16,
+            lineHeight: 1.4,
+            minHeight: 44,
+          }}
+          role="alert"
+          aria-live="polite"
+        >
+          {error || ""}
+        </div>
 
         {success ? (
           <div style={{ display: "grid", gap: 10 }}>
@@ -496,16 +514,30 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
           </button>
         ) : (
           <>
+            <label
+              htmlFor="reset-password-new"
+              style={{ display: "block", marginBottom: 8, fontWeight: 700, color: "#0f172a", fontSize: 15 }}
+            >
+              {tr("auth.password", "Password")}
+            </label>
             <input
+              id="reset-password-new"
               type="password"
-              placeholder={tr("auth.password", "Password")}
+              placeholder={tr("auth.passwordPlaceholder", "Enter your new password")}
               value={pwd1}
               onChange={(e) => setPwd1(e.target.value)}
               style={inputStyle}
             />
+            <label
+              htmlFor="reset-password-confirm"
+              style={{ display: "block", marginBottom: 8, fontWeight: 700, color: "#0f172a", fontSize: 15 }}
+            >
+              {tr("auth.passwordConfirm", "Confirm password")}
+            </label>
             <input
+              id="reset-password-confirm"
               type="password"
-              placeholder={tr("auth.passwordConfirm", "Confirm password")}
+              placeholder={tr("auth.passwordPlaceholder2", "Re-enter your new password")}
               value={pwd2}
               onChange={(e) => setPwd2(e.target.value)}
               style={{ ...inputStyle, marginBottom: 12 }}
