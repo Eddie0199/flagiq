@@ -6,6 +6,7 @@ import { getHintTranslation, HINT_IDS } from "../hints";
 import { READY_LOCAL_PACK_IDS } from "../localPacks";
 import { DAILY_BOOSTER_ICON, HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 import Header from "./Header";
+import { isNativeAppRuntime } from "../platformRuntime";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -117,6 +118,9 @@ function DailySpinButton({
     const value = t(lang, key);
     return value === key ? fallback : value;
   };
+  const isNativeRuntime = isNativeAppRuntime();
+  const isWebRuntime = !isNativeRuntime;
+  const WEB_REVEAL_KEY = "flagiq.dailySpinReveal.web"; // dev toggle aid: only web modal uses this persistence
 
   // rewards
   const baseRewards = useMemo(
@@ -171,7 +175,12 @@ function DailySpinButton({
     const nextRemaining = computeRemainingMs(lastClaimedAt);
     setRemainingMs(nextRemaining);
     setCanSpin(isOnline && nextRemaining <= 0);
-  }, [isOnline, lastClaimedAt]);
+    if (isWebRuntime && nextRemaining <= 0) {
+      try {
+        localStorage.removeItem(WEB_REVEAL_KEY);
+      } catch (_) {}
+    }
+  }, [isOnline, isWebRuntime, lastClaimedAt]);
 
   useEffect(() => {
     if (!isOnline || remainingMs <= 0) return;
@@ -226,13 +235,43 @@ function DailySpinButton({
   const claimText = t && lang ? t(lang, "claim") : "Claim";
   const statusText = canSpin ? claimText : formatMs(remainingMs);
 
+  function restoreWebRevealIfAvailable() {
+    if (!isWebRuntime) return false;
+    try {
+      const raw = localStorage.getItem(WEB_REVEAL_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      const idx = Number(parsed?.selectedIndex);
+      const rewardId = parsed?.rewardId;
+      const claimedAt = parsed?.lastClaimedAt;
+      if (!Number.isFinite(idx) || idx < 0 || idx >= GRID_ROWS * GRID_COLS) return false;
+      if (typeof rewardId !== "string" || typeof claimedAt !== "string") return false;
+      if (computeRemainingMs(claimedAt) <= 0) return false;
+      const reward = baseRewards.find((item) => item.id === rewardId);
+      if (!reward) return false;
+      setLastClaimedAt(claimedAt);
+      setHasPicked(true);
+      setSelectedIndex(idx);
+      setResult(reward);
+      setRevealStage("shown");
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function handleOpen() {
     setIsOpen(true);
     setShowInfo(false);
-    setHasPicked(false);
-    setSelectedIndex(null);
-    setResult(null);
-    setRevealStage("idle");
+
+    const restored = restoreWebRevealIfAvailable();
+    if (!restored) {
+      setHasPicked(false);
+      setSelectedIndex(null);
+      setResult(null);
+      setRevealStage("idle");
+    }
+
     setStatusMessage(isOnline ? "" : offlineMessage);
     setIsSubmitting(false);
   }
@@ -292,6 +331,19 @@ function DailySpinButton({
 
       setCanSpin(false);
       setRemainingMs(DAILY_SPIN_COOLDOWN_MS);
+
+      if (isWebRuntime) {
+        try {
+          localStorage.setItem(
+            WEB_REVEAL_KEY,
+            JSON.stringify({
+              selectedIndex: idx,
+              rewardId: reward.id,
+              lastClaimedAt: backendLast,
+            })
+          );
+        } catch (_) {}
+      }
 
       // deliver reward → hints (parent owns persistence)
       onReward && onReward(reward);
@@ -358,7 +410,7 @@ function DailySpinButton({
       {/* MODAL */}
       {isOpen && (
         <div
-          className="daily-spin-modal-overlay"
+          className={`daily-spin-modal-overlay ${isWebRuntime ? "daily-spin-modal-overlay--web" : ""}`}
           style={{
             position: "fixed",
             inset: 0,
@@ -372,11 +424,12 @@ function DailySpinButton({
           }}
         >
           <div
-            className="daily-spin-modal"
+            className={`daily-spin-modal ${isWebRuntime ? "daily-spin-modal--web" : ""}`}
+            data-daily-spin-variant={isWebRuntime ? "web" : "native"}
             style={{
-              width: 360,
+              width: isWebRuntime ? "min(360px, 100%)" : 360,
               maxWidth: "100%",
-              maxHeight: "min(92dvh, 760px)",
+              maxHeight: isWebRuntime ? "min(92dvh, 720px)" : "min(92dvh, 760px)",
               background: "#eef2ff",
               borderRadius: 22,
               padding: 18,

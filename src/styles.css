@@ -358,6 +358,30 @@ body {
   --daily-spin-tile-size: min(86px, calc((100vw - 96px) / 3));
 }
 
+.daily-spin-modal-overlay--web {
+  align-items: center;
+}
+
+.daily-spin-modal--web {
+  background: #eef2ff;
+  border-radius: 22px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.25);
+}
+
+.daily-spin-modal--web .daily-spin-grid {
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.daily-spin-modal--web .daily-spin-timer {
+  margin-bottom: 4px;
+}
+
+.daily-spin-modal--web .daily-spin-reward {
+  margin-top: 4px;
+}
+
 .daily-spin-grid {
   width: fit-content;
   max-width: 100%;
@@ -369,44 +393,44 @@ body {
 }
 
 @media (max-width: 768px) {
-  .daily-spin-modal {
+  .daily-spin-modal--web {
     --daily-spin-grid-gap: clamp(8px, 2.6vw, 12px);
     --daily-spin-tile-size: min(78px, calc((100vw - 72px) / 3));
   }
 
-  .daily-spin-modal .modal-close-button,
-  .daily-spin-info-button {
+  .daily-spin-modal--web .modal-close-button,
+  .daily-spin-modal--web .daily-spin-info-button {
     width: 30px;
     height: 30px;
   }
 
-  .daily-spin-modal .modal-close-button {
+  .daily-spin-modal--web .modal-close-button {
     top: 12px;
     right: 12px;
   }
 
-  .daily-spin-info-button {
+  .daily-spin-modal--web .daily-spin-info-button {
     top: 12px !important;
     left: 12px !important;
   }
 
-  .daily-spin-title {
+  .daily-spin-modal--web .daily-spin-title {
     padding-inline: 30px !important;
   }
 }
 
 @media (max-width: 420px) {
-  .daily-spin-modal {
+  .daily-spin-modal--web {
     --daily-spin-grid-gap: clamp(8px, 2.2vw, 10px);
     --daily-spin-tile-size: min(72px, calc((100vw - 56px) / 3));
   }
 
-  .daily-spin-modal .daily-spin-subtitle {
+  .daily-spin-modal--web .daily-spin-subtitle {
     margin-bottom: 12px !important;
   }
 
-  .daily-spin-modal .daily-spin-timer,
-  .daily-spin-modal .daily-spin-reward {
+  .daily-spin-modal--web .daily-spin-timer,
+  .daily-spin-modal--web .daily-spin-reward {
     line-height: 1.35;
   }
 }
