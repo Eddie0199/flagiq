@@ -105,6 +105,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [hadRecoveryTokens, setHadRecoveryTokens] = useState(false);
   const [diagnostics, setDiagnostics] = useState({
     paramsDetected: "none",
     recoveryModeUsed: "none",
@@ -175,6 +176,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         sessionEstablished: false,
         lastResetError: "",
       };
+      let hadRecoveryTokensInAttempt = false;
 
       setReady(false);
       setError("");
@@ -204,6 +206,10 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
 
         const isHashTokenRecovery =
           parsed.type === "recovery" && parsed.hasAccessToken && parsed.hasRefreshToken;
+        const hasRecoveryTokens =
+          parsed.mode !== "none" || (parsed.type === "recovery" && parsed.hasTokenHash);
+        hadRecoveryTokensInAttempt = hasRecoveryTokens;
+        setHadRecoveryTokens(hasRecoveryTokens);
         console.log("[reset-password] recovery mode activated", isHashTokenRecovery || parsed.mode !== "none");
 
         const bootstrapKey = [
@@ -270,7 +276,7 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         console.log("[reset-password] session established from recovery tokens", sessionPresent);
         nextDiagnostics.sessionEstablished = sessionPresent;
 
-        if (!sessionPresent) {
+        if (hasRecoveryTokens && !sessionPresent) {
           nextDiagnostics.lastResetError = trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE);
           if (!cancelled) setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
         }
@@ -283,7 +289,9 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
         nextDiagnostics.lastResetError = e?.message || trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE);
         if (!cancelled) {
           setHasSession(false);
-          setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
+          if (hadRecoveryTokensInAttempt) {
+            setError(trRef.current("auth.resetInvalid", INVALID_RESET_MESSAGE));
+          }
           setDiagnostics(nextDiagnostics);
         }
       } finally {
@@ -304,8 +312,9 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
     };
   }, [recoveryUrl]);
 
-  const invalid = Boolean(error) && !hasSession;
+  const invalid = hadRecoveryTokens && Boolean(error) && !hasSession;
   const showForm = ready && hasSession && !success;
+  const showNeutral = ready && !success && !hasSession && !invalid;
 
   useEffect(() => {
     console.log("[reset-password] final render state", {
@@ -472,7 +481,16 @@ export default function ResetPasswordPage({ onDone, onDiagnosticsChange, recover
               {tr("auth.backToLogin", "Back to login")}
             </button>
           </div>
-        ) : !hasSession ? (
+        ) : showNeutral ? (
+          <div style={{ display: "grid", gap: 10 }}>
+            <div style={{ color: "#334155", marginBottom: 6, fontSize: 17 }}>
+              {tr("auth.resetNeutral", "Please use the password reset link from your email.")}
+            </div>
+            <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={secondaryButtonStyle}>
+              {tr("auth.backToLogin", "Back to login")}
+            </button>
+          </div>
+        ) : invalid ? (
           <button type="button" onClick={() => onDone && onDone()} className="app-back-button" style={secondaryButtonStyle}>
             {tr("auth.backToLogin", "Back to login")}
           </button>
