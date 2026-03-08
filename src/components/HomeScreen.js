@@ -376,42 +376,47 @@ function DailySpinButton({
               width: "min(420px, 100%)",
               maxWidth: "100%",
               maxHeight: "min(92dvh, 760px)",
-              background: "#eef2ff",
-              borderRadius: 22,
-              padding: "16px clamp(12px, 3.6vw, 20px) clamp(14px, 3vw, 18px)",
-              boxShadow: "0 10px 30px rgba(15,23,42,0.25)",
+              background:
+                "linear-gradient(180deg, rgba(243,247,255,0.98) 0%, rgba(234,240,255,0.98) 100%)",
+              borderRadius: 24,
+              border: "1px solid rgba(148, 163, 184, 0.24)",
+              padding: "18px clamp(14px, 3.6vw, 22px) clamp(16px, 3.2vw, 20px)",
+              boxShadow: "0 18px 42px rgba(15,23,42,0.28)",
               position: "relative",
               overflowY: "auto",
             }}
           >
-            {/* close */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="modal-close-button"
-              aria-label={text("close", "Close")}
-            >
-              ×
-            </button>
+            <div className="daily-spin-header" style={{ display: "grid", gridTemplateColumns: "34px 1fr 34px", alignItems: "center" }}>
+              {/* info */}
+              <button
+                onClick={() => setShowInfo((v) => !v)}
+                className="daily-spin-info-button"
+                style={{
+                  border: "none",
+                  background: "rgba(255, 255, 255, 0.9)",
+                  borderRadius: 999,
+                  width: 34,
+                  height: 34,
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  boxShadow: "0 6px 14px rgba(15,23,42,0.12)",
+                }}
+              >
+                i
+              </button>
 
-            {/* info */}
-            <button
-              onClick={() => setShowInfo((v) => !v)}
-              className="daily-spin-info-button"
-              style={{
-                position: "absolute",
-                top: 14,
-                left: 14,
-                border: "none",
-                background: "#fff",
-                borderRadius: 999,
-                width: 30,
-                height: 30,
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              i
-            </button>
+              <span aria-hidden="true" />
+
+              {/* close */}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="modal-close-button daily-spin-close-button"
+                aria-label={text("close", "Close")}
+              >
+                ×
+              </button>
+            </div>
 
             {showInfo && (
               <div
@@ -444,9 +449,9 @@ function DailySpinButton({
                 fontWeight: 700,
                 fontSize: "clamp(18px, 4.4vw, 22px)",
                 color: "#0f172a",
-                marginTop: 8,
-                marginBottom: 8,
-                paddingInline: 28,
+                marginTop: 10,
+                marginBottom: 6,
+                paddingInline: 8,
               }}
             >
               {titleText}
@@ -457,7 +462,7 @@ function DailySpinButton({
                 textAlign: "center",
                 fontSize: "clamp(12px, 3vw, 14px)",
                 color: "#475569",
-                marginBottom: 14,
+                marginBottom: 16,
                 marginTop: 0,
               }}
             >
@@ -480,8 +485,8 @@ function DailySpinButton({
               {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, idx) => {
                 const isSelected = hasPicked && idx === selectedIndex;
 
-                const baseBg = "#ffffff";
-                const selectedBg = "#fef3c7";
+                const baseBg = "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)";
+                const selectedBg = "linear-gradient(180deg, #fef9c3 0%, #fde68a 100%)";
 
                 return (
                   <button
@@ -495,8 +500,8 @@ function DailySpinButton({
                       border: "none",
                       background: isSelected ? selectedBg : baseBg,
                       boxShadow: isSelected
-                        ? "0 10px 28px rgba(245,158,11,0.45)"
-                        : "0 6px 16px rgba(15,23,42,0.12)",
+                        ? "0 10px 26px rgba(245,158,11,0.38)"
+                        : "0 8px 18px rgba(15,23,42,0.12)",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
