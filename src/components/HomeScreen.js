@@ -62,7 +62,6 @@ const GRID_ROWS = 3;
 const GRID_COLS = 3;
 const TILE_SIZE = 86;
 const TILE_GAP = 20;
-const DAILY_SPIN_REVEAL_STORAGE_KEY = "flagiq.dailySpinReveal";
 
 // helper
 function formatMs(ms) {
@@ -82,33 +81,6 @@ function computeRemainingMs(lastClaimedAt) {
   const elapsed = Date.now() - ts;
   if (elapsed < 0) return DAILY_SPIN_COOLDOWN_MS;
   return Math.max(DAILY_SPIN_COOLDOWN_MS - elapsed, 0);
-}
-
-function loadStoredReveal() {
-  try {
-    const raw = localStorage.getItem(DAILY_SPIN_REVEAL_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-    if (typeof parsed.selectedIndex !== "number") return null;
-    if (typeof parsed.rewardId !== "string") return null;
-    if (typeof parsed.lastClaimedAt !== "string") return null;
-    return parsed;
-  } catch (_) {
-    return null;
-  }
-}
-
-function saveStoredReveal(payload) {
-  try {
-    localStorage.setItem(DAILY_SPIN_REVEAL_STORAGE_KEY, JSON.stringify(payload));
-  } catch (_) {}
-}
-
-function clearStoredReveal() {
-  try {
-    localStorage.removeItem(DAILY_SPIN_REVEAL_STORAGE_KEY);
-  } catch (_) {}
 }
 
 // =============== DAILY BOOSTER (3×3 pick) ===============
@@ -182,29 +154,7 @@ function DailySpinButton({
   );
 
   useEffect(() => {
-    const storedReveal = loadStoredReveal();
-    if (!storedReveal) return;
-
-    const isStillActive = computeRemainingMs(storedReveal.lastClaimedAt) > 0;
-    if (!isStillActive) {
-      clearStoredReveal();
-      return;
-    }
-
-    const reward = baseRewards.find((item) => item.id === storedReveal.rewardId);
-    if (!reward) return;
-
-    setLastClaimedAt(storedReveal.lastClaimedAt);
-    setHasPicked(true);
-    setSelectedIndex(storedReveal.selectedIndex);
-    setResult(reward);
-    setRevealStage("shown");
-  }, [baseRewards]);
-
-  useEffect(() => {
-    if (lastClaimedAtProp) {
-      setLastClaimedAt(lastClaimedAtProp);
-    }
+    setLastClaimedAt(lastClaimedAtProp || null);
   }, [lastClaimedAtProp]);
 
   useEffect(() => {
@@ -221,9 +171,6 @@ function DailySpinButton({
     const nextRemaining = computeRemainingMs(lastClaimedAt);
     setRemainingMs(nextRemaining);
     setCanSpin(isOnline && nextRemaining <= 0);
-    if (lastClaimedAt && nextRemaining <= 0) {
-      clearStoredReveal();
-    }
   }, [isOnline, lastClaimedAt]);
 
   useEffect(() => {
@@ -282,31 +229,10 @@ function DailySpinButton({
   function handleOpen() {
     setIsOpen(true);
     setShowInfo(false);
-
-    const latestRemaining = computeRemainingMs(lastClaimedAt);
-
-    if (latestRemaining > 0 && (!hasPicked || !result)) {
-      const storedReveal = loadStoredReveal();
-      const reward = storedReveal
-        ? baseRewards.find((item) => item.id === storedReveal.rewardId)
-        : null;
-
-      if (storedReveal && reward && computeRemainingMs(storedReveal.lastClaimedAt) > 0) {
-        setLastClaimedAt(storedReveal.lastClaimedAt);
-        setHasPicked(true);
-        setSelectedIndex(storedReveal.selectedIndex);
-        setResult(reward);
-        setRevealStage("shown");
-      }
-    }
-
-    if (latestRemaining <= 0) {
-      setHasPicked(false);
-      setSelectedIndex(null);
-      setResult(null);
-      setRevealStage("idle");
-    }
-
+    setHasPicked(false);
+    setSelectedIndex(null);
+    setResult(null);
+    setRevealStage("idle");
     setStatusMessage(isOnline ? "" : offlineMessage);
     setIsSubmitting(false);
   }
@@ -366,12 +292,6 @@ function DailySpinButton({
 
       setCanSpin(false);
       setRemainingMs(DAILY_SPIN_COOLDOWN_MS);
-
-      saveStoredReveal({
-        lastClaimedAt: backendLast,
-        selectedIndex: idx,
-        rewardId: reward.id,
-      });
 
       // deliver reward → hints (parent owns persistence)
       onReward && onReward(reward);
@@ -447,7 +367,7 @@ function DailySpinButton({
             justifyContent: "center",
             alignItems: "center",
             zIndex: 9999,
-            padding: 16,
+            padding: "max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))",
             overflowY: "auto",
           }}
         >
@@ -456,6 +376,7 @@ function DailySpinButton({
             style={{
               width: 360,
               maxWidth: "100%",
+              maxHeight: "min(92dvh, 760px)",
               background: "#eef2ff",
               borderRadius: 22,
               padding: 18,
@@ -572,7 +493,7 @@ function DailySpinButton({
                       border: "none",
                       background: isSelected ? selectedBg : baseBg,
                       boxShadow: isSelected
-                        ? "0 12px 30px rgba(245,158,11,0.42), 0 0 22px rgba(245,158,11,0.35)"
+                        ? "0 10px 28px rgba(245,158,11,0.45)"
                         : "0 6px 16px rgba(15,23,42,0.12)",
                       display: "flex",
                       alignItems: "center",
@@ -601,7 +522,7 @@ function DailySpinButton({
                 textAlign: "center",
                 fontSize: 13,
                 color: "#475569",
-                marginBottom: 2,
+                marginBottom: 4,
               }}
             >
               {comeBackTxt} {formatMs(remainingMs)}
@@ -612,7 +533,7 @@ function DailySpinButton({
                 style={{
                   textAlign: "center",
                   fontWeight: 700,
-                  marginTop: 2,
+                  marginTop: 4,
                   fontSize: 13,
                   color: "#0f172a",
                 }}
