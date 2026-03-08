@@ -348,3 +348,65 @@ body {
     display: none;
   }
 }
+
+.daily-spin-modal-overlay {
+  -webkit-overflow-scrolling: touch;
+}
+
+.daily-spin-modal {
+  --daily-spin-grid-gap: 14px;
+  --daily-spin-tile-size: min(86px, calc((100vw - 96px) / 3));
+}
+
+.daily-spin-grid {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.daily-spin-grid button span {
+  font-size: clamp(22px, 5vw, 26px) !important;
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .daily-spin-modal {
+    --daily-spin-grid-gap: clamp(8px, 2.6vw, 12px);
+    --daily-spin-tile-size: min(78px, calc((100vw - 72px) / 3));
+  }
+
+  .daily-spin-modal .modal-close-button,
+  .daily-spin-info-button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .daily-spin-modal .modal-close-button {
+    top: 12px;
+    right: 12px;
+  }
+
+  .daily-spin-info-button {
+    top: 12px !important;
+    left: 12px !important;
+  }
+
+  .daily-spin-title {
+    padding-inline: 30px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .daily-spin-modal {
+    --daily-spin-grid-gap: clamp(8px, 2.2vw, 10px);
+    --daily-spin-tile-size: min(72px, calc((100vw - 56px) / 3));
+  }
+
+  .daily-spin-modal .daily-spin-subtitle {
+    margin-bottom: 12px !important;
+  }
+
+  .daily-spin-modal .daily-spin-timer,
+  .daily-spin-modal .daily-spin-reward {
+    line-height: 1.35;
+  }
+}
