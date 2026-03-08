@@ -202,7 +202,9 @@ function DailySpinButton({
   }, [baseRewards]);
 
   useEffect(() => {
-    setLastClaimedAt(lastClaimedAtProp || null);
+    if (lastClaimedAtProp) {
+      setLastClaimedAt(lastClaimedAtProp);
+    }
   }, [lastClaimedAtProp]);
 
   useEffect(() => {
@@ -219,7 +221,7 @@ function DailySpinButton({
     const nextRemaining = computeRemainingMs(lastClaimedAt);
     setRemainingMs(nextRemaining);
     setCanSpin(isOnline && nextRemaining <= 0);
-    if (nextRemaining <= 0) {
+    if (lastClaimedAt && nextRemaining <= 0) {
       clearStoredReveal();
     }
   }, [isOnline, lastClaimedAt]);
@@ -282,8 +284,23 @@ function DailySpinButton({
     setShowInfo(false);
 
     const latestRemaining = computeRemainingMs(lastClaimedAt);
-    const shouldResetReveal = latestRemaining <= 0 || !hasPicked || !result;
-    if (shouldResetReveal) {
+
+    if (latestRemaining > 0 && (!hasPicked || !result)) {
+      const storedReveal = loadStoredReveal();
+      const reward = storedReveal
+        ? baseRewards.find((item) => item.id === storedReveal.rewardId)
+        : null;
+
+      if (storedReveal && reward && computeRemainingMs(storedReveal.lastClaimedAt) > 0) {
+        setLastClaimedAt(storedReveal.lastClaimedAt);
+        setHasPicked(true);
+        setSelectedIndex(storedReveal.selectedIndex);
+        setResult(reward);
+        setRevealStage("shown");
+      }
+    }
+
+    if (latestRemaining <= 0) {
       setHasPicked(false);
       setSelectedIndex(null);
       setResult(null);
