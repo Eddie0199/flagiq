@@ -67,30 +67,30 @@ export default function SettingsModal({
     setIsDeleting(true);
     setDeleteError("");
     try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      const userId = data?.user?.id;
-      if (!userId) throw new Error("Missing user id.");
+      const { data, error } = await supabase.functions.invoke("delete-account", {
+        body: {
+          deletion_source: "settings_modal",
+        },
+      });
 
-      await Promise.allSettled([
-        supabase.from("player_state").delete().eq("user_id", userId),
-        supabase.from("purchases").delete().eq("user_id", userId),
-      ]);
+      if (error) {
+        throw new Error(error.message || tx("deleteAccountFailed"));
+      }
 
-      if (supabase?.auth?.admin?.deleteUser) {
-        const { error: deleteError } = await supabase.auth.admin.deleteUser(
-          userId
-        );
-        if (deleteError) throw deleteError;
+      if (!data?.success) {
+        throw new Error(data?.error || tx("deleteAccountFailed"));
       }
 
       clearLocalUserData(activeUser);
       await handleLogout();
     } catch (error) {
       console.error("Failed to delete account", error);
-      setDeleteError(
-        tx("deleteAccountFailed")
-      );
+      const fallback = tx("deleteAccountFailed");
+      const message =
+        typeof error?.message === "string" && error.message.trim()
+          ? `${fallback} (${error.message})`
+          : fallback;
+      setDeleteError(message);
     } finally {
       setIsDeleting(false);
     }
