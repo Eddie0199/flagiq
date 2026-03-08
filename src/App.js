@@ -1445,20 +1445,26 @@ export default function App() {
     if (!supabase) return;
     const unsubscribe = subscribeToSupabaseAuth((event, session) => {
       const isRecoveryEvent = event === "PASSWORD_RECOVERY";
+      const shouldIgnoreAuthMutation =
+        isRecoveryFlow || isRecoveryEvent || isResetPasswordRoute();
+
       if (isRecoveryEvent) {
         setIsRecoveryFlow(true);
         if (typeof window !== "undefined" && window.location.pathname !== "/reset-password") {
           window.history.replaceState({}, "", "/reset-password");
         }
       }
+
+      if (shouldIgnoreAuthMutation) {
+        return;
+      }
+
       if (event === "SIGNED_OUT" || !session?.user) {
         setActiveUser("");
         setActiveUserLabel("");
         return;
       }
-      if (isRecoveryFlow || isRecoveryEvent || isResetPasswordRoute()) {
-        return;
-      }
+
       const user = session.user;
       setActiveUser(user.id || user.email || "");
       setActiveUserLabel(getAuthUserLabel(user));
