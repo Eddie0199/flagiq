@@ -335,6 +335,7 @@ const STRINGS = {
 "auth.resetError": "Could not update your password. The link may have expired.",
 "auth.passwordReuseError": "You cannot use a previous password. Please choose a new password.",
     "auth.resetInvalid": "This reset link is invalid or has expired.",
+    "auth.resetNeutral": "Please use the password reset link from your email.",
     "auth.passwordPlaceholder2": "Re-enter your new password",
 
 
@@ -826,6 +827,7 @@ const STRINGS = {
 "auth.resetError": "No se pudo actualizar tu contraseña. Es posible que el enlace haya caducado.",
 "auth.passwordReuseError": "No puedes usar una contraseña anterior. Elige una contraseña nueva.",
     "auth.resetInvalid": "Este enlace de restablecimiento no es válido o ha caducado.",
+    "auth.resetNeutral": "Usa el enlace para restablecer la contraseña que recibiste por correo.",
     "auth.passwordPlaceholder2": "Vuelve a introducir tu nueva contraseña",
 
 
@@ -1316,6 +1318,7 @@ const STRINGS = {
 "auth.resetError": "Não foi possível atualizar a palavra-passe. O link pode ter expirado.",
 "auth.passwordReuseError": "Não pode reutilizar uma palavra-passe anterior. Escolha uma nova palavra-passe.",
         "auth.resetInvalid": "Este link de redefinição é inválido ou expirou.",
+        "auth.resetNeutral": "Use o link de redefinição de palavra-passe enviado para o seu e-mail.",
 
 
 
@@ -1808,6 +1811,7 @@ const STRINGS = {
 "auth.resetError": "Dein Passwort konnte nicht aktualisiert werden. Der Link ist möglicherweise abgelaufen.",
 "auth.passwordReuseError": "Du kannst kein früheres Passwort verwenden. Bitte wähle ein neues Passwort.",
         "auth.resetInvalid": "Dieser Zurücksetzungslink ist ungültig oder abgelaufen.",
+        "auth.resetNeutral": "Bitte verwende den Link zum Zurücksetzen des Passworts aus deiner E-Mail.",
     "auth.passwordPlaceholder2": "Gib dein neues Passwort erneut ein",
 
 
@@ -2305,6 +2309,7 @@ const STRINGS = {
 "auth.resetError": "Impossible de mettre à jour votre mot de passe. Le lien a peut-être expiré.",
 "auth.passwordReuseError": "Vous ne pouvez pas réutiliser un ancien mot de passe. Veuillez en choisir un nouveau.",
         "auth.resetInvalid": "Ce lien de réinitialisation est invalide ou a expiré.",
+        "auth.resetNeutral": "Veuillez utiliser le lien de réinitialisation du mot de passe envoyé par e-mail.",
     "auth.passwordPlaceholder2": "Saisissez à nouveau votre nouveau mot de passe",
 
 
@@ -2796,6 +2801,7 @@ const STRINGS = {
 "auth.resetError": "Je wachtwoord kon niet worden bijgewerkt. De link is mogelijk verlopen.",
 "auth.passwordReuseError": "Je kunt geen eerder wachtwoord gebruiken. Kies een nieuw wachtwoord.",
         "auth.resetInvalid": "Deze resetlink is ongeldig of verlopen.",
+    "auth.resetNeutral": "Gebruik de wachtwoordresetlink uit je e-mail.",
   "auth.passwordPlaceholder2": "Voer je nieuwe wachtwoord opnieuw in",
 
 
