@@ -7,10 +7,20 @@ type CleanupResult = {
   reason?: string;
 };
 
-const JSON_HEADERS = { "Content-Type": "application/json" };
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 function jsonResponse(status: number, payload: Record<string, unknown>) {
-  return new Response(JSON.stringify(payload), { status, headers: JSON_HEADERS });
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ...CORS_HEADERS,
+    },
+  });
 }
 
 function groupObjectPathsByBucket(objects: Array<{ bucket_id: string; name: string }>) {
@@ -24,6 +34,10 @@ function groupObjectPathsByBucket(objects: Array<{ bucket_id: string; name: stri
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
     return jsonResponse(405, { success: false, error: "Method not allowed" });
   }

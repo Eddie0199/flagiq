@@ -85,9 +85,12 @@ export default function SettingsModal({
       await handleLogout();
     } catch (error) {
       console.error("Failed to delete account", error);
-      setDeleteError(
-        tx("deleteAccountFailed")
-      );
+      const fallback = tx("deleteAccountFailed");
+      const message =
+        typeof error?.message === "string" && error.message.trim()
+          ? `${fallback} (${error.message})`
+          : fallback;
+      setDeleteError(message);
     } finally {
       setIsDeleting(false);
     }
