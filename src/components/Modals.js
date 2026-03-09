@@ -1,6 +1,7 @@
 // components/Modals.js
 import React, { useEffect, useState } from "react";
 import { REGEN_MS } from "../App";
+import usePressAction from "./usePressAction";
 
 function formatRemaining(ms) {
   const s = Math.max(0, Math.ceil(ms / 1000));
@@ -13,9 +14,13 @@ function formatRemaining(ms) {
 
 export function LockedModal({ info, onClose, lang }) {
   const { need, blockStart, blockEnd } = info || {};
+  const overlayPress = usePressAction({ id: "locked-modal-overlay", onPress: onClose });
+  const closePress = usePressAction({ id: "locked-modal-ok", onPress: onClose });
+
   return (
     <div
-      onClick={onClose}
+      onPointerDown={overlayPress.onPointerDown}
+      onClick={overlayPress.onClick}
       style={{
         position: "fixed",
         inset: 0,
@@ -28,6 +33,7 @@ export function LockedModal({ info, onClose, lang }) {
       }}
     >
       <div
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
@@ -39,12 +45,12 @@ export function LockedModal({ info, onClose, lang }) {
         }}
       >
         <div style={{ fontSize: 16, color: "#0f172a" }}>
-          You need <b>{need}</b> more ★ to unlock levels {blockStart}–{blockEnd}
-          .
+          You need <b>{need}</b> more ★ to unlock levels {blockStart}–{blockEnd}.
         </div>
         <div style={{ marginTop: 14, textAlign: "right" }}>
           <button
-            onClick={onClose}
+            onPointerDown={closePress.onPointerDown}
+            onClick={closePress.onClick}
             style={{
               padding: "8px 12px",
               borderRadius: 10,
@@ -62,16 +68,22 @@ export function LockedModal({ info, onClose, lang }) {
 }
 
 export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
+  const overlayPress = usePressAction({ id: "no-lives-modal-overlay", onPress: onClose });
+  const closePress = usePressAction({ id: "no-lives-modal-ok", onPress: onClose });
   const [now, setNow] = useState(Date.now());
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
   const baseline = lastRegenAt ?? Date.now();
   const nextMs = Math.max(0, REGEN_MS - (now - baseline));
+
   return (
     <div
-      onClick={onClose}
+      onPointerDown={overlayPress.onPointerDown}
+      onClick={overlayPress.onClick}
       style={{
         position: "fixed",
         inset: 0,
@@ -84,6 +96,7 @@ export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
       }}
     >
       <div
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
@@ -104,7 +117,8 @@ export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
         </p>
         <div style={{ marginTop: 12 }}>
           <button
-            onClick={onClose}
+            onPointerDown={closePress.onPointerDown}
+            onClick={closePress.onClick}
             style={{
               padding: "10px 14px",
               borderRadius: 10,

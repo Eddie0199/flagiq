@@ -7,8 +7,15 @@ import { READY_LOCAL_PACK_IDS } from "../localPacks";
 import { DAILY_BOOSTER_ICON, HINT_ICON_BY_TYPE, SHOP_COIN_ICON } from "../uiIcons";
 import Header from "./Header";
 import { isNativeAppRuntime } from "../platformRuntime";
+import usePressAction from "./usePressAction";
+import { IS_DEBUG_BUILD } from "../debugTools";
 
 const DAILY_SPIN_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function logPressDebug(payload) {
+  if (!IS_DEBUG_BUILD) return;
+  console.debug("[press-debug]", payload);
+}
 
 // simple helpers (copied from App-style logic)
 const sumStars = (m) =>
@@ -260,6 +267,11 @@ function DailySpinButton({
     }
   }
 
+  const openPress = usePressAction({ id: "daily-spin-open", onPress: handleOpen });
+  const webClosePress = usePressAction({ id: "daily-spin-web-close", onPress: () => setIsOpen(false) });
+  const nativeClosePress = usePressAction({ id: "daily-spin-native-close", onPress: () => setIsOpen(false) });
+  const infoPress = usePressAction({ id: "daily-spin-info-toggle", onPress: () => setShowInfo((v) => !v) });
+
   function handleOpen() {
     setIsOpen(true);
     setShowInfo(false);
@@ -276,7 +288,14 @@ function DailySpinButton({
     setIsSubmitting(false);
   }
 
-  async function handlePick(idx) {
+  async function handlePick(idx, eventType = "click") {
+    logPressDebug({
+      id: `daily-spin-claim-tile-${idx}`,
+      modalId: "daily-spin",
+      eventType,
+      handlerFired: !(hasPicked || isSubmitting),
+      actionCompleted: false,
+    });
     if (hasPicked || isSubmitting) return;
 
     if (!isOnline) {
@@ -349,7 +368,21 @@ function DailySpinButton({
       onReward && onReward(reward);
 
       setTimeout(() => setRevealStage("shown"), 300);
+      logPressDebug({
+        id: `daily-spin-claim-tile-${idx}`,
+        modalId: "daily-spin",
+        eventType,
+        handlerFired: true,
+        actionCompleted: true,
+      });
     } catch (e) {
+      logPressDebug({
+        id: `daily-spin-claim-tile-${idx}`,
+        modalId: "daily-spin",
+        eventType,
+        handlerFired: true,
+        actionCompleted: false,
+      });
       setStatusMessage(
         t && lang
           ? t(lang, "spinNetworkError") || "Unable to claim now."
@@ -372,7 +405,8 @@ function DailySpinButton({
         }}
       >
         <button
-          onClick={handleOpen}
+          onPointerDown={openPress.onPointerDown}
+          onClick={openPress.onClick}
           aria-label={label}
           style={{
             position: "relative",
@@ -416,7 +450,8 @@ function DailySpinButton({
               data-daily-spin-variant="web"
             >
               <button
-                onClick={() => setShowInfo((v) => !v)}
+                onPointerDown={infoPress.onPointerDown}
+                onClick={infoPress.onClick}
                 className="daily-booster-web-info"
                 aria-label={infoTitle}
               >
@@ -424,7 +459,8 @@ function DailySpinButton({
               </button>
 
               <button
-                onClick={() => setIsOpen(false)}
+                onPointerDown={webClosePress.onPointerDown}
+                onClick={webClosePress.onClick}
                 className="daily-booster-web-close"
                 aria-label={text("close", "Close")}
               >
@@ -448,7 +484,8 @@ function DailySpinButton({
                   return (
                     <button
                       key={idx}
-                      onClick={() => handlePick(idx)}
+                      onPointerDown={() => handlePick(idx, "pointerdown")}
+                      onClick={() => handlePick(idx, "click")}
                       disabled={!canSpin || hasPicked || isSubmitting || !isOnline}
                       className={`daily-booster-web-tile ${isSelected ? "is-selected" : ""}`}
                     >
@@ -499,7 +536,8 @@ function DailySpinButton({
             >
               {/* close */}
               <button
-                onClick={() => setIsOpen(false)}
+                onPointerDown={nativeClosePress.onPointerDown}
+                onClick={nativeClosePress.onClick}
                 className="modal-close-button"
                 aria-label={text("close", "Close")}
               >
@@ -508,7 +546,8 @@ function DailySpinButton({
 
               {/* info */}
               <button
-                onClick={() => setShowInfo((v) => !v)}
+                onPointerDown={infoPress.onPointerDown}
+                onClick={infoPress.onClick}
                 style={{
                   position: "absolute",
                   top: 10,
@@ -592,7 +631,8 @@ function DailySpinButton({
                   return (
                     <button
                       key={idx}
-                      onClick={() => handlePick(idx)}
+                      onPointerDown={() => handlePick(idx, "pointerdown")}
+                      onClick={() => handlePick(idx, "click")}
                       disabled={!canSpin || hasPicked || isSubmitting || !isOnline}
                       style={{
                         width: TILE_SIZE,
@@ -677,6 +717,8 @@ export default function HomeScreen({
 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const infoModalClosePress = usePressAction({ id: "home-info-modal-close", onPress: () => setShowInfoModal(false) });
+  const leaderboardClosePress = usePressAction({ id: "home-leaderboard-modal-close", onPress: () => setShowLeaderboardModal(false) });
 
   // no scroll
   useEffect(() => {
@@ -1196,7 +1238,8 @@ export default function HomeScreen({
             }}
           >
             <button
-              onClick={() => setShowInfoModal(false)}
+              onPointerDown={infoModalClosePress.onPointerDown}
+              onClick={infoModalClosePress.onClick}
               className="modal-close-button"
               aria-label={text("close", "Close")}
             >
@@ -1298,7 +1341,8 @@ export default function HomeScreen({
             }}
           >
             <button
-              onClick={() => setShowLeaderboardModal(false)}
+              onPointerDown={leaderboardClosePress.onPointerDown}
+              onClick={leaderboardClosePress.onClick}
               className="modal-close-button"
               aria-label={text("close", "Close")}
             >
