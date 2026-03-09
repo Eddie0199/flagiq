@@ -1212,6 +1212,20 @@ export default function App() {
       }));
     }
 
+    const platform =
+      typeof Capacitor?.getPlatform === "function"
+        ? Capacitor.getPlatform()
+        : "web";
+    const supportsNativeAppUrlEvents =
+      platform !== "web" &&
+      CapacitorAppPlugin &&
+      typeof CapacitorAppPlugin.getLaunchUrl === "function" &&
+      typeof CapacitorAppPlugin.addListener === "function";
+
+    if (!supportsNativeAppUrlEvents) {
+      return () => {};
+    }
+
     let listener;
     CapacitorAppPlugin.getLaunchUrl()
       .then((result) => processIncomingUrl(result?.url || ""))
@@ -1219,9 +1233,11 @@ export default function App() {
 
     CapacitorAppPlugin.addListener("appUrlOpen", (data) => {
       processIncomingUrl(data?.url || "");
-    }).then((handle) => {
-      listener = handle;
-    });
+    })
+      .then((handle) => {
+        listener = handle;
+      })
+      .catch(() => {});
 
     return () => {
       listener?.remove?.();
