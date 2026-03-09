@@ -363,6 +363,7 @@ export default function GameScreen({
   const [isInputLocked, setIsInputLocked] = useState(false);
   const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
   const [isFetchingNextQuestion, setIsFetchingNextQuestion] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [lastTapTimestamp, setLastTapTimestamp] = useState(null);
   const [lastTapTarget, setLastTapTarget] = useState("none");
   const inputLockSinceRef = useRef(0);
@@ -372,6 +373,7 @@ export default function GameScreen({
   const questionTokenRef = useRef(0);
   const actionInFlightRef = useRef(false);
   const lastProgressionErrorRef = useRef("");
+  const loadingStartedAtRef = useRef(0);
 
   const clearPendingTransitionTimeout = useCallback(() => {
     if (pendingCorrectTransitionTimeoutRef.current) {
@@ -459,7 +461,7 @@ export default function GameScreen({
         isValidationInProgress: Boolean(actionInFlightRef.current),
         isWaitingAsync: Boolean(isAnimatingTransition || isFetchingNextQuestion),
         isInputLocked: Boolean(isInputLocked),
-        isLoading: Boolean(!preloadReady || !currentFlagLoaded),
+        isLoading: Boolean(isLoading),
         isAnimatingTransition: Boolean(isAnimatingTransition),
         isFetchingNextQuestion: Boolean(isFetchingNextQuestion),
         actionInFlight: Boolean(actionInFlightRef.current),
@@ -482,8 +484,7 @@ export default function GameScreen({
       isAnimatingTransition,
       isFetchingNextQuestion,
       isInputLocked,
-      preloadReady,
-      currentFlagLoaded,
+      isLoading,
     ]
   );
 
@@ -502,6 +503,44 @@ export default function GameScreen({
       emitQuestionFlowDiagnostics({ lastEvent: eventName, lastEventMeta: meta });
     },
     [mode, levelId, qIndex, current, selectedAnswer, isInputLocked, emitQuestionFlowDiagnostics]
+  );
+
+  const setLoadingState = useCallback((value) => {
+    setIsLoading((prev) => {
+      if (prev === value) return prev;
+      if (value) {
+        loadingStartedAtRef.current = Date.now();
+        console.log("[question-flow] loading started");
+      } else {
+        loadingStartedAtRef.current = 0;
+        console.log("[question-flow] loading completed");
+      }
+      return value;
+    });
+  }, []);
+
+  const loadNextQuestion = useCallback(async (advanceFn) => {
+    if (typeof advanceFn === "function") {
+      advanceFn();
+    }
+    await Promise.resolve();
+  }, []);
+
+  const runQuestionLoadingPipeline = useCallback(
+    async (advanceFn) => {
+      try {
+        setLoadingState(true);
+        await loadNextQuestion(advanceFn);
+      } catch (error) {
+        logQuestionFlowEvent("caught progression error", {
+          message: error?.message || "Unknown question progression error",
+        });
+        throw error;
+      } finally {
+        setLoadingState(false);
+      }
+    },
+    [loadNextQuestion, logQuestionFlowEvent, setLoadingState]
   );
 
   // reset base state on level/mode change
@@ -530,6 +569,7 @@ export default function GameScreen({
     runEndedRef.current = false;
     lifeLostRef.current = false;
     actionInFlightRef.current = false;
+    setLoadingState(false);
   }, [
     levelId,
     mode,
@@ -537,6 +577,7 @@ export default function GameScreen({
     clearPendingTransitionTimeout,
     clearPendingWrongResetTimeout,
     clearPendingPauseTimeout,
+    setLoadingState,
   ]);
 
   useEffect(() => {
@@ -567,6 +608,20 @@ export default function GameScreen({
   useEffect(() => {
     logQuestionFlowEvent(isInputLocked ? "state locked" : "state unlocked");
   }, [isInputLocked, logQuestionFlowEvent]);
+
+  useEffect(() => {
+    const questionVisible = Boolean(preloadReady && current && !done && !fail);
+    if (!isLoading || !questionVisible) return;
+    const timer = setTimeout(() => {
+      const elapsed = loadingStartedAtRef.current
+        ? Date.now() - loadingStartedAtRef.current
+        : 0;
+      if (!loadingStartedAtRef.current || elapsed <= 1500) return;
+      console.warn("[question-flow] loading watchdog reset", { elapsed, qIndex });
+      setLoadingState(false);
+    }, 1550);
+    return () => clearTimeout(timer);
+  }, [isLoading, preloadReady, current, done, fail, qIndex, setLoadingState]);
 
 
   // mark run as started once they interact (move question / answer / wrong)
@@ -1086,56 +1141,55 @@ export default function GameScreen({
         afterCorrectHighlight(() => {
           pendingCorrectTransitionTimeoutRef.current = setTimeout(() => {
             pendingCorrectTransitionTimeoutRef.current = null;
-            try {
-            if (questionToken !== questionTokenRef.current) return;
-            if (lastQ) {
-              const livesLeft = clamp(3 - skulls, 0, 3);
-              const stars = starsFromLives
-                ? starsFromLives(livesLeft)
-                : clamp(livesLeft, 0, 3);
+            void runQuestionLoadingPipeline(() => {
+              if (questionToken !== questionTokenRef.current) return;
+              if (lastQ) {
+                const livesLeft = clamp(3 - skulls, 0, 3);
+                const stars = starsFromLives
+                  ? starsFromLives(livesLeft)
+                  : clamp(livesLeft, 0, 3);
 
-              // ⭐ set stars for THIS run
-              setRunStars(stars);
+                // ⭐ set stars for THIS run
+                setRunStars(stars);
 
-              // check if this level had *any* stars before (per mode)
-              const alreadyCompletedBefore = Number(storedStars || 0) > 0;
+                // check if this level had *any* stars before (per mode)
+                const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
-              // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
-              if (onProgressUpdate) {
-                onProgressUpdate(mode, levelId, stars);
+                // update BEST-EVER stars in the in-memory map (for unlocks, etc.)
+                if (onProgressUpdate) {
+                  onProgressUpdate(mode, levelId, stars);
+                }
+
+                // award coins ONLY if this is the first completion of this level+mode
+                if (!alreadyCompletedBefore && stars > 0) {
+                  awardCoinsOnce();
+                }
+
+                markRunEnded();
+                setDone(true);
+                logQuestionFlowEvent("validation completed", {
+                  answer,
+                  accepted: true,
+                  completedRun: true,
+                });
+                return;
               }
-
-              // award coins ONLY if this is the first completion of this level+mode
-              if (!alreadyCompletedBefore && stars > 0) {
-                awardCoinsOnce();
-              }
-
-              markRunEnded();
-              setDone(true);
-              logQuestionFlowEvent("validation completed", {
-                answer,
-                accepted: true,
-                completedRun: true,
-              });
-            } else {
               setIsFetchingNextQuestion(true);
               logQuestionFlowEvent("next question requested", { nextIndex: qIndex + 1 });
               setQIndex((p) => p + 1);
               setSelectedAnswer(null);
               setWrongAnswers([]);
               logQuestionFlowEvent("next question loaded", { nextIndex: qIndex + 1 });
-            }
-          } catch (error) {
-            lastProgressionErrorRef.current =
-              error?.message || "Unknown question progression error";
-            logQuestionFlowEvent("caught progression error", {
-              message: lastProgressionErrorRef.current,
-            });
-            console.error("[question-flow] classic progression failure", error);
-          } finally {
-            actionInFlightRef.current = false;
-            unlockInput();
-          }
+            })
+              .catch((error) => {
+                lastProgressionErrorRef.current =
+                  error?.message || "Unknown question progression error";
+                console.error("[question-flow] classic progression failure", error);
+              })
+              .finally(() => {
+                actionInFlightRef.current = false;
+                unlockInput();
+              });
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
@@ -1180,40 +1234,41 @@ export default function GameScreen({
         afterCorrectHighlight(() => {
           pendingCorrectTransitionTimeoutRef.current = setTimeout(() => {
             pendingCorrectTransitionTimeoutRef.current = null;
-            try {
-            if (questionToken !== questionTokenRef.current) return;
-            if (lastQ) {
-              // stars based on score AND mistakes
-              const maxByMistakes = clamp(3 - skulls, 0, 3);
-              let stars = 1;
-              if (newTotal >= TT_STAR3) stars = 3;
-              else if (newTotal >= TT_STAR2) stars = 2;
-              stars = Math.min(stars, maxByMistakes);
+            void runQuestionLoadingPipeline(() => {
+              if (questionToken !== questionTokenRef.current) return;
+              if (lastQ) {
+                // stars based on score AND mistakes
+                const maxByMistakes = clamp(3 - skulls, 0, 3);
+                let stars = 1;
+                if (newTotal >= TT_STAR3) stars = 3;
+                else if (newTotal >= TT_STAR2) stars = 2;
+                stars = Math.min(stars, maxByMistakes);
 
-              // ⭐ set stars for THIS run
-              setRunStars(stars);
+                // ⭐ set stars for THIS run
+                setRunStars(stars);
 
-              // check if this level had *any* stars before (per mode)
-              const alreadyCompletedBefore = Number(storedStars || 0) > 0;
+                // check if this level had *any* stars before (per mode)
+                const alreadyCompletedBefore = Number(storedStars || 0) > 0;
 
-              if (onProgressUpdate) {
-                onProgressUpdate(mode, levelId, stars);
+                if (onProgressUpdate) {
+                  onProgressUpdate(mode, levelId, stars);
+                }
+
+                // award coins ONLY if this is the first completion of this level+mode
+                if (!alreadyCompletedBefore && stars > 0) {
+                  awardCoinsOnce();
+                }
+
+                markRunEnded();
+                setTtScore(newTotal);
+                setDone(true);
+                logQuestionFlowEvent("validation completed", {
+                  answer,
+                  accepted: true,
+                  completedRun: true,
+                });
+                return;
               }
-
-              // award coins ONLY if this is the first completion of this level+mode
-              if (!alreadyCompletedBefore && stars > 0) {
-                awardCoinsOnce();
-              }
-
-              markRunEnded();
-              setTtScore(newTotal);
-              setDone(true);
-              logQuestionFlowEvent("validation completed", {
-                answer,
-                accepted: true,
-                completedRun: true,
-              });
-            } else {
               setIsFetchingNextQuestion(true);
               logQuestionFlowEvent("next question requested", { nextIndex: qIndex + 1 });
               setTtScore(newTotal);
@@ -1222,18 +1277,16 @@ export default function GameScreen({
               setSelectedAnswer(null);
               setWrongAnswers([]);
               logQuestionFlowEvent("next question loaded", { nextIndex: qIndex + 1 });
-            }
-          } catch (error) {
-            lastProgressionErrorRef.current =
-              error?.message || "Unknown question progression error";
-            logQuestionFlowEvent("caught progression error", {
-              message: lastProgressionErrorRef.current,
-            });
-            console.error("[question-flow] timetrial progression failure", error);
-          } finally {
-            actionInFlightRef.current = false;
-            unlockInput();
-          }
+            })
+              .catch((error) => {
+                lastProgressionErrorRef.current =
+                  error?.message || "Unknown question progression error";
+                console.error("[question-flow] timetrial progression failure", error);
+              })
+              .finally(() => {
+                actionInFlightRef.current = false;
+                unlockInput();
+              });
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
@@ -1299,6 +1352,7 @@ export default function GameScreen({
     clearPendingTransitionTimeout,
     clearPendingWrongResetTimeout,
     clearPendingPauseTimeout,
+    setLoadingState,
   ]);
 
   // submit Time Trial results once when the run is completed
