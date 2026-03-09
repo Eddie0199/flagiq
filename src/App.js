@@ -3211,6 +3211,10 @@ export default function App() {
                   <div>isAnimatingTransition: {String(questionFlowDiagnostics.isAnimatingTransition)}</div>
                   <div>isFetchingNextQuestion: {String(questionFlowDiagnostics.isFetchingNextQuestion)}</div>
                   <div>actionInFlight: {String(questionFlowDiagnostics.actionInFlight)}</div>
+                  <div>resolvedTapTarget: {questionFlowDiagnostics.resolvedTapTarget || "none"}</div>
+                  <div>resolvedOptionIndex: {Number(questionFlowDiagnostics.resolvedOptionIndex ?? -1)}</div>
+                  <div>resolvedAnswerId: {questionFlowDiagnostics.resolvedAnswerId || "none"}</div>
+                  <div>lastGuardBlockedReason: {questionFlowDiagnostics.lastGuardBlockedReason || "none"}</div>
                   <div>boosterState: {questionFlowDiagnostics.boosterState || "none"}</div>
                   <div>lastProgressionError: {questionFlowDiagnostics.lastProgressionError || "none"}</div>
                 </div>

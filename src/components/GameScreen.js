@@ -364,8 +364,10 @@ export default function GameScreen({
   const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
   const [isFetchingNextQuestion, setIsFetchingNextQuestion] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastTapTimestamp, setLastTapTimestamp] = useState(null);
-  const [lastTapTarget, setLastTapTarget] = useState("none");
+  const [resolvedTapTarget, setResolvedTapTarget] = useState("none");
+  const [resolvedOptionIndex, setResolvedOptionIndex] = useState(-1);
+  const [resolvedAnswerId, setResolvedAnswerId] = useState("none");
+  const [lastGuardBlockedReason, setLastGuardBlockedReason] = useState("none");
   const inputLockSinceRef = useRef(0);
   const pendingCorrectTransitionTimeoutRef = useRef(null);
   const pendingWrongResetTimeoutRef = useRef(null);
@@ -467,6 +469,10 @@ export default function GameScreen({
         actionInFlight: Boolean(actionInFlightRef.current),
         boosterState,
         lastProgressionError: lastProgressionErrorRef.current,
+        resolvedTapTarget,
+        resolvedOptionIndex,
+        resolvedAnswerId,
+        lastGuardBlockedReason,
         timestamp: new Date().toISOString(),
         ...extra,
       });
@@ -485,6 +491,10 @@ export default function GameScreen({
       isFetchingNextQuestion,
       isInputLocked,
       isLoading,
+      resolvedTapTarget,
+      resolvedOptionIndex,
+      resolvedAnswerId,
+      lastGuardBlockedReason,
     ]
   );
 
@@ -1051,7 +1061,7 @@ export default function GameScreen({
     if (!current) return;
 
     // consume only if progression action accepted
-    const actionAccepted = handleAnswer(current.correct.name, { fromHint: true });
+    const actionAccepted = handleAnswerPress(current.correct.name, -1, { fromHint: true });
     if (!actionAccepted) {
       return;
     }
@@ -1100,38 +1110,90 @@ export default function GameScreen({
   }
 
   // ---------- ANSWER HANDLER ----------
-  function handleAnswer(answer, { fromHint = false, event } = {}) {
-    setLastTapTimestamp(Date.now());
-    setLastTapTarget(describeTapTarget(event?.target));
-    logQuestionFlowEvent("answer tapped", {
-      answer,
+  function handleAnswerPress(answerId, optionIndex, { fromHint = false, event } = {}) {
+    const tapTarget = describeTapTarget(event?.target);
+    setResolvedTapTarget(tapTarget);
+    setResolvedOptionIndex(Number.isInteger(optionIndex) ? optionIndex : -1);
+    setResolvedAnswerId(answerId || "none");
+    setLastGuardBlockedReason("none");
+
+    logQuestionFlowEvent("answer_tap_received", {
+      answerId,
+      optionIndex,
       fromHint,
-      tapTarget: describeTapTarget(event?.target),
+      tapTarget,
     });
-    if (!preloadReady || !current || done || fail || !currentFlagLoaded) return false;
-    if (isInputLocked || actionInFlightRef.current) return false;
+
+    const blockWithReason = (reason) => {
+      setLastGuardBlockedReason(reason);
+      logQuestionFlowEvent("answer_guard_blocked", { reason, answerId, optionIndex, fromHint });
+      return false;
+    };
+
+    if (!preloadReady || !current || done || fail || !currentFlagLoaded) {
+      return blockWithReason("blocked_question_not_ready");
+    }
+    if (isInputLocked || actionInFlightRef.current) {
+      return blockWithReason("blocked_action_in_flight");
+    }
     // normal clicks shouldn't work while we show colours
-    if (!fromHint && selectedAnswer !== null) return false;
+    if (!fromHint && selectedAnswer !== null) {
+      return blockWithReason("blocked_duplicate_selection");
+    }
+
+    logQuestionFlowEvent("answer_target_resolved", {
+      answerId,
+      optionIndex,
+      tapTarget,
+      fromHint,
+    });
+
+    if (!fromHint && !Number.isInteger(optionIndex)) {
+      return blockWithReason("blocked_invalid_option_index");
+    }
+
+    const resolvedOption =
+      fromHint && answerId
+        ? answerId
+        : Number.isInteger(optionIndex)
+        ? current.options?.[optionIndex]
+        : null;
+
+    logQuestionFlowEvent("answer_option_resolved", {
+      answerId,
+      optionIndex,
+      resolvedOption,
+    });
+
+    if (!resolvedOption) {
+      return blockWithReason("blocked_missing_option");
+    }
+    if (!answerId) {
+      return blockWithReason("blocked_missing_answer_id");
+    }
+    if (resolvedOption !== answerId) {
+      return blockWithReason("blocked_option_answer_mismatch");
+    }
 
     actionInFlightRef.current = true;
     const questionToken = questionTokenRef.current;
 
     const isCorrect =
-      current.correct && current.correct.name === answer ? true : false;
+      current.correct && current.correct.name === answerId ? true : false;
 
-    logQuestionFlowEvent("validation started", {
-      answer,
+    setSelectedAnswer(answerId);
+    logQuestionFlowEvent("selected_answer_set", { answerId, optionIndex });
+
+    logQuestionFlowEvent("validation_started", {
+      answerId,
       isCorrect,
       questionToken,
     });
 
-    // show highlight
-    setSelectedAnswer(answer);
-
     // ----- CLASSIC -----
     if (isClassicMode) {
       if (isCorrect) {
-        logQuestionFlowEvent("answer accepted", { answer, mode: "classic" });
+        logQuestionFlowEvent("answer accepted", { answer: answerId, mode: "classic" });
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
         lockInput();
@@ -1168,7 +1230,7 @@ export default function GameScreen({
                 markRunEnded();
                 setDone(true);
                 logQuestionFlowEvent("validation completed", {
-                  answer,
+                  answer: answerId,
                   accepted: true,
                   completedRun: true,
                 });
@@ -1193,7 +1255,7 @@ export default function GameScreen({
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
-        logQuestionFlowEvent("answer rejected", { answer, mode: "classic" });
+        logQuestionFlowEvent("answer rejected", { answer: answerId, mode: "classic" });
         actionInFlightRef.current = false;
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -1204,13 +1266,13 @@ export default function GameScreen({
           }
           return next;
         });
-        setWrongAnswers((prev) => [...prev, answer]);
+        setWrongAnswers((prev) => [...prev, answerId]);
         clearPendingWrongResetTimeout();
         pendingWrongResetTimeoutRef.current = setTimeout(() => {
           pendingWrongResetTimeoutRef.current = null;
           setSelectedAnswer(null);
           logQuestionFlowEvent("validation completed", {
-            answer,
+            answer: answerId,
             accepted: false,
             resetSelection: true,
           });
@@ -1222,7 +1284,7 @@ export default function GameScreen({
     // ----- TIME TRIAL -----
     if (mode === "timetrial") {
       if (isCorrect) {
-        logQuestionFlowEvent("answer accepted", { answer, mode: "timetrial" });
+        logQuestionFlowEvent("answer accepted", { answer: answerId, mode: "timetrial" });
         soundCorrect && soundCorrect();
         const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
         const newTotal = ttScore + gain;
@@ -1263,7 +1325,7 @@ export default function GameScreen({
                 setTtScore(newTotal);
                 setDone(true);
                 logQuestionFlowEvent("validation completed", {
-                  answer,
+                  answer: answerId,
                   accepted: true,
                   completedRun: true,
                 });
@@ -1290,7 +1352,7 @@ export default function GameScreen({
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
-        logQuestionFlowEvent("answer rejected", { answer, mode: "timetrial" });
+        logQuestionFlowEvent("answer rejected", { answer: answerId, mode: "timetrial" });
         actionInFlightRef.current = false;
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -1301,13 +1363,13 @@ export default function GameScreen({
           }
           return next;
         });
-        setWrongAnswers((prev) => [...prev, answer]);
+        setWrongAnswers((prev) => [...prev, answerId]);
         clearPendingWrongResetTimeout();
         pendingWrongResetTimeoutRef.current = setTimeout(() => {
           pendingWrongResetTimeoutRef.current = null;
           setSelectedAnswer(null);
           logQuestionFlowEvent("validation completed", {
-            answer,
+            answer: answerId,
             accepted: false,
             resetSelection: true,
           });
@@ -2146,7 +2208,7 @@ export default function GameScreen({
                   return (
                     <button
                       key={`${current?.correct?.code || `q${qIndex}`}-${optIndex}`}
-                      onPointerDown={(event) => handleAnswer(opt, { event })}
+                      onClick={(event) => handleAnswerPress(opt, optIndex, { event })}
                       disabled={isWrong || selectedAnswer !== null || isInputLocked}
                       style={{
                         background: bg,
@@ -2193,47 +2255,7 @@ export default function GameScreen({
         </div>
       )}
 
-      {IS_DEBUG_BUILD && (
-        <div
-          style={{
-            marginTop: 12,
-            background: "rgba(15,23,42,0.7)",
-            color: "#fff",
-            borderRadius: 12,
-            padding: 10,
-            fontSize: 12,
-            display: "grid",
-            gap: 4,
-          }}
-        >
-          <strong>Input State (debug)</strong>
-          <div>isInputLocked: {String(isInputLocked)}</div>
-          <div>currentQuestionId: {current?.correct?.code || "none"}</div>
-          <div>selectedAnswerId: {selectedAnswer || "none"}</div>
-          <div>isAnimatingTransition: {String(isAnimatingTransition)}</div>
-          <div>isFetchingNextQuestion: {String(isFetchingNextQuestion)}</div>
-          <div>
-            lastTapTimestamp: {lastTapTimestamp ? new Date(lastTapTimestamp).toISOString() : "none"}
-          </div>
-          <div>tapTarget: {lastTapTarget}</div>
-          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={unlockInput}
-              style={{ borderRadius: 8, border: "none", padding: "6px 8px", cursor: "pointer" }}
-            >
-              Force unlock input
-            </button>
-            <button
-              type="button"
-              onClick={reloadCurrentQuestion}
-              style={{ borderRadius: 8, border: "none", padding: "6px 8px", cursor: "pointer" }}
-            >
-              Reload current question
-            </button>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
