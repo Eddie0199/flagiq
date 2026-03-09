@@ -177,6 +177,8 @@ body {
   line-height: 1;
   cursor: pointer;
   padding: 0;
+  touch-action: manipulation;
+  pointer-events: auto;
 }
 
 .game-answers {
@@ -397,6 +399,7 @@ body {
   justify-content: center;
   cursor: pointer;
   font-weight: 700;
+  touch-action: manipulation;
 }
 
 .daily-booster-web-info {

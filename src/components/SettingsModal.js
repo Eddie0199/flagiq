@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { clearSupabaseSession, supabase } from "../supabaseClient";
 import { getLocalizedLanguageName } from "../languageDisplay";
+import usePressAction from "./usePressAction";
 
 export default function SettingsModal({
   onClose,
@@ -113,6 +114,8 @@ export default function SettingsModal({
     ...entry,
     name: getLocalizedLanguageName(entry.code, lang),
   }));
+  const closePress = usePressAction({ id: "settings-modal-close", onPress: onClose });
+  const overlayPress = usePressAction({ id: "settings-modal-overlay", onPress: onClose });
 
   return (
     <div
@@ -126,9 +129,11 @@ export default function SettingsModal({
         zIndex: 200,
         padding: 16,
       }}
-      onClick={onClose}
+      onPointerDown={overlayPress.onPointerDown}
+      onClick={overlayPress.onClick}
     >
       <div
+        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: "min(460px, 100%)",
@@ -142,7 +147,8 @@ export default function SettingsModal({
         }}
       >
         <button
-          onClick={onClose}
+          onPointerDown={closePress.onPointerDown}
+          onClick={closePress.onClick}
           aria-label={tx("close")}
           className="modal-close-button"
         >
