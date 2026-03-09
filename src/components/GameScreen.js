@@ -80,7 +80,6 @@ export default function GameScreen({
   onGameplayDiagnostics,
   onInputAnswerState,
   externalOverlayFlags,
-  showInlineDebugToggle = false,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -298,7 +297,6 @@ export default function GameScreen({
   const [forceInputEnabledNonce, setForceInputEnabledNonce] = useState(0);
   const [lastTapMeta, setLastTapMeta] = useState({ pointerType: null, timestamp: 0 });
   const [showTapAgainToast, setShowTapAgainToast] = useState(false);
-  const [showInlineDebugOverlay, setShowInlineDebugOverlay] = useState(false);
   const [pendingTimeoutsCount, setPendingTimeoutsCount] = useState(0);
   const [answersPointerEvents, setAnswersPointerEvents] = useState("unknown");
 
@@ -822,7 +820,14 @@ export default function GameScreen({
     if (!current) return;
 
     // act as if we clicked the correct answer
-    handleAnswer(current.correct.name, { fromHint: true });
+    handleAnswerSelection(
+      makeAnswerPayload({
+        optionValue: current.correct.name,
+        optionIndex: -1,
+        optionLabel: current.correct.name,
+      }),
+      { fromHint: true, interactionSource: "hint_autopass" }
+    );
     setHints((prev) => ({
       ...prev,
       autoPass: Math.max(0, (prev?.autoPass ?? 0) - 1),
@@ -861,12 +866,66 @@ export default function GameScreen({
     setShowCoinReward(true);
   }
 
+  const logQuestionFlow = useCallback((eventName, payload = {}, level = "info") => {
+    const logger = console[level] || console.info;
+    logger(`[question-flow] ${eventName}`, payload);
+  }, []);
+
+  const makeAnswerPayload = useCallback(
+    ({ optionValue, optionIndex, optionLabel }) => ({
+      optionId: `${current?.correct?.code || "q"}-${String(optionValue)}-${optionIndex}`,
+      optionIndex,
+      optionValue,
+      optionLabel,
+    }),
+    [current]
+  );
+
   // ---------- ANSWER HANDLER ----------
-  async function handleAnswer(answer, { fromHint = false, event = null } = {}) {
+  async function handleAnswerSelection(
+    answerPayload,
+    { fromHint = false, interactionSource = "answer_button" } = {}
+  ) {
+    logQuestionFlow("answer_tap_received", {
+      interactionSource,
+      questionIndex: qIndex,
+      questionCode: current?.correct?.code || null,
+    });
+
+    const answer = answerPayload?.optionValue;
     setLastTapMeta({
-      pointerType: event?.pointerType || "programmatic",
+      pointerType: interactionSource,
       timestamp: Date.now(),
     });
+
+    logQuestionFlow("answer_target_resolved", {
+      interactionSource,
+      optionIndex: answerPayload?.optionIndex ?? null,
+      optionId: answerPayload?.optionId ?? null,
+    });
+
+    if (!answerPayload || typeof answer !== "string" || !answer.trim()) {
+      logQuestionFlow(
+        "answer_guard_blocked",
+        {
+          reason: "answer_payload_unresolved",
+          questionIndex: qIndex,
+          questionCode: current?.correct?.code || null,
+          options: current?.options || [],
+          tapTarget: interactionSource,
+        },
+        "warn"
+      );
+      return;
+    }
+
+    logQuestionFlow("answer_payload_resolved", {
+      optionId: answerPayload.optionId,
+      optionIndex: answerPayload.optionIndex,
+      optionValue: answer,
+      optionLabel: answerPayload.optionLabel,
+    });
+
     const tapContext = {
       questionId: current?.correct?.code || null,
       optionId: answer,
@@ -886,6 +945,17 @@ export default function GameScreen({
     if (hasOverlayOpen && !fromHint) ignoredReasons.push("overlay_open");
 
     if (ignoredReasons.length > 0) {
+      logQuestionFlow(
+        "answer_guard_blocked",
+        {
+          reason: ignoredReasons.join(","),
+          questionIndex: qIndex,
+          questionCode: current?.correct?.code || null,
+          options: current?.options || [],
+          tapTarget: interactionSource,
+        },
+        "warn"
+      );
       console.warn("answer:tap_ignored", { ...tapContext, reasons: ignoredReasons });
       clearManagedTimeout(tapWatchdogTimeoutRef.current);
       tapWatchdogTimeoutRef.current = registerManagedTimeout(() => {
@@ -904,6 +974,20 @@ export default function GameScreen({
 
     // show highlight
     setSelectedAnswer(answer);
+    logQuestionFlow("selected_answer_set", {
+      questionIndex: qIndex,
+      questionCode: current?.correct?.code || null,
+      optionId: answerPayload.optionId,
+      optionValue: answer,
+    });
+
+    logQuestionFlow("validation_started", {
+      questionIndex: qIndex,
+      questionCode: current?.correct?.code || null,
+      optionId: answerPayload.optionId,
+      optionValue: answer,
+      mode,
+    });
 
     // ----- CLASSIC -----
     if (isClassicMode) {
@@ -1770,7 +1854,7 @@ export default function GameScreen({
           {/* ANSWERS */}
           <div className="game-answers" ref={answersContainerRef}>
             {current
-              ? current.options.map((opt) => {
+              ? current.options.map((opt, optionIndex) => {
                   const isSelected = selectedAnswer === opt;
                   const isWrong = wrongAnswers.includes(opt);
                   let border = "1px solid #e2e8f0";
@@ -1802,7 +1886,16 @@ export default function GameScreen({
                   return (
                     <button
                       key={opt}
-                      onPointerDown={(event) => handleAnswer(opt, { event })}
+                      onClick={() =>
+                        handleAnswerSelection(
+                          makeAnswerPayload({
+                            optionValue: opt,
+                            optionIndex,
+                            optionLabel: label,
+                          }),
+                          { interactionSource: "answer_button" }
+                        )
+                      }
                       disabled={isWrong || isInputDisabled}
                       style={{
                         background: bg,
@@ -1820,7 +1913,7 @@ export default function GameScreen({
                       }}
                       className="game-answer-button"
                     >
-                      {label}
+                      <span style={{ pointerEvents: "none" }}>{label}</span>
                     </button>
                   );
                 })
@@ -1841,19 +1934,7 @@ export default function GameScreen({
           Tap again
         </div>
       )}
-      {showInlineDebugToggle && (
-        <button
-          type="button"
-          onClick={() => setShowInlineDebugOverlay((prev) => !prev)}
-          style={{ position: "fixed", right: 8, bottom: 8, width: 14, height: 14, borderRadius: 999, opacity: 0.08, border: "none", zIndex: 998 }}
-          aria-label="Toggle input debug overlay"
-        />
-      )}
-      {showInlineDebugOverlay && (
-        <pre style={{ position: "fixed", right: 12, bottom: 28, zIndex: 998, maxWidth: "92vw", maxHeight: "40vh", overflow: "auto", fontSize: 10, color: "#fff", background: "rgba(2,6,23,0.9)", border: "1px solid rgba(148,163,184,0.4)", borderRadius: 8, padding: 8 }}>
-          {JSON.stringify(inputAnswerDebugState, null, 2)}
-        </pre>
-      )}
+
     </div>
   );
 }
