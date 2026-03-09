@@ -408,195 +408,248 @@ function DailySpinButton({
       </div>
 
       {/* MODAL */}
-      {isOpen && (
-        <div
-          className={`daily-spin-modal-overlay ${isWebRuntime ? "daily-spin-modal-overlay--web" : ""}`}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,0.35)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-            padding: "max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))",
-            overflowY: "auto",
-          }}
-        >
+      {isOpen &&
+        (isWebRuntime ? (
+          <div className="daily-booster-web-overlay">
+            <div
+              className="daily-booster-web-modal"
+              data-daily-spin-variant="web"
+            >
+              <button
+                onClick={() => setShowInfo((v) => !v)}
+                className="daily-booster-web-info"
+                aria-label={infoTitle}
+              >
+                i
+              </button>
+
+              <button
+                onClick={() => setIsOpen(false)}
+                className="daily-booster-web-close"
+                aria-label={text("close", "Close")}
+              >
+                ×
+              </button>
+
+              {showInfo && (
+                <div className="daily-booster-web-popover">
+                  <strong>{infoTitle}</strong>
+                  <span>{infoBody}</span>
+                </div>
+              )}
+
+              <h3 className="daily-booster-web-title">{titleText}</h3>
+              <p className="daily-booster-web-subtitle">{subtitleText}</p>
+
+              <div className="daily-booster-web-grid" role="grid">
+                {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, idx) => {
+                  const isSelected = hasPicked && idx === selectedIndex;
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handlePick(idx)}
+                      disabled={!canSpin || hasPicked || isSubmitting || !isOnline}
+                      className={`daily-booster-web-tile ${isSelected ? "is-selected" : ""}`}
+                    >
+                      <span className="daily-booster-web-tile-icon">
+                        {isSelected && result ? result.icon : "📦"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="daily-booster-web-timer">
+                {comeBackTxt} {formatMs(remainingMs)}
+              </div>
+              {result && (
+                <div className="daily-booster-web-result">
+                  {youWonTxt}: {result.label}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
           <div
-            className={`daily-spin-modal ${isWebRuntime ? "daily-spin-modal--web" : ""}`}
-            data-daily-spin-variant={isWebRuntime ? "web" : "native"}
+            className="daily-spin-modal-overlay"
             style={{
-              width: isWebRuntime ? "min(360px, 100%)" : 360,
-              maxWidth: "100%",
-              maxHeight: isWebRuntime ? "min(92dvh, 720px)" : "min(92dvh, 760px)",
-              background: "#eef2ff",
-              borderRadius: 22,
-              padding: 18,
-              boxShadow: "0 10px 30px rgba(15,23,42,0.25)",
-              position: "relative",
-              overflowY: "auto",
+              position: "fixed",
+              inset: 0,
+              background: "rgba(15,23,42,0.35)",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              zIndex: 9999,
+              padding: 16,
             }}
           >
-            {/* close */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="modal-close-button"
-              aria-label={text("close", "Close")}
-            >
-              ×
-            </button>
-
-            {/* info */}
-            <button
-              onClick={() => setShowInfo((v) => !v)}
-              className="daily-spin-info-button"
+            <div
+              className="daily-spin-modal"
+              data-daily-spin-variant="native"
               style={{
-                position: "absolute",
-                top: 10,
-                left: 10,
-                border: "none",
-                background: "#fff",
-                borderRadius: 999,
-                width: 26,
-                height: 26,
-                cursor: "pointer",
-                fontWeight: 600,
+                width: 360,
+                maxWidth: "100%",
+                background: "#eef2ff",
+                borderRadius: 22,
+                padding: 18,
+                boxShadow: "0 10px 30px rgba(15,23,42,0.25)",
+                position: "relative",
               }}
             >
-              i
-            </button>
+              {/* close */}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="modal-close-button"
+                aria-label={text("close", "Close")}
+              >
+                ×
+              </button>
 
-            {showInfo && (
-              <div
+              {/* info */}
+              <button
+                onClick={() => setShowInfo((v) => !v)}
                 style={{
                   position: "absolute",
-                  top: 44,
-                  left: 12,
-                  right: 12,
+                  top: 10,
+                  left: 10,
+                  border: "none",
                   background: "#fff",
-                  borderRadius: 14,
-                  padding: "10px 12px",
-                  fontSize: 12,
-                  color: "#0f172a",
-                  boxShadow: "0 8px 16px rgba(15,23,42,0.15)",
-                  zIndex: 50,
+                  borderRadius: 999,
+                  width: 26,
+                  height: 26,
+                  cursor: "pointer",
+                  fontWeight: 600,
                 }}
               >
-                <strong style={{ display: "block", marginBottom: 4 }}>
-                  {infoTitle}
-                </strong>
-                {infoBody}
-              </div>
-            )}
+                i
+              </button>
 
-            {/* heading */}
-            <h3
-              className="daily-spin-title"
-              style={{
-                textAlign: "center",
-                fontWeight: 700,
-                fontSize: 20,
-                color: "#0f172a",
-                marginTop: 6,
-              }}
-            >
-              {titleText}
-            </h3>
-            <p
-              className="daily-spin-subtitle"
-              style={{
-                textAlign: "center",
-                fontSize: 13,
-                color: "#475569",
-                marginBottom: 12,
-              }}
-            >
-              {subtitleText}
-            </p>
+              {showInfo && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 44,
+                    left: 12,
+                    right: 12,
+                    background: "#fff",
+                    borderRadius: 14,
+                    padding: "10px 12px",
+                    fontSize: 12,
+                    color: "#0f172a",
+                    boxShadow: "0 8px 16px rgba(15,23,42,0.15)",
+                    zIndex: 50,
+                  }}
+                >
+                  <strong style={{ display: "block", marginBottom: 4 }}>
+                    {infoTitle}
+                  </strong>
+                  {infoBody}
+                </div>
+              )}
 
-            {/* 3×3 grid */}
-            <div
-              className="daily-spin-grid"
-              style={{
-                marginTop: 8,
-                marginBottom: 16,
-                display: "grid",
-                gridTemplateColumns: `repeat(${GRID_COLS}, var(--daily-spin-tile-size, ${TILE_SIZE}px))`,
-                gridTemplateRows: `repeat(${GRID_ROWS}, var(--daily-spin-tile-size, ${TILE_SIZE}px))`,
-                gap: `var(--daily-spin-grid-gap, ${TILE_GAP}px)`,
-                justifyContent: "center",
-              }}
-            >
-              {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, idx) => {
-                const isSelected = hasPicked && idx === selectedIndex;
-
-                const baseBg = "#ffffff";
-                const selectedBg = "#fef3c7";
-
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => handlePick(idx)}
-                    disabled={!canSpin || hasPicked || isSubmitting || !isOnline}
-                    style={{
-                      width: "var(--daily-spin-tile-size, 86px)",
-                      height: "var(--daily-spin-tile-size, 86px)",
-                      borderRadius: 24,
-                      border: "none",
-                      background: isSelected ? selectedBg : baseBg,
-                      boxShadow: isSelected
-                        ? "0 10px 28px rgba(245,158,11,0.45)"
-                        : "0 6px 16px rgba(15,23,42,0.12)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: !canSpin || hasPicked ? "default" : "pointer",
-                      transition:
-                        "transform .18s ease, box-shadow .18s ease, background .18s ease",
-                      transform:
-                        isSelected && revealStage !== "idle"
-                          ? "scale(1.06) translateY(-2px)"
-                          : "scale(1)",
-                    }}
-                  >
-                    <span style={{ fontSize: 26 }}>
-                      {isSelected && result ? result.icon : "📦"}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* footer: timer + result text */}
-            <div
-              className="daily-spin-timer"
-              style={{
-                textAlign: "center",
-                fontSize: 13,
-                color: "#475569",
-                marginBottom: 4,
-              }}
-            >
-              {comeBackTxt} {formatMs(remainingMs)}
-            </div>
-            {result && (
-              <div
-                className="daily-spin-reward"
+              {/* heading */}
+              <h3
                 style={{
                   textAlign: "center",
                   fontWeight: 700,
-                  marginTop: 4,
-                  fontSize: 13,
+                  fontSize: 20,
                   color: "#0f172a",
+                  marginTop: 6,
                 }}
               >
-                {youWonTxt}: {result.label}
+                {titleText}
+              </h3>
+              <p
+                style={{
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "#475569",
+                  marginBottom: 12,
+                }}
+              >
+                {subtitleText}
+              </p>
+
+              {/* 3×3 grid */}
+              <div
+                style={{
+                  marginTop: 8,
+                  marginBottom: 16,
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${GRID_COLS}, ${TILE_SIZE}px)`,
+                  gridTemplateRows: `repeat(${GRID_ROWS}, ${TILE_SIZE}px)`,
+                  gap: TILE_GAP,
+                  justifyContent: "center",
+                }}
+              >
+                {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, idx) => {
+                  const isSelected = hasPicked && idx === selectedIndex;
+
+                  const baseBg = "#ffffff";
+                  const selectedBg = "#fef3c7";
+
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => handlePick(idx)}
+                      disabled={!canSpin || hasPicked || isSubmitting || !isOnline}
+                      style={{
+                        width: TILE_SIZE,
+                        height: TILE_SIZE,
+                        borderRadius: 24,
+                        border: "none",
+                        background: isSelected ? selectedBg : baseBg,
+                        boxShadow: isSelected
+                          ? "0 10px 28px rgba(245,158,11,0.45)"
+                          : "0 6px 16px rgba(15,23,42,0.12)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: !canSpin || hasPicked ? "default" : "pointer",
+                        transition:
+                          "transform .18s ease, box-shadow .18s ease, background .18s ease",
+                        transform:
+                          isSelected && revealStage !== "idle"
+                            ? "scale(1.06) translateY(-2px)"
+                            : "scale(1)",
+                      }}
+                    >
+                      <span style={{ fontSize: 26 }}>
+                        {isSelected && result ? result.icon : "📦"}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
+
+              {/* footer: timer + result text */}
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "#475569",
+                  marginBottom: 4,
+                }}
+              >
+                {comeBackTxt} {formatMs(remainingMs)}
+              </div>
+              {result && (
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontWeight: 700,
+                    marginTop: 4,
+                    fontSize: 13,
+                    color: "#0f172a",
+                  }}
+                >
+                  {youWonTxt}: {result.label}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        ))}
     </>
   );
 }
