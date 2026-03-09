@@ -96,6 +96,7 @@ export default function GameScreen({
   activeUser,
   onCoinsChange,
   onGameplayDiagnostics,
+  onQuestionFlowDiagnostics,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -370,6 +371,7 @@ export default function GameScreen({
   const pendingPauseTimeoutRef = useRef(null);
   const questionTokenRef = useRef(0);
   const actionInFlightRef = useRef(false);
+  const lastProgressionErrorRef = useRef("");
 
   const clearPendingTransitionTimeout = useCallback(() => {
     if (pendingCorrectTransitionTimeoutRef.current) {
@@ -431,6 +433,77 @@ export default function GameScreen({
 
   const current = questions[qIndex];
 
+  const emitQuestionFlowDiagnostics = useCallback(
+    (extra = {}) => {
+      if (!onQuestionFlowDiagnostics) return;
+      const route =
+        typeof window === "undefined"
+          ? "unknown"
+          : `${window.location?.pathname || "/"} (screen:game)`;
+      const boosterState = JSON.stringify({
+        remove2: Number(hints?.remove2 || 0),
+        autoPass: Number(hints?.autoPass || 0),
+        pause: Number(hints?.pause || 0),
+        ttPaused: Boolean(ttPaused),
+      });
+      onQuestionFlowDiagnostics({
+        route,
+        screen: "game",
+        mode,
+        levelId,
+        questionIndex: qIndex,
+        questionCount,
+        questionCode: current?.correct?.code || "",
+        selectedAnswer,
+        uiHasSelectedAnswer: selectedAnswer !== null,
+        isValidationInProgress: Boolean(actionInFlightRef.current),
+        isWaitingAsync: Boolean(isAnimatingTransition || isFetchingNextQuestion),
+        isInputLocked: Boolean(isInputLocked),
+        isLoading: Boolean(!preloadReady || !currentFlagLoaded),
+        isAnimatingTransition: Boolean(isAnimatingTransition),
+        isFetchingNextQuestion: Boolean(isFetchingNextQuestion),
+        actionInFlight: Boolean(actionInFlightRef.current),
+        boosterState,
+        lastProgressionError: lastProgressionErrorRef.current,
+        timestamp: new Date().toISOString(),
+        ...extra,
+      });
+    },
+    [
+      onQuestionFlowDiagnostics,
+      hints,
+      ttPaused,
+      mode,
+      levelId,
+      qIndex,
+      questionCount,
+      current,
+      selectedAnswer,
+      isAnimatingTransition,
+      isFetchingNextQuestion,
+      isInputLocked,
+      preloadReady,
+      currentFlagLoaded,
+    ]
+  );
+
+  const logQuestionFlowEvent = useCallback(
+    (eventName, meta = {}) => {
+      console.log("[question-flow]", eventName, {
+        mode,
+        levelId,
+        qIndex,
+        questionCode: current?.correct?.code || null,
+        selectedAnswer,
+        isInputLocked,
+        actionInFlight: actionInFlightRef.current,
+        ...meta,
+      });
+      emitQuestionFlowDiagnostics({ lastEvent: eventName, lastEventMeta: meta });
+    },
+    [mode, levelId, qIndex, current, selectedAnswer, isInputLocked, emitQuestionFlowDiagnostics]
+  );
+
   // reset base state on level/mode change
   useEffect(() => {
     setQIndex(0);
@@ -490,6 +563,10 @@ export default function GameScreen({
     }, INPUT_LOCK_WATCHDOG_MS + 50);
     return () => clearTimeout(timer);
   }, [isInputLocked, current, done, fail, qIndex, unlockInput]);
+
+  useEffect(() => {
+    logQuestionFlowEvent(isInputLocked ? "state locked" : "state unlocked");
+  }, [isInputLocked, logQuestionFlowEvent]);
 
 
   // mark run as started once they interact (move question / answer / wrong)
@@ -873,6 +950,10 @@ export default function GameScreen({
     noteGameplayDiagnostic();
   }, [brokenFlagCodesState, noteGameplayDiagnostic]);
 
+  useEffect(() => {
+    emitQuestionFlowDiagnostics();
+  }, [emitQuestionFlowDiagnostics]);
+
   // ---------- best-ever stars for badge (from persistent store) ----------
   const bestStars = useMemo(() => {
     return Math.max(Number(storedStars || 0), Number(currentStars || 0));
@@ -899,6 +980,10 @@ export default function GameScreen({
       ...prev,
       remove2: Math.max(0, (prev?.remove2 ?? 0) - 1),
     }));
+    logQuestionFlowEvent("booster used", {
+      booster: "remove2",
+      removedCount: toDisable.length,
+    });
   }
 
   function handleUseAutoPass() {
@@ -919,6 +1004,7 @@ export default function GameScreen({
       ...prev,
       autoPass: Math.max(0, (prev?.autoPass ?? 0) - 1),
     }));
+    logQuestionFlowEvent("booster used", { booster: "autoPass" });
   }
 
   function handleUsePause() {
@@ -943,6 +1029,7 @@ export default function GameScreen({
       pendingPauseTimeoutRef.current = null;
       setTtPaused(false);
     }, PAUSE_HINT_MS);
+    logQuestionFlowEvent("booster used", { booster: "pause" });
   }
 
   // ---------- COIN AWARD (per-username store) ----------
@@ -961,6 +1048,11 @@ export default function GameScreen({
   function handleAnswer(answer, { fromHint = false, event } = {}) {
     setLastTapTimestamp(Date.now());
     setLastTapTarget(describeTapTarget(event?.target));
+    logQuestionFlowEvent("answer tapped", {
+      answer,
+      fromHint,
+      tapTarget: describeTapTarget(event?.target),
+    });
     if (!preloadReady || !current || done || fail || !currentFlagLoaded) return false;
     if (isInputLocked || actionInFlightRef.current) return false;
     // normal clicks shouldn't work while we show colours
@@ -972,12 +1064,19 @@ export default function GameScreen({
     const isCorrect =
       current.correct && current.correct.name === answer ? true : false;
 
+    logQuestionFlowEvent("validation started", {
+      answer,
+      isCorrect,
+      questionToken,
+    });
+
     // show highlight
     setSelectedAnswer(answer);
 
     // ----- CLASSIC -----
     if (isClassicMode) {
       if (isCorrect) {
+        logQuestionFlowEvent("answer accepted", { answer, mode: "classic" });
         soundCorrect && soundCorrect();
         const lastQ = qIndex + 1 >= questionCount;
         lockInput();
@@ -1013,12 +1112,26 @@ export default function GameScreen({
 
               markRunEnded();
               setDone(true);
+              logQuestionFlowEvent("validation completed", {
+                answer,
+                accepted: true,
+                completedRun: true,
+              });
             } else {
               setIsFetchingNextQuestion(true);
+              logQuestionFlowEvent("next question requested", { nextIndex: qIndex + 1 });
               setQIndex((p) => p + 1);
               setSelectedAnswer(null);
               setWrongAnswers([]);
+              logQuestionFlowEvent("next question loaded", { nextIndex: qIndex + 1 });
             }
+          } catch (error) {
+            lastProgressionErrorRef.current =
+              error?.message || "Unknown question progression error";
+            logQuestionFlowEvent("caught progression error", {
+              message: lastProgressionErrorRef.current,
+            });
+            console.error("[question-flow] classic progression failure", error);
           } finally {
             actionInFlightRef.current = false;
             unlockInput();
@@ -1026,6 +1139,7 @@ export default function GameScreen({
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
+        logQuestionFlowEvent("answer rejected", { answer, mode: "classic" });
         actionInFlightRef.current = false;
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -1041,6 +1155,11 @@ export default function GameScreen({
         pendingWrongResetTimeoutRef.current = setTimeout(() => {
           pendingWrongResetTimeoutRef.current = null;
           setSelectedAnswer(null);
+          logQuestionFlowEvent("validation completed", {
+            answer,
+            accepted: false,
+            resetSelection: true,
+          });
         }, WRONG_ANSWER_RESET_MS);
       }
       return true;
@@ -1049,6 +1168,7 @@ export default function GameScreen({
     // ----- TIME TRIAL -----
     if (mode === "timetrial") {
       if (isCorrect) {
+        logQuestionFlowEvent("answer accepted", { answer, mode: "timetrial" });
         soundCorrect && soundCorrect();
         const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
         const newTotal = ttScore + gain;
@@ -1088,14 +1208,28 @@ export default function GameScreen({
               markRunEnded();
               setTtScore(newTotal);
               setDone(true);
+              logQuestionFlowEvent("validation completed", {
+                answer,
+                accepted: true,
+                completedRun: true,
+              });
             } else {
               setIsFetchingNextQuestion(true);
+              logQuestionFlowEvent("next question requested", { nextIndex: qIndex + 1 });
               setTtScore(newTotal);
               setQIndex((p) => p + 1);
               setTtRemaining(TT_MS_PER_Q);
               setSelectedAnswer(null);
               setWrongAnswers([]);
+              logQuestionFlowEvent("next question loaded", { nextIndex: qIndex + 1 });
             }
+          } catch (error) {
+            lastProgressionErrorRef.current =
+              error?.message || "Unknown question progression error";
+            logQuestionFlowEvent("caught progression error", {
+              message: lastProgressionErrorRef.current,
+            });
+            console.error("[question-flow] timetrial progression failure", error);
           } finally {
             actionInFlightRef.current = false;
             unlockInput();
@@ -1103,6 +1237,7 @@ export default function GameScreen({
           }, CORRECT_ANSWER_HOLD_MS);
         });
       } else {
+        logQuestionFlowEvent("answer rejected", { answer, mode: "timetrial" });
         actionInFlightRef.current = false;
         soundWrong && soundWrong();
         setSkulls((prev) => {
@@ -1118,6 +1253,11 @@ export default function GameScreen({
         pendingWrongResetTimeoutRef.current = setTimeout(() => {
           pendingWrongResetTimeoutRef.current = null;
           setSelectedAnswer(null);
+          logQuestionFlowEvent("validation completed", {
+            answer,
+            accepted: false,
+            resetSelection: true,
+          });
         }, WRONG_ANSWER_RESET_MS);
       }
       return true;
