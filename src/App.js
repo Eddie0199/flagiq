@@ -20,7 +20,7 @@ import ResetPasswordPage from "./components/ResetPasswordPage";
 import LegalPage from "./components/LegalPage";
 import { registerPurchaseRewardHandler, runIapStartupDiagnostics } from "./purchases";
 import IapDiagnosticsPanel from "./components/IapDiagnosticsPanel";
-import { IS_DEBUG_BUILD } from "./debugTools";
+import { IS_DEBUG_BUILD, IS_HIDDEN_DEBUGGER_ENABLED } from "./debugTools";
 import {
   LOCAL_PACKS,
   buildLocalPackLevels,
@@ -1015,7 +1015,7 @@ export default function App() {
     return <ConfigMissingScreen missingKeys={missingSupabaseEnv} />;
   }
 
-  const debugOverlayEnabled = IS_DEBUG_BUILD;
+  const debugOverlayEnabled = IS_HIDDEN_DEBUGGER_ENABLED;
   const initialDebugLogs = useMemo(
     () => (debugOverlayEnabled ? readDebugLogs() : []),
     [debugOverlayEnabled]
@@ -1027,6 +1027,7 @@ export default function App() {
   const debugTapRef = useRef({ count: 0, timer: null });
   const [appInfo, setAppInfo] = useState({ version: "", build: "" });
   const [gameplayDiagnostics, setGameplayDiagnostics] = useState(null);
+  const [questionFlowDiagnostics, setQuestionFlowDiagnostics] = useState(null);
   const [resetDeepLinkUrl, setResetDeepLinkUrl] = useState("");
   const [isRecoveryFlow, setIsRecoveryFlow] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -1381,7 +1382,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (IS_DEBUG_BUILD) return;
+    if (IS_HIDDEN_DEBUGGER_ENABLED) return;
     if (showDebugScreen || showDebugOverlay) {
       console.warn("[debug-tools] Debug UI attempted to mount in production; force-disabling.");
       setShowDebugScreen(false);
@@ -2586,6 +2587,10 @@ export default function App() {
   const handleGameplayDiagnostics = useCallback((stats) => {
     setGameplayDiagnostics(stats);
   }, []);
+
+  const handleQuestionFlowDiagnostics = useCallback((stats) => {
+    setQuestionFlowDiagnostics(stats);
+  }, []);
   const handleNextLevel = () => {
     if (mode === "local") {
       const idx = localPackLevels.findIndex((lvl) => lvl.id === levelId);
@@ -2885,6 +2890,7 @@ export default function App() {
               })
             }
             onGameplayDiagnostics={handleGameplayDiagnostics}
+            onQuestionFlowDiagnostics={handleQuestionFlowDiagnostics}
           />
         </>
       )}
@@ -3159,6 +3165,41 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ fontSize: 12, color: "#cbd5f5" }}>No gameplay run recorded yet.</div>
+              )}
+            </div>
+            <div
+              style={{
+                border: "1px solid rgba(148, 163, 184, 0.3)",
+                borderRadius: 10,
+                padding: 12,
+                marginBottom: 12,
+                background: "rgba(15, 23, 42, 0.65)",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>Question progression diagnostics</div>
+              {questionFlowDiagnostics ? (
+                <div style={{ fontSize: 12, color: "#cbd5f5", lineHeight: 1.5 }}>
+                  <div>route: {questionFlowDiagnostics.route || "unknown"}</div>
+                  <div>screen: {questionFlowDiagnostics.screen || "unknown"}</div>
+                  <div>mode: {questionFlowDiagnostics.mode || "unknown"}</div>
+                  <div>levelId: {questionFlowDiagnostics.levelId || "-"}</div>
+                  <div>questionIndex: {Number(questionFlowDiagnostics.questionIndex) || 0}</div>
+                  <div>questionCount: {Number(questionFlowDiagnostics.questionCount) || 0}</div>
+                  <div>questionCode: {questionFlowDiagnostics.questionCode || "-"}</div>
+                  <div>selectedAnswer: {questionFlowDiagnostics.selectedAnswer || "none"}</div>
+                  <div>uiHasSelectedAnswer: {String(questionFlowDiagnostics.uiHasSelectedAnswer)}</div>
+                  <div>isValidationInProgress: {String(questionFlowDiagnostics.isValidationInProgress)}</div>
+                  <div>isWaitingAsync: {String(questionFlowDiagnostics.isWaitingAsync)}</div>
+                  <div>isInputLocked: {String(questionFlowDiagnostics.isInputLocked)}</div>
+                  <div>isLoading: {String(questionFlowDiagnostics.isLoading)}</div>
+                  <div>isAnimatingTransition: {String(questionFlowDiagnostics.isAnimatingTransition)}</div>
+                  <div>isFetchingNextQuestion: {String(questionFlowDiagnostics.isFetchingNextQuestion)}</div>
+                  <div>actionInFlight: {String(questionFlowDiagnostics.actionInFlight)}</div>
+                  <div>boosterState: {questionFlowDiagnostics.boosterState || "none"}</div>
+                  <div>lastProgressionError: {questionFlowDiagnostics.lastProgressionError || "none"}</div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "#cbd5f5" }}>No question-progression diagnostics yet.</div>
               )}
             </div>
             <div
