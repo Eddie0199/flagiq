@@ -646,7 +646,12 @@ export default function HomeScreen({
     const newWindow = window.open(url, "_blank", "noopener,noreferrer");
     if (newWindow) {
       newWindow.opener = null;
+      return;
     }
+
+    // iOS/PWA browsers can block window.open on first tap.
+    // Fall back to same-tab navigation so legal links always open on one tap.
+    window.location.assign(url);
   };
 
   const Card = ({ color, icon, title, stats, onClick, mode, disabled }) => {
