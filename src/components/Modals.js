@@ -14,13 +14,10 @@ function formatRemaining(ms) {
 
 export function LockedModal({ info, onClose, lang }) {
   const { need, blockStart, blockEnd } = info || {};
-  const overlayPress = usePressAction({ id: "locked-modal-overlay", onPress: onClose });
   const closePress = usePressAction({ id: "locked-modal-ok", onPress: onClose });
 
   return (
     <div
-      onPointerDown={overlayPress.onPointerDown}
-      onClick={overlayPress.onClick}
       style={{
         position: "fixed",
         inset: 0,
@@ -68,7 +65,6 @@ export function LockedModal({ info, onClose, lang }) {
 }
 
 export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
-  const overlayPress = usePressAction({ id: "no-lives-modal-overlay", onPress: onClose });
   const closePress = usePressAction({ id: "no-lives-modal-ok", onPress: onClose });
   const [now, setNow] = useState(Date.now());
 
@@ -82,8 +78,6 @@ export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
 
   return (
     <div
-      onPointerDown={overlayPress.onPointerDown}
-      onClick={overlayPress.onClick}
       style={{
         position: "fixed",
         inset: 0,
