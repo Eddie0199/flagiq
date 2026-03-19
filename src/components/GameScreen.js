@@ -128,6 +128,7 @@ export default function GameScreen({
   const lastResolvedFlagUrlRef = useRef("");
   const currentFlagRequestIdRef = useRef(0);
   const [currentFlagRequestId, setCurrentFlagRequestId] = useState(0);
+  const currentFlagImageRef = useRef(null);
   const preloadStatsRef = useRef({
     startedAt: 0,
     completedAt: 0,
@@ -436,6 +437,22 @@ export default function GameScreen({
   const [runStars, setRunStars] = useState(0);
 
   const current = questions[qIndex];
+  const questionReadyDetails = useMemo(() => {
+    const hasCurrent = Boolean(current);
+    const optionsVisible = Boolean(hasCurrent && current?.options?.length);
+    const renderReady = Boolean(currentFlagLoaded || optionsVisible);
+    return {
+      preloadReady: Boolean(preloadReady),
+      currentExists: hasCurrent,
+      done: Boolean(done),
+      fail: Boolean(fail),
+      currentFlagLoaded: Boolean(currentFlagLoaded),
+      optionsVisible,
+      renderReady,
+      questionReady:
+        Boolean(preloadReady) && hasCurrent && !done && !fail && renderReady,
+    };
+  }, [preloadReady, current, done, fail, currentFlagLoaded]);
 
   const emitQuestionFlowDiagnostics = useCallback(
     (extra = {}) => {
@@ -473,6 +490,7 @@ export default function GameScreen({
         resolvedOptionIndex,
         resolvedAnswerId,
         lastGuardBlockedReason,
+        questionReadyDetails,
         timestamp: new Date().toISOString(),
         ...extra,
       });
@@ -495,6 +513,7 @@ export default function GameScreen({
       resolvedOptionIndex,
       resolvedAnswerId,
       lastGuardBlockedReason,
+      questionReadyDetails,
     ]
   );
 
@@ -660,9 +679,7 @@ export default function GameScreen({
   // ---------- TIME TRIAL TICKER ----------
   useEffect(() => {
     if (mode !== "timetrial") return;
-    if (!preloadReady) return;
-    if (!currentFlagLoaded) return;
-    if (done || fail) return;
+    if (!questionReadyDetails.questionReady) return;
     if (ttPaused) return;
 
     const timer = setInterval(() => {
@@ -682,7 +699,7 @@ export default function GameScreen({
 
     return () => clearInterval(timer);
     
-  }, [mode, preloadReady, currentFlagLoaded, done, fail, ttPaused]);
+  }, [mode, questionReadyDetails, ttPaused]);
 
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
@@ -1005,6 +1022,20 @@ export default function GameScreen({
   }, [current?.correct?.code, displayFlagSrc, current?.correct]);
 
   useEffect(() => {
+    const img = currentFlagImageRef.current;
+    if (!img || currentFlagLoaded) return;
+    const requestId = Number(img.dataset.requestId || 0);
+    if (requestId !== currentFlagRequestIdRef.current) return;
+    if (img.complete && img.naturalWidth > 0) {
+      setCurrentFlagLoaded(true);
+      logQuestionFlowEvent("flag_image_complete_sync", {
+        requestId,
+        questionCode: current?.correct?.code || null,
+      });
+    }
+  }, [currentFlagLoaded, currentFlagRequestId, displayFlagSrc, current, logQuestionFlowEvent]);
+
+  useEffect(() => {
     if (!questions.length && !done && !fail) {
       markRunEnded();
       setDone(true);
@@ -1124,14 +1155,28 @@ export default function GameScreen({
       tapTarget,
     });
 
-    const blockWithReason = (reason) => {
+    const blockWithReason = (reason, extra = {}) => {
       setLastGuardBlockedReason(reason);
-      logQuestionFlowEvent("answer_guard_blocked", { reason, answerId, optionIndex, fromHint });
+      logQuestionFlowEvent("answer_guard_blocked", {
+        reason,
+        answerId,
+        optionIndex,
+        fromHint,
+        ...extra,
+      });
       return false;
     };
 
-    if (!preloadReady || !current || done || fail || !currentFlagLoaded) {
-      return blockWithReason("blocked_question_not_ready");
+    if (!questionReadyDetails.questionReady) {
+      return blockWithReason("blocked_question_not_ready", {
+        preloadReady: questionReadyDetails.preloadReady,
+        currentExists: questionReadyDetails.currentExists,
+        done: questionReadyDetails.done,
+        fail: questionReadyDetails.fail,
+        currentFlagLoaded: questionReadyDetails.currentFlagLoaded,
+        optionsVisible: questionReadyDetails.optionsVisible,
+        renderReady: questionReadyDetails.renderReady,
+      });
     }
     if (isInputLocked || actionInFlightRef.current) {
       return blockWithReason("blocked_action_in_flight");
@@ -2108,6 +2153,7 @@ export default function GameScreen({
           >
             {current ? (
               <img
+                ref={currentFlagImageRef}
                 src={displayFlagSrc || flagSrc(current.correct, 320)}
                 alt={current.correct.name}
                 data-request-id={currentFlagRequestId}
@@ -2115,6 +2161,10 @@ export default function GameScreen({
                   const requestId = Number(event.currentTarget.dataset.requestId || 0);
                   if (requestId !== currentFlagRequestIdRef.current) return;
                   setCurrentFlagLoaded(true);
+                  logQuestionFlowEvent("flag_image_loaded", {
+                    requestId,
+                    questionCode: current?.correct?.code || null,
+                  });
                 }}
                 onError={(event) => {
                   const requestId = Number(event.currentTarget.dataset.requestId || 0);
@@ -2209,7 +2259,7 @@ export default function GameScreen({
                     <button
                       key={`${current?.correct?.code || `q${qIndex}`}-${optIndex}`}
                       onClick={(event) => handleAnswerPress(opt, optIndex, { event })}
-                      disabled={isWrong || selectedAnswer !== null || isInputLocked}
+                      disabled={!questionReadyDetails.questionReady || isWrong || selectedAnswer !== null || isInputLocked}
                       style={{
                         background: bg,
                         border,
@@ -2220,6 +2270,7 @@ export default function GameScreen({
                         textAlign: "left",
                         fontWeight: 500,
                         cursor:
+                          !questionReadyDetails.questionReady ||
                           isWrong || selectedAnswer !== null || isInputLocked
                             ? "not-allowed"
                             : "pointer",
