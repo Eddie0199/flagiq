@@ -1,5 +1,5 @@
 // components/Modals.js
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { REGEN_MS } from "../App";
 
 function formatRemaining(ms) {
@@ -11,11 +11,61 @@ function formatRemaining(ms) {
   return `${m}:${ss}`;
 }
 
+function swallowInteraction(e) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function useModalCloseHandler(onClose) {
+  const pointerCloseHandledRef = useRef(false);
+
+  const handleButtonPointerDown = useCallback((e) => {
+    pointerCloseHandledRef.current = false;
+    swallowInteraction(e);
+  }, []);
+
+  const handleButtonPointerUp = useCallback(
+    (e) => {
+      if (pointerCloseHandledRef.current) {
+        swallowInteraction(e);
+        return;
+      }
+      pointerCloseHandledRef.current = true;
+      swallowInteraction(e);
+      onClose?.();
+    },
+    [onClose]
+  );
+
+  const handleButtonClick = useCallback(
+    (e) => {
+      swallowInteraction(e);
+      if (pointerCloseHandledRef.current) {
+        pointerCloseHandledRef.current = false;
+        return;
+      }
+      onClose?.();
+    },
+    [onClose]
+  );
+
+  return {
+    handleButtonPointerDown,
+    handleButtonPointerUp,
+    handleButtonClick,
+  };
+}
+
 export function LockedModal({ info, onClose, lang }) {
   const { need, blockStart, blockEnd } = info || {};
+  const {
+    handleButtonPointerDown,
+    handleButtonPointerUp,
+    handleButtonClick,
+  } = useModalCloseHandler(onClose);
+
   return (
     <div
-      onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
@@ -28,7 +78,8 @@ export function LockedModal({ info, onClose, lang }) {
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={swallowInteraction}
+        onClick={swallowInteraction}
         style={{
           width: "100%",
           maxWidth: 420,
@@ -44,7 +95,9 @@ export function LockedModal({ info, onClose, lang }) {
         </div>
         <div style={{ marginTop: 14, textAlign: "right" }}>
           <button
-            onClick={onClose}
+            onPointerDown={handleButtonPointerDown}
+            onPointerUp={handleButtonPointerUp}
+            onClick={handleButtonClick}
             style={{
               padding: "8px 12px",
               borderRadius: 10,
@@ -63,6 +116,11 @@ export function LockedModal({ info, onClose, lang }) {
 
 export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
   const [now, setNow] = useState(Date.now());
+  const {
+    handleButtonPointerDown,
+    handleButtonPointerUp,
+    handleButtonClick,
+  } = useModalCloseHandler(onClose);
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
@@ -71,7 +129,6 @@ export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
   const nextMs = Math.max(0, REGEN_MS - (now - baseline));
   return (
     <div
-      onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
@@ -84,7 +141,8 @@ export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={swallowInteraction}
+        onClick={swallowInteraction}
         style={{
           width: "100%",
           maxWidth: 380,
@@ -104,7 +162,9 @@ export function NoLivesModal({ onClose, lastRegenAt, maxHearts }) {
         </p>
         <div style={{ marginTop: 12 }}>
           <button
-            onClick={onClose}
+            onPointerDown={handleButtonPointerDown}
+            onPointerUp={handleButtonPointerUp}
+            onClick={handleButtonClick}
             style={{
               padding: "10px 14px",
               borderRadius: 10,
