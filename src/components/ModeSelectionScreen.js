@@ -6,24 +6,30 @@ function ModeCard({ color, icon, title, subtitle, progressLabel, starsLabel, onC
       onClick={onClick}
       disabled={disabled}
       style={{
-        width: "100%",
+        width: "85%",
+        maxWidth: 520,
         border: "none",
-        borderRadius: 28,
-        background: disabled ? "rgba(198, 218, 248, 0.92)" : color,
-        color: disabled ? "#4f6898" : "#0f172a",
+        borderRadius: 22,
+        background: disabled ? "#e5e7eb" : color,
+        color: disabled ? "#6b7280" : "#0f172a",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "18px 20px",
+        gap: 12,
+        padding: "6px 12px",
+        minHeight: 62,
         textAlign: "left",
-        cursor: disabled ? "default" : "pointer",
+        boxShadow: disabled ? "none" : "0 8px 18px rgba(0,0,0,.12)",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.75 : 1,
+        margin: "12px auto",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         <span style={{ fontSize: 32 }}>{icon}</span>
         <div>
-          <div style={{ fontSize: 53/2, fontWeight: 800 }}>{title}</div>
-          <div style={{ fontSize: 20/2, fontWeight: 700, opacity: disabled ? 0.75 : 1 }}>{subtitle}</div>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>{title}</div>
+          <div style={{ fontSize: 13, fontWeight: 700, opacity: disabled ? 0.75 : 1 }}>{subtitle}</div>
         </div>
       </div>
       <div style={{ minWidth: 94, textAlign: "right", fontWeight: 800 }}>
@@ -31,18 +37,27 @@ function ModeCard({ color, icon, title, subtitle, progressLabel, starsLabel, onC
           <span
             style={{
               borderRadius: 999,
-              background: "rgba(255,255,255,0.45)",
-              padding: "8px 14px",
+              background: "rgba(255, 255, 255, 0.95)",
+              boxShadow: "0 8px 16px rgba(17,24,39,0.25)",
+              border: "1px solid rgba(17,24,39,0.15)",
+              padding: "7px 12px",
               fontSize: 13,
             }}
           >
             {t ? t(lang, "comingSoon") : "Coming soon"}
           </span>
         ) : (
-          <>
-            <div style={{ fontSize: 14 }}>🏁 {progressLabel}</div>
-            <div style={{ fontSize: 14, marginTop: 4 }}>⭐ {starsLabel}</div>
-          </>
+          <div className="mode-progress-row">
+            <span className="mode-progress-token mode-progress-flag">
+              <span className="mode-progress-icon" aria-hidden="true">🏁</span>
+              <span className="mode-progress-value">{progressLabel}</span>
+            </span>
+            <span className="mode-progress-sep" aria-hidden="true">·</span>
+            <span className="mode-progress-token mode-progress-stars">
+              <span className="mode-progress-icon" aria-hidden="true">⭐</span>
+              <span className="mode-progress-value">{starsLabel}</span>
+            </span>
+          </div>
         )}
       </div>
     </button>
@@ -77,7 +92,7 @@ export default function ModeSelectionScreen({
 
   return (
     <div style={{ minHeight: "100vh", color: "white", padding: "16px 14px 24px" }}>
-      <div style={{ textAlign: "center", marginTop: 44, marginBottom: 34 }}>
+      <div style={{ textAlign: "center", marginTop: 44, marginBottom: 24 }}>
         <div style={{ fontSize: 64, lineHeight: 1 }}>🚩</div>
         <div style={{ fontSize: 54, fontWeight: 800, textShadow: "0 8px 16px rgba(15,23,42,.35)" }}>
           {text("appTitle", "FlagIQ")}
@@ -85,7 +100,7 @@ export default function ModeSelectionScreen({
       </div>
 
       {!loggedIn && (
-        <div style={{ margin: "0 6px 12px" }}>
+        <div style={{ width: "85%", maxWidth: 520, margin: "0 auto 12px" }}>
           <button
             onClick={() => onAuthRequest && onAuthRequest("login")}
             style={{
@@ -108,7 +123,7 @@ export default function ModeSelectionScreen({
         </div>
       )}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 16 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 8 }}>
         <ModeCard
           color="#f3cc2f"
           icon="🚩"
@@ -144,7 +159,7 @@ export default function ModeSelectionScreen({
         />
       </div>
 
-      <div style={{ textAlign: "center", marginTop: 42, opacity: 0.92 }}>
+      <div style={{ textAlign: "center", marginTop: 38, opacity: 0.92 }}>
         <div style={{ fontWeight: 700 }}>Powered by <span style={{ fontStyle: "italic" }}>Wild Moustache Games</span></div>
         <div style={{ marginTop: 8, display: "flex", justifyContent: "center", gap: 10 }}>
           <span>{text("footerTerms", "Terms")}</span>
