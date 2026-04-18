@@ -17,6 +17,8 @@ export default function SettingsModal({
   setScreen,
   LANGS = [],
   t,
+  onAuthRequest,
+  onRestorePurchases,
   onResetProgress, // dev-only callback from App (optional)
 }) {
   const loggedIn = !!activeUser;
@@ -53,14 +55,14 @@ export default function SettingsModal({
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error("You must be logged in to delete your account.");
+        throw new Error(tx("deleteAccountMustLogin"));
       }
 
       const { data, error } = await supabase.functions.invoke("delete-account");
 
       if (error) {
         console.error("Delete account function error", error, data);
-        throw new Error(error.message || "We could not delete your account.");
+        throw new Error(error.message || tx("deleteAccountErrorGeneric"));
       }
 
       try {
@@ -73,7 +75,7 @@ export default function SettingsModal({
       setActiveUserLabel && setActiveUserLabel("");
       setDeleteConfirmOpen(false);
       setStatusType("success");
-      setStatusMessage("Your account has been permanently deleted.");
+      setStatusMessage(tx("deleteAccountSuccess"));
       setScreen && setScreen("home");
       setTimeout(() => {
         onClose();
@@ -83,7 +85,7 @@ export default function SettingsModal({
       setStatusType("error");
       setStatusMessage(
         error?.message ||
-          "We could not delete your account right now. Please try again."
+          tx("deleteAccountErrorGeneric")
       );
     } finally {
       setDeleteBusy(false);
@@ -462,6 +464,63 @@ export default function SettingsModal({
 
         {loggedIn && (
           <button
+            onClick={onRestorePurchases}
+            style={{
+              width: "100%",
+              background: "#eef2ff",
+              border: "1px solid #c7d2fe",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              marginTop: 14,
+              cursor: "pointer",
+              color: "#1e3a8a",
+            }}
+          >
+            {tx("restorePurchases")}
+          </button>
+        )}
+
+        {!loggedIn && (
+          <button
+            onClick={() => onAuthRequest && onAuthRequest("login")}
+            style={{
+              width: "100%",
+              background: "#0f172a",
+              color: "#fff",
+              border: "1px solid #0f172a",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              marginTop: 14,
+              cursor: "pointer",
+            }}
+          >
+            {tx("signInCreateAccount")}
+          </button>
+        )}
+
+        {!loggedIn && (
+          <button
+            onClick={onRestorePurchases}
+            style={{
+              width: "100%",
+              background: "#eef2ff",
+              border: "1px solid #c7d2fe",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              marginTop: 10,
+              cursor: "pointer",
+              color: "#1e3a8a",
+            }}
+          >
+            {tx("restorePurchases")}
+          </button>
+        )}
+
+        {loggedIn && (
+          <button
             onClick={handleLogout}
             style={{
               width: "100%",
@@ -496,7 +555,7 @@ export default function SettingsModal({
               cursor: "pointer",
             }}
           >
-            Delete Account
+            {tx("deleteAccount")}
           </button>
         )}
       </div>
@@ -528,11 +587,10 @@ export default function SettingsModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontSize: 18, fontWeight: 700, color: "#7f1d1d" }}>
-              Permanently delete account?
+              {tx("deleteAccountConfirmTitle")}
             </div>
             <div style={{ fontSize: 13, color: "#475569", marginTop: 8 }}>
-              This action cannot be undone. Your account will be permanently
-              deleted, and you will be signed out.
+              {tx("deleteAccountConfirmBody")}
             </div>
             <div
               style={{
@@ -553,7 +611,7 @@ export default function SettingsModal({
                   cursor: deleteBusy ? "not-allowed" : "pointer",
                 }}
               >
-                Cancel
+                {tx("cancel")}
               </button>
               <button
                 onClick={handleDeleteAccount}
@@ -569,7 +627,7 @@ export default function SettingsModal({
                   opacity: deleteBusy ? 0.7 : 1,
                 }}
               >
-                {deleteBusy ? "Deleting..." : "Yes, delete account"}
+                {deleteBusy ? tx("deleting") : tx("deleteAccountConfirmAction")}
               </button>
             </div>
           </div>
