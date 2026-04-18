@@ -713,6 +713,7 @@ export default function HomeScreen({
   onDailySpinClaim,
   loggedIn,
   onAuthRequest,
+  onEnterModes,
   i18nAuditEnabled = false,
 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -1554,39 +1555,27 @@ export default function HomeScreen({
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
+            gap: 12,
           }}
         >
-          <Card
-            color="#f3cc2f"
-            icon="🚩"
-            title={text("classic", "Classic")}
-            stats={classicFromStore}
-            onClick={(event, eventType) =>
-              onStart && onStart("classic", null, { event, eventType })
-            }
-            mode="classic"
-          />
-          <Card
-            color="#38c5dd"
-            icon="⏱️"
-            title={text("timeTrial", "Time Trial")}
-            stats={timetrialFromStore}
-            onClick={(event, eventType) =>
-              onStart && onStart("timetrial", null, { event, eventType })
-            }
-            mode="timetrial"
-          />
-          <Card
-            color="#ef4444"
-            icon="💀"
-            title={text("localFlags", "Local Flags")}
-            stats={localFromStore}
-            onClick={(event, eventType) =>
-              onStart && onStart("local", null, { event, eventType })
-            }
-            mode="local"
-            disabled={localDisabled}
-          />
+          <button
+            onClick={() => onEnterModes && onEnterModes()}
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              padding: "12px 16px",
+              borderRadius: 22,
+              border: "none",
+              background: "#0f172a",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 16,
+              boxShadow: "0 8px 18px rgba(15,23,42,.2)",
+              cursor: "pointer",
+            }}
+          >
+            {text("chooseGameMode", "Choose Game Mode")}
+          </button>
         </div>
       ) : (
         <div
@@ -1600,9 +1589,7 @@ export default function HomeScreen({
           }}
         >
           <button
-            onClick={(event) =>
-              onStart && onStart("classic", null, { event, eventType: "guest-cta" })
-            }
+            onClick={() => onEnterModes && onEnterModes()}
             style={{
               width: "85%",
               maxWidth: 520,
@@ -1637,6 +1624,22 @@ export default function HomeScreen({
           >
             {text("signInCreateAccount", "Sign in / Create account")}
           </button>
+          <div
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 600,
+              lineHeight: 1.35,
+              color: "rgba(255,255,255,0.92)",
+            }}
+          >
+            {text(
+              "homeAccountBenefits",
+              "Save your progress, keep your coins safe, and play across devices."
+            )}
+          </div>
         </div>
       )}
 

@@ -349,7 +349,10 @@ export default function StoreScreen({
       const result = await purchaseProduct(pack.id);
       if (result?.success) {
         const successMessage = text("storeCoinsAdded", "Purchase successful! Coins added.");
-        const guestPrompt = "Create an account to save your progress and purchases across devices";
+        const guestPrompt = text(
+          "guestPurchaseAccountPrompt",
+          "Create an account to save your progress and purchases across devices"
+        );
         setMessage(loggedIn ? successMessage : `${successMessage} ${guestPrompt}`);
         if (!loggedIn && typeof onGuestPurchasePrompt === "function") {
           onGuestPurchasePrompt();

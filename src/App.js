@@ -8,6 +8,7 @@ import { HINT_IDS, HINT_INVENTORY_KEYS } from "./hints";
 
 import Header from "./components/Header";
 import HomeScreen from "./components/HomeScreen";
+import ModeSelectionScreen from "./components/ModeSelectionScreen";
 import LevelScreen from "./components/LevelScreen";
 import GameScreen from "./components/GameScreen";
 import LocalPackLevelsScreen from "./components/LocalPackLevelsScreen";
@@ -1611,6 +1612,8 @@ export default function App() {
     setState: setReviewPromptState,
     loaded: reviewPromptLoaded,
   } = useReviewPromptState(storageProfileId);
+  const [dismissedGuestPromptMilestones, setDismissedGuestPromptMilestones] =
+    useUserStorage(storageProfileId, "guest:accountPrompt:dismissedMilestones", []);
   const reviewSessionIncrementedRef = useRef(false);
 
   useEffect(() => {
@@ -2252,6 +2255,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [lockInfo, setLockInfo] = useState(null);
   const [noLivesOpen, setNoLivesOpen] = useState(false);
+  const [guestAccountPromptMilestone, setGuestAccountPromptMilestone] = useState(null);
 
   const [levels] = useState(() => buildLevels(FLAGS));
   const activeLocalPack = useMemo(() => {
@@ -2689,6 +2693,18 @@ export default function App() {
     [setActiveLocalPackId, setMode, setScreen]
   );
 
+  useEffect(() => {
+    if (loggedIn) {
+      setGuestAccountPromptMilestone(null);
+      return;
+    }
+    const completedLevels = countUniqueCompletedLevels(progress);
+    const milestone = Math.floor(completedLevels / 5) * 5;
+    if (milestone < 5) return;
+    if (dismissedGuestPromptMilestones.includes(milestone)) return;
+    setGuestAccountPromptMilestone((prev) => (prev === milestone ? prev : milestone));
+  }, [dismissedGuestPromptMilestones, loggedIn, progress]);
+
   // navigation helper for opening the store from header
   const openStoreFromScreen = () => {
     setLastNonStoreScreen(screen || "levels");
@@ -2863,7 +2879,21 @@ export default function App() {
           onDailySpinClaim={handleDailySpinClaim}
           loggedIn={loggedIn}
           onAuthRequest={openAuth}
+          onEnterModes={() => setScreen("mode-select")}
           i18nAuditEnabled={debugOverlayEnabled && showDebugScreen}
+        />
+      )}
+
+      {screen === "mode-select" && (
+        <ModeSelectionScreen
+          t={t}
+          lang={lang}
+          loggedIn={loggedIn}
+          onBack={() => setScreen("home")}
+          onSelectMode={(modeId) => {
+            if (modeId === "future") return;
+            handleHomeStart(modeId, null);
+          }}
         />
       )}
 
@@ -3151,6 +3181,80 @@ export default function App() {
           onClose={() => setNoLivesOpen(false)}
         />
       )}
+      {!loggedIn && guestAccountPromptMilestone && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 310,
+            background: "rgba(2, 6, 23, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              width: "min(420px, 100%)",
+              background: "#fff",
+              borderRadius: 18,
+              padding: 16,
+              boxShadow: "0 18px 40px rgba(15,23,42,.3)",
+            }}
+          >
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>
+              {t(lang, "guestProgressPromptTitle")}
+            </div>
+            <div style={{ fontSize: 13, color: "#475569", marginBottom: 14 }}>
+              {String(t(lang, "guestProgressPromptBody")).replace(
+                "{{milestone}}",
+                String(guestAccountPromptMilestone)
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setDismissedGuestPromptMilestones((prev) =>
+                  Array.from(new Set([...(Array.isArray(prev) ? prev : []), guestAccountPromptMilestone]))
+                );
+                setGuestAccountPromptMilestone(null);
+                openAuth("signup");
+              }}
+              style={{
+                width: "100%",
+                border: "1px solid #0f172a",
+                background: "#0f172a",
+                color: "white",
+                borderRadius: 12,
+                padding: "10px 12px",
+                fontWeight: 700,
+                marginBottom: 8,
+              }}
+            >
+              {t(lang, "createAccount")}
+            </button>
+            <button
+              onClick={() => {
+                setDismissedGuestPromptMilestones((prev) =>
+                  Array.from(new Set([...(Array.isArray(prev) ? prev : []), guestAccountPromptMilestone]))
+                );
+                setGuestAccountPromptMilestone(null);
+              }}
+              style={{
+                width: "100%",
+                border: "1px solid #cbd5e1",
+                background: "#fff",
+                color: "#334155",
+                borderRadius: 12,
+                padding: "10px 12px",
+                fontWeight: 700,
+              }}
+            >
+              {t(lang, "maybeLater")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Auth */}
       {!loggedIn && authOpen && (
@@ -3177,7 +3281,7 @@ export default function App() {
               setActiveUser(u);
               setActiveUserLabel(u);
             }
-            setScreen("home");
+            setScreen("mode-select");
           }}
         />
       )}
