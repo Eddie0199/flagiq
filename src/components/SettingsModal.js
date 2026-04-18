@@ -51,34 +51,16 @@ export default function SettingsModal({
     try {
       const {
         data: { session },
-        error: sessionError,
       } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        throw new Error("No active session token found. Please log in again.");
+      if (!session) {
+        throw new Error("You must be logged in to delete your account.");
       }
 
-      const response = await fetch(
-        "https://zhrxgwsphqfkkcnjndds.supabase.co/functions/v1/delete-account",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke("delete-account");
 
-      if (!response.ok) {
-        let detail = "";
-        try {
-          detail = await response.text();
-        } catch (e) {
-          detail = "";
-        }
-        throw new Error(detail || `Delete failed (${response.status})`);
+      if (error) {
+        console.error("Delete account function error", error, data);
+        throw new Error(error.message || "We could not delete your account.");
       }
 
       try {
