@@ -447,46 +447,6 @@ export default function SettingsModal({
           </div>
         )}
 
-        {loggedIn && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: "12px 14px",
-              borderRadius: 16,
-              border: "1px solid #fecaca",
-              background: "#fff1f2",
-              boxShadow: "0 6px 16px rgba(15, 23, 42, 0.08)",
-            }}
-          >
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#7f1d1d" }}>
-              Delete Account
-            </div>
-            <div style={{ fontSize: 12, color: "#9f1239", marginTop: 4 }}>
-              Permanently delete your authenticated account and all associated
-              login access.
-            </div>
-            <button
-              onClick={() => {
-                setStatusMessage("");
-                setDeleteConfirmOpen(true);
-              }}
-              style={{
-                width: "100%",
-                marginTop: 10,
-                background: "#ef4444",
-                color: "#fff",
-                border: "1px solid #dc2626",
-                borderRadius: 12,
-                padding: "9px 0",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              Delete Account
-            </button>
-          </div>
-        )}
-
         {statusMessage && (
           <div
             style={{
@@ -535,6 +495,28 @@ export default function SettingsModal({
             {tx("logout")}
           </button>
         )}
+
+        {loggedIn && (
+          <button
+            onClick={() => {
+              setStatusMessage("");
+              setDeleteConfirmOpen(true);
+            }}
+            style={{
+              width: "100%",
+              marginTop: 10,
+              background: "#ef4444",
+              color: "#fff",
+              border: "1px solid #dc2626",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Delete Account
+          </button>
+        )}
       </div>
 
       {deleteConfirmOpen && (
@@ -549,6 +531,7 @@ export default function SettingsModal({
             zIndex: 230,
             padding: 16,
           }}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={() => !deleteBusy && setDeleteConfirmOpen(false)}
         >
           <div
@@ -559,14 +542,15 @@ export default function SettingsModal({
               padding: 18,
               boxShadow: "0 18px 40px rgba(15, 23, 42, 0.28)",
             }}
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontSize: 18, fontWeight: 700, color: "#7f1d1d" }}>
               Permanently delete account?
             </div>
             <div style={{ fontSize: 13, color: "#475569", marginTop: 8 }}>
-              This action cannot be undone. Your Supabase authentication account
-              will be permanently deleted, and you will be signed out.
+              This action cannot be undone. Your account will be permanently
+              deleted, and you will be signed out.
             </div>
             <div
               style={{
