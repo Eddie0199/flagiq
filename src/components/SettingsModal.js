@@ -14,11 +14,16 @@ export default function SettingsModal({
   setActiveUser,
   activeUserLabel,
   setActiveUserLabel,
+  setScreen,
   LANGS = [],
   t,
   onResetProgress, // dev-only callback from App (optional)
 }) {
   const loggedIn = !!activeUser;
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusType, setStatusType] = useState("info");
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
   const [userEmail, setUserEmail] = useState("");
   const [userCreatedAt, setUserCreatedAt] = useState("");
@@ -36,6 +41,52 @@ export default function SettingsModal({
       setActiveUser("");
       setActiveUserLabel && setActiveUserLabel("");
       onClose();
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!supabase || deleteBusy) return;
+    setDeleteBusy(true);
+    setStatusMessage("");
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("You must be logged in to delete your account.");
+      }
+
+      const { data, error } = await supabase.functions.invoke("delete-account");
+
+      if (error) {
+        console.error("Delete account function error", error, data);
+        throw new Error(error.message || "We could not delete your account.");
+      }
+
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        // ignore sign out errors, we still clear local auth state below
+      }
+      await clearSupabaseSession();
+      setActiveUser("");
+      setActiveUserLabel && setActiveUserLabel("");
+      setDeleteConfirmOpen(false);
+      setStatusType("success");
+      setStatusMessage("Your account has been permanently deleted.");
+      setScreen && setScreen("home");
+      setTimeout(() => {
+        onClose();
+      }, 900);
+    } catch (error) {
+      console.error("Account deletion failed", error);
+      setStatusType("error");
+      setStatusMessage(
+        error?.message ||
+          "We could not delete your account right now. Please try again."
+      );
+    } finally {
+      setDeleteBusy(false);
     }
   };
 
@@ -378,6 +429,37 @@ export default function SettingsModal({
           </div>
         )}
 
+        {statusMessage && (
+          <div
+            style={{
+              marginTop: 12,
+              padding: "10px 12px",
+              borderRadius: 12,
+              fontSize: 12,
+              border:
+                statusType === "success"
+                  ? "1px solid #86efac"
+                  : statusType === "error"
+                    ? "1px solid #fca5a5"
+                    : "1px solid #cbd5e1",
+              background:
+                statusType === "success"
+                  ? "#f0fdf4"
+                  : statusType === "error"
+                    ? "#fff1f2"
+                    : "#f8fafc",
+              color:
+                statusType === "success"
+                  ? "#166534"
+                  : statusType === "error"
+                    ? "#9f1239"
+                    : "#334155",
+            }}
+          >
+            {statusMessage}
+          </div>
+        )}
+
         {loggedIn && (
           <button
             onClick={handleLogout}
@@ -395,7 +477,104 @@ export default function SettingsModal({
             {tx("logout")}
           </button>
         )}
+
+        {loggedIn && (
+          <button
+            onClick={() => {
+              setStatusMessage("");
+              setDeleteConfirmOpen(true);
+            }}
+            style={{
+              width: "100%",
+              marginTop: 10,
+              background: "#ef4444",
+              color: "#fff",
+              border: "1px solid #dc2626",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            Delete Account
+          </button>
+        )}
       </div>
+
+      {deleteConfirmOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(2, 6, 23, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 230,
+            padding: 16,
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => !deleteBusy && setDeleteConfirmOpen(false)}
+        >
+          <div
+            style={{
+              width: "min(420px, 100%)",
+              background: "#fff",
+              borderRadius: 20,
+              padding: 18,
+              boxShadow: "0 18px 40px rgba(15, 23, 42, 0.28)",
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#7f1d1d" }}>
+              Permanently delete account?
+            </div>
+            <div style={{ fontSize: 13, color: "#475569", marginTop: 8 }}>
+              This action cannot be undone. Your account will be permanently
+              deleted, and you will be signed out.
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                marginTop: 16,
+              }}
+            >
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleteBusy}
+                style={{
+                  border: "1px solid #cbd5e1",
+                  background: "#fff",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  cursor: deleteBusy ? "not-allowed" : "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteBusy}
+                style={{
+                  border: "1px solid #dc2626",
+                  background: "#ef4444",
+                  color: "#fff",
+                  borderRadius: 10,
+                  padding: "8px 12px",
+                  fontWeight: 700,
+                  cursor: deleteBusy ? "not-allowed" : "pointer",
+                  opacity: deleteBusy ? 0.7 : 1,
+                }}
+              >
+                {deleteBusy ? "Deleting..." : "Yes, delete account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
