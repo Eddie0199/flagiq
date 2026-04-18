@@ -18,9 +18,14 @@ import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import LegalPage from "./components/LegalPage";
-import { registerPurchaseRewardHandler, runIapStartupDiagnostics } from "./purchases";
+import {
+  registerPurchaseRewardHandler,
+  restorePurchases,
+  runIapStartupDiagnostics,
+} from "./purchases";
 import IapDiagnosticsPanel from "./components/IapDiagnosticsPanel";
 import { IS_DEBUG_BUILD, IS_HIDDEN_DEBUGGER_ENABLED } from "./debugTools";
+import { getProductDefinition } from "./shopProducts";
 import {
   LOCAL_PACKS,
   buildLocalPackLevels,
@@ -501,6 +506,8 @@ function getHeartsStorageKey(username) {
   return username ? `flagiq:u:${username}:hearts` : null;
 }
 
+const GUEST_PROFILE_ID = "guest";
+
 const REVIEW_PROMPT_DEFAULT = {
   lastReviewMilestonePrompted: 0,
   lastReviewPromptAt: 0,
@@ -749,6 +756,66 @@ function deriveModeStatsFromProgress(progress, mode) {
   return {
     level: lastCompletedLevel(starsMap),
     stars: totalStars,
+  };
+}
+
+function mergeProgressForMigration(localProgress, backendProgress) {
+  const local = normalizeProgress(localProgress);
+  const backend = normalizeProgress(backendProgress);
+  const mergeStars = (a = {}, b = {}) => {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    const merged = {};
+    keys.forEach((key) => {
+      merged[key] = Math.max(Number(a[key] || 0), Number(b[key] || 0));
+    });
+    return merged;
+  };
+
+  const mergedClassicStars = mergeStars(
+    local.classic?.starsByLevel,
+    backend.classic?.starsByLevel
+  );
+  const mergedTrialStars = mergeStars(
+    local.timetrial?.starsByLevel,
+    backend.timetrial?.starsByLevel
+  );
+
+  const mergedLocalPacks = {
+    ...(backend.localFlags?.packs || {}),
+  };
+  Object.entries(local.localFlags?.packs || {}).forEach(([packId, pack]) => {
+    const backendPack = mergedLocalPacks[packId] || {};
+    mergedLocalPacks[packId] = {
+      ...backendPack,
+      starsByLevel: mergeStars(pack?.starsByLevel, backendPack?.starsByLevel),
+      currentLevel: Math.max(
+        Number(pack?.currentLevel || 0),
+        Number(backendPack?.currentLevel || 0)
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  return {
+    classic: {
+      starsByLevel: mergedClassicStars,
+      unlockedUntil: Math.max(
+        Number(local.classic?.unlockedUntil || 0),
+        Number(backend.classic?.unlockedUntil || 0),
+        computeUnlockedLevels(mergedClassicStars)
+      ),
+    },
+    timetrial: {
+      starsByLevel: mergedTrialStars,
+      unlockedUntil: Math.max(
+        Number(local.timetrial?.unlockedUntil || 0),
+        Number(backend.timetrial?.unlockedUntil || 0),
+        computeUnlockedLevels(mergedTrialStars)
+      ),
+    },
+    localFlags: {
+      packs: mergedLocalPacks,
+    },
   };
 }
 
@@ -1414,8 +1481,10 @@ export default function App() {
   );
   const [lastCreds, setLastCreds] = useLocalStorage("flagiq:lastCreds", {});
   const loggedIn = !!activeUser;
+  const storageProfileId = activeUser || GUEST_PROFILE_ID;
   const [authReady, setAuthReady] = useState(!supabase);
   const [backendLoaded, setBackendLoaded] = useState(false);
+  const [pendingGuestMigration, setPendingGuestMigration] = useState(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -1529,35 +1598,29 @@ export default function App() {
   const [lastNonStoreScreen, setLastNonStoreScreen] = useState("home");
 
   // per-user data
-  const [levelId, setLevelId] = useUserStorage(activeUser, `${mode}:level`, 1);
+  const [levelId, setLevelId] = useUserStorage(storageProfileId, `${mode}:level`, 1);
   const [activeLocalPackId, setActiveLocalPackId] = useUserStorage(
-    activeUser,
+    storageProfileId,
     "localFlags:pack",
     defaultLocalPackId
   );
   const [progress, setProgress] = useState(() => normalizeProgress());
-  const progressStorageKey = activeUser
-    ? `flagiq:progress:${activeUser}`
-    : null;
+  const progressStorageKey = `flagiq:progress:${storageProfileId}`;
   const {
     state: reviewPromptState,
     setState: setReviewPromptState,
     loaded: reviewPromptLoaded,
-  } = useReviewPromptState(activeUser);
+  } = useReviewPromptState(storageProfileId);
   const reviewSessionIncrementedRef = useRef(false);
 
   useEffect(() => {
-    if (!activeUser) {
-      setProgress(normalizeProgress());
-      return;
-    }
     try {
       const raw = localStorage.getItem(progressStorageKey);
       setProgress(normalizeProgress(raw));
     } catch (e) {
       setProgress(normalizeProgress());
     }
-  }, [activeUser, progressStorageKey]);
+  }, [progressStorageKey, storageProfileId]);
 
   useEffect(() => {
     if (!progressStorageKey) return;
@@ -1568,7 +1631,7 @@ export default function App() {
 
   useEffect(() => {
     reviewSessionIncrementedRef.current = false;
-  }, [activeUser]);
+  }, [storageProfileId]);
 
   useEffect(() => {
     if (!activeUser || !reviewPromptLoaded) return;
@@ -1582,7 +1645,7 @@ export default function App() {
 
   const maybePromptForReview = useCallback(
     (nextProgress) => {
-      if (!activeUser || !reviewPromptLoaded) return;
+      if (!storageProfileId || !reviewPromptLoaded) return;
       const uniqueCompleted = countUniqueCompletedLevels(nextProgress);
       const milestone = Math.floor(uniqueCompleted / 5) * 5;
       const eligible =
@@ -1609,7 +1672,7 @@ export default function App() {
         }));
       })();
     },
-    [activeUser, reviewPromptLoaded, reviewPromptState, setReviewPromptState]
+    [reviewPromptLoaded, reviewPromptState, setReviewPromptState, storageProfileId]
   );
 
   const persistProgress = useCallback(
@@ -1690,7 +1753,7 @@ export default function App() {
 
 
   // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
-  const [hints, setHints] = usePerUserHints(activeUser);
+  const [hints, setHints] = usePerUserHints(storageProfileId);
 
   // Backend inventory (includes hints). We keep a copy so we can merge
   // additional keys the backend might have without losing them when we
@@ -1710,22 +1773,29 @@ export default function App() {
     backendHeartsRef.current = null;
     pendingHeartsUpdateRef.current = null;
     setNextHeartsRefreshAt(null);
-  }, [activeUser]);
+  }, [storageProfileId]);
 
   useEffect(() => {
+    setBackendLoaded(false);
+    setCooldowns({});
+    setHeartsState(loadHeartsForUser(storageProfileId));
+
     if (!activeUser) {
       setBackendPreferredLanguage(null);
       setPendingPreferredLanguagePush(false);
-      setCoins(0);
-      setHeartsState(DEFAULT_HEARTS_STATE);
-      setBackendLoaded(false);
       setInventory(null);
-      setCooldowns({});
+      try {
+        const raw = localStorage.getItem(`flagiq:u:${storageProfileId}:coins`);
+        setCoins(raw ? Number(raw) : 0);
+        const cooldownRaw = localStorage.getItem(`flagiq:u:${storageProfileId}:cooldowns`);
+        setCooldowns(cooldownRaw ? JSON.parse(cooldownRaw) : {});
+      } catch (e) {
+        setCoins(0);
+        setCooldowns({});
+      }
+      setBackendLoaded(true);
       return;
     }
-    setBackendLoaded(false);
-    setCooldowns({});
-    setHeartsState(loadHeartsForUser(activeUser));
 
     (async () => {
       try {
@@ -1824,7 +1894,7 @@ export default function App() {
           const raw = localStorage.getItem(`flagiq:u:${activeUser}:coins`);
           setCoins(raw ? Number(raw) : 0);
         } catch (e) {}
-        setHeartsState(loadHeartsForUser(activeUser));
+        setHeartsState(loadHeartsForUser(storageProfileId));
         setCooldowns({});
         setBackendPreferredLanguage((prev) => prev);
         setPendingPreferredLanguagePush((prev) => prev || !!activeUser);
@@ -1833,7 +1903,7 @@ export default function App() {
         setBackendLoaded(true);
       }
     })();
-  }, [activeUser, persistProgress]);
+  }, [activeUser, persistProgress, storageProfileId]);
 
 
   // helper to update coins AND persist to localStorage
@@ -1845,15 +1915,13 @@ export default function App() {
             ? valueOrUpdater(prev)
             : valueOrUpdater;
         const safe = Number.isFinite(Number(next)) ? Number(next) : 0;
-        if (activeUser) {
-          try {
-            localStorage.setItem(`flagiq:u:${activeUser}:coins`, String(safe));
-          } catch (e) {}
-        }
+        try {
+          localStorage.setItem(`flagiq:u:${storageProfileId}:coins`, String(safe));
+        } catch (e) {}
         return safe;
       });
     },
-    [activeUser]
+    [storageProfileId]
   );
 
   const flushHeartsUpdate = useCallback(async () => {
@@ -1939,13 +2007,72 @@ export default function App() {
     });
   }, [applyCoinsUpdate, queueHeartsUpdate]);
 
+  const applyProductRewardLocally = useCallback(
+    (productId) => {
+      const product = getProductDefinition(productId);
+      const reward = product?.reward || {};
+      const coinsToGrant = Number(reward?.coins || 0);
+      if (coinsToGrant > 0) {
+        applyCoinsUpdate((prev) => Math.max(0, prev + coinsToGrant));
+      }
+      if (reward?.heartsRefill) {
+        setHeartsState((prev) => {
+          const normalized = normalizeHeartsState(prev);
+          return {
+            ...normalized,
+            current: normalized.max,
+            max: normalized.max,
+            lastRegenAt: null,
+          };
+        });
+      }
+    },
+    [applyCoinsUpdate]
+  );
+
+  const handleRestorePurchases = useCallback(async () => {
+    const result = await restorePurchases();
+    if (!result?.success) {
+      return;
+    }
+    (result?.restoredProductIds || []).forEach((productId) => {
+      applyProductRewardLocally(productId);
+    });
+  }, [applyProductRewardLocally]);
+
   const handleDailySpinClaim = useCallback(async () => {
-    if (!activeUser || !backendLoaded) {
+    if (!backendLoaded) {
       return { success: false, reason: "not_ready" };
     }
 
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
       return { success: false, reason: "offline" };
+    }
+
+    if (!activeUser) {
+      try {
+        const storageKey = `flagiq:u:${storageProfileId}:cooldowns`;
+        const raw = localStorage.getItem(storageKey);
+        const localCooldowns = raw ? JSON.parse(raw) : {};
+        const lastClaimedAt = localCooldowns?.dailySpin?.last_claimed_at || null;
+        const remainingMs = remainingDailySpinMs(lastClaimedAt);
+        if (remainingMs > 0) {
+          return { success: false, remainingMs, lastClaimedAt };
+        }
+        const nextIso = new Date().toISOString();
+        const mergedCooldowns = {
+          ...localCooldowns,
+          dailySpin: {
+            ...(localCooldowns.dailySpin || {}),
+            last_claimed_at: nextIso,
+          },
+        };
+        localStorage.setItem(storageKey, JSON.stringify(mergedCooldowns));
+        setCooldowns(mergedCooldowns);
+        return { success: true, lastClaimedAt: nextIso };
+      } catch (error) {
+        return { success: false, reason: "error" };
+      }
     }
 
     try {
@@ -1983,7 +2110,7 @@ export default function App() {
       console.error("Failed to update daily spin cooldown", error);
       return { success: false, reason: "error" };
     }
-  }, [activeUser, backendLoaded]);
+  }, [activeUser, backendLoaded, storageProfileId]);
 
   useEffect(() => {
     flushHeartsUpdate();
@@ -2008,6 +2135,66 @@ export default function App() {
       return next;
     });
   }, [hints, activeUser, backendLoaded]);
+
+  useEffect(() => {
+    if (!activeUser || !backendLoaded || !pendingGuestMigration) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const latestState = (await getPlayerState(activeUser)) || {};
+        const mergedProgress = mergeProgressForMigration(
+          pendingGuestMigration.progress,
+          latestState.progress
+        );
+        const mergedCoins = Math.max(
+          Number(latestState.coins || 0),
+          Number(pendingGuestMigration.coins || 0)
+        );
+        const mergedHints = {
+          ...(latestState.inventory?.hints || {}),
+          ...(pendingGuestMigration.hints || {}),
+        };
+        const mergedHearts = {
+          current: Math.max(
+            Number(latestState.hearts_current || 0),
+            Number(pendingGuestMigration.hearts?.current || 0)
+          ),
+          max: Math.max(
+            Number(latestState.hearts_max || MAX_HEARTS),
+            Number(pendingGuestMigration.hearts?.max || MAX_HEARTS)
+          ),
+          lastRegenAt:
+            pendingGuestMigration.hearts?.lastRegenAt ||
+            latestState.hearts_last_regen_at ||
+            null,
+        };
+        await updatePlayerState(activeUser, {
+          coins: mergedCoins,
+          progress: mergedProgress,
+          inventory: {
+            ...(latestState.inventory || {}),
+            hints: mergedHints,
+          },
+          hearts_current: mergedHearts.current,
+          hearts_max: mergedHearts.max,
+          hearts_last_regen_at: mergedHearts.lastRegenAt
+            ? new Date(mergedHearts.lastRegenAt).toISOString()
+            : null,
+        });
+      } catch (error) {
+        console.error("Guest migration failed", error);
+      } finally {
+        if (!cancelled) {
+          setPendingGuestMigration(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeUser, backendLoaded, pendingGuestMigration]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
@@ -2046,9 +2233,8 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (!activeUser) return;
     try {
-      const key = getHeartsStorageKey(activeUser);
+      const key = getHeartsStorageKey(storageProfileId);
       if (!key) return;
       localStorage.setItem(
         key,
@@ -2059,7 +2245,7 @@ export default function App() {
         })
       );
     } catch (e) {}
-  }, [activeUser, heartsState]);
+  }, [heartsState, storageProfileId]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
@@ -2128,7 +2314,6 @@ export default function App() {
 
   const applyHeartsTick = useCallback(
     (forcedNow) => {
-      if (!loggedIn) return;
       const nowTs = Number.isFinite(Number(forcedNow))
         ? Number(forcedNow)
         : Date.now();
@@ -2168,11 +2353,10 @@ export default function App() {
         return nextState;
       });
     },
-    [isOnline, loggedIn, queueHeartsUpdate]
+    [isOnline, queueHeartsUpdate]
   );
 
   useEffect(() => {
-    if (!loggedIn) return;
     applyHeartsTick();
     const id = setInterval(() => applyHeartsTick(), 1500);
     let timeoutId = null;
@@ -2184,7 +2368,7 @@ export default function App() {
       clearInterval(id);
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [applyHeartsTick, loggedIn, nextHeartsRefreshAt]);
+  }, [applyHeartsTick, nextHeartsRefreshAt, storageProfileId]);
 
   useEffect(() => {
     if (!activeUser || !backendLoaded) return;
@@ -2208,12 +2392,6 @@ export default function App() {
       document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [activeUser, refreshHeartsFromBackend]);
-
-  // home guard
-  useEffect(() => {
-    if (!authReady) return;
-    if (!loggedIn && screen !== "home") setScreen("home");
-  }, [authReady, loggedIn, screen, setScreen]);
 
   const goHome = () => setScreen("home");
   const goLevels = () => setScreen("levels");
@@ -2466,20 +2644,6 @@ export default function App() {
       }
       return;
     }
-    if (!loggedIn) {
-      openAuth("login");
-      navigationFired = true;
-      if (IS_DEBUG_BUILD) {
-        console.debug("[home-cta] auth-gate", {
-          eventType,
-          targetTag,
-          targetLabel,
-          currentRoute: screen,
-          navigationFired,
-        });
-      }
-      return;
-    }
     if (nextMode === "local") {
       if (pack?.packId) {
         setActiveLocalPackId(pack.packId);
@@ -2516,17 +2680,13 @@ export default function App() {
 
   const handleLocalPackSelect = useCallback(
     (pack) => {
-      if (!loggedIn) {
-        openAuth("login");
-        return;
-      }
       if (pack?.packId) {
         setActiveLocalPackId(pack.packId);
       }
       setMode("local");
       setScreen("local-pack-levels");
     },
-    [loggedIn, openAuth, setActiveLocalPackId, setMode, setScreen]
+    [setActiveLocalPackId, setMode, setScreen]
   );
 
   // navigation helper for opening the store from header
@@ -2708,7 +2868,7 @@ export default function App() {
       )}
 
       {/* LOCAL PACKS */}
-      {loggedIn && screen === "local-packs" && (
+      {screen === "local-packs" && (
         <>
           <Header
             showBack
@@ -2778,7 +2938,7 @@ export default function App() {
       )}
 
       {/* LOCAL PACK LEVELS */}
-      {loggedIn && screen === "local-pack-levels" && (
+      {screen === "local-pack-levels" && (
         <>
           <Header
             showBack
@@ -2814,7 +2974,7 @@ export default function App() {
       )}
 
       {/* LEVELS */}
-      {loggedIn && screen === "levels" && (
+      {screen === "levels" && (
         <div
           style={{
             minHeight: "100vh",
@@ -2852,7 +3012,7 @@ export default function App() {
       )}
 
       {/* GAME */}
-      {loggedIn && screen === "game" && (
+      {screen === "game" && (
         <>
           <Header
             showBack
@@ -2912,7 +3072,7 @@ export default function App() {
       )}
 
       {/* SHOP / STORE */}
-      {loggedIn && screen === "shop" && (
+      {screen === "shop" && (
         <>
           {/* Header still shows hearts & coins but coins are DISPLAY only here */}
           <Header
@@ -2937,6 +3097,8 @@ export default function App() {
             coins={coins}
             hints={hints}
             setHints={setHints}
+            loggedIn={loggedIn}
+            onGuestPurchasePrompt={() => openAuth("signup")}
             // Store passes an *absolute* new total
             onUpdateCoins={(next) => applyCoinsUpdate(next)}
             onBack={() => setScreen(lastNonStoreScreen || "levels")}
@@ -2969,6 +3131,8 @@ export default function App() {
           setScreen={setScreen}
           LANGS={LANGS}
           t={t}
+          onAuthRequest={openAuth}
+          onRestorePurchases={handleRestorePurchases}
         />
       )}
 
@@ -2999,6 +3163,13 @@ export default function App() {
           users={users}
           setUsers={setUsers}
           onLoggedIn={(u) => {
+            const guestSnapshot = {
+              coins,
+              progress,
+              hearts: heartsState,
+              hints,
+            };
+            setPendingGuestMigration(guestSnapshot);
             if (u && typeof u === "object") {
               setActiveUser(u.id || "");
               setActiveUserLabel(u.label || u.id || "");

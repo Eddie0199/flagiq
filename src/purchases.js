@@ -464,3 +464,35 @@ export async function purchaseProduct(productId) {
 
   return await applyRewards(product, platform);
 }
+
+export async function restorePurchases() {
+  const platform = getRuntimePlatform();
+  if (platform !== "ios") {
+    return { success: true, restoredProductIds: [] };
+  }
+
+  if (typeof StoreKitPurchase?.restorePurchases !== "function") {
+    return { success: false, error: "Restore purchases is unavailable in this build." };
+  }
+
+  try {
+    const result = await StoreKitPurchase.restorePurchases();
+    if (result?.success) {
+      const restoredProductIds = Array.isArray(result?.restoredProductIds)
+        ? result.restoredProductIds.filter(Boolean)
+        : [];
+      return { success: true, restoredProductIds };
+    }
+    return {
+      success: false,
+      error: result?.error || "Could not restore purchases.",
+      restoredProductIds: [],
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: normalizeStoreKitError(error),
+      restoredProductIds: [],
+    };
+  }
+}

@@ -134,6 +134,8 @@ export default function StoreScreen({
   hearts,
   maxHearts,
   onBuyHeartWithCoins,
+  loggedIn = false,
+  onGuestPurchasePrompt,
   showPriceDebugOverlay = IS_DEBUG_BUILD,
 }) {
   const [message, setMessage] = useState("");
@@ -346,7 +348,12 @@ export default function StoreScreen({
     try {
       const result = await purchaseProduct(pack.id);
       if (result?.success) {
-        setMessage(text("storeCoinsAdded", "Purchase successful! Coins added."));
+        const successMessage = text("storeCoinsAdded", "Purchase successful! Coins added.");
+        const guestPrompt = "Create an account to save your progress and purchases across devices";
+        setMessage(loggedIn ? successMessage : `${successMessage} ${guestPrompt}`);
+        if (!loggedIn && typeof onGuestPurchasePrompt === "function") {
+          onGuestPurchasePrompt();
+        }
         ctaState.markSuccess(pack.id);
       } else if (result?.cancelled) {
         ctaState.resetState(pack.id);

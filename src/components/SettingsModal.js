@@ -17,6 +17,8 @@ export default function SettingsModal({
   setScreen,
   LANGS = [],
   t,
+  onAuthRequest,
+  onRestorePurchases,
   onResetProgress, // dev-only callback from App (optional)
 }) {
   const loggedIn = !!activeUser;
@@ -458,6 +460,63 @@ export default function SettingsModal({
           >
             {statusMessage}
           </div>
+        )}
+
+        {loggedIn && (
+          <button
+            onClick={onRestorePurchases}
+            style={{
+              width: "100%",
+              background: "#eef2ff",
+              border: "1px solid #c7d2fe",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              marginTop: 14,
+              cursor: "pointer",
+              color: "#1e3a8a",
+            }}
+          >
+            Restore Purchases
+          </button>
+        )}
+
+        {!loggedIn && (
+          <button
+            onClick={() => onAuthRequest && onAuthRequest("login")}
+            style={{
+              width: "100%",
+              background: "#0f172a",
+              color: "#fff",
+              border: "1px solid #0f172a",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              marginTop: 14,
+              cursor: "pointer",
+            }}
+          >
+            Sign in / Create account
+          </button>
+        )}
+
+        {!loggedIn && (
+          <button
+            onClick={onRestorePurchases}
+            style={{
+              width: "100%",
+              background: "#eef2ff",
+              border: "1px solid #c7d2fe",
+              borderRadius: 16,
+              padding: "10px 0",
+              fontWeight: 700,
+              marginTop: 10,
+              cursor: "pointer",
+              color: "#1e3a8a",
+            }}
+          >
+            Restore Purchases
+          </button>
         )}
 
         {loggedIn && (

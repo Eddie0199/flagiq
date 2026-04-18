@@ -8,6 +8,8 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     private var purchaseRequest: SKProductsRequest?
     private var fetchProductsCall: CAPPluginCall?
     private var fetchProductsRequest: SKProductsRequest?
+    private var restoreCall: CAPPluginCall?
+    private var restoredProductIds: [String] = []
     private var pendingProductId: String?
     private let diagnosticsMaxEvents = 50
     private var diagnosticsRequestedProductIds: [String] = []
@@ -138,6 +140,17 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
         request.start()
     }
 
+    @objc func restorePurchases(_ call: CAPPluginCall) {
+        guard restoreCall == nil else {
+            call.reject("Restore already in progress")
+            return
+        }
+        restoreCall = call
+        restoredProductIds = []
+        appendNativeEvent(["event": "restore:start"])
+        SKPaymentQueue.default().restoreCompletedTransactions()
+    }
+
     public func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
         if request === purchaseRequest {
             handlePurchaseProductsResponse(response)
@@ -193,14 +206,14 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
     }
 
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
-        guard let call = pendingCall else { return }
-        guard let productId = pendingProductId else { return }
-
-        for transaction in transactions where transaction.payment.productIdentifier == productId {
+        for transaction in transactions {
+            let productId = transaction.payment.productIdentifier
+            let isPendingPurchaseProduct = (pendingProductId != nil && productId == pendingProductId)
             CAPLog.print("[IAP] transaction update productId=\(productId) state=\(transaction.transactionState.rawValue)")
             appendTransactionEvent(transaction, event: "transaction:update")
             switch transaction.transactionState {
             case .purchased:
+                guard isPendingPurchaseProduct, let call = pendingCall else { break }
                 let transactionId = transaction.transactionIdentifier ?? ""
                 let purchasedAt = transaction.transactionDate.map { ISO8601DateFormatter().string(from: $0) } ?? ISO8601DateFormatter().string(from: Date())
                 let environment = currentStoreEnvironment()
@@ -237,6 +250,10 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
                 diagnosticsLastPurchaseAttempt = payload
                 call.resolve(payload)
             case .failed:
+                guard isPendingPurchaseProduct, let call = pendingCall else {
+                    SKPaymentQueue.default().finishTransaction(transaction)
+                    break
+                }
                 let error = transaction.error as NSError?
                 CAPLog.print("[IAP] purchase failure productId=\(productId) errorCode=\(error?.code ?? -1) message=\(transaction.error?.localizedDescription ?? "Purchase failed")")
                 CAPLog.print("[IAP] transaction finish start productId=\(productId) state=failed")
@@ -277,6 +294,9 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
                     call.resolve(payload)
                 }
             case .restored:
+                if restoreCall != nil {
+                    restoredProductIds.append(productId)
+                }
                 CAPLog.print("[IAP] transaction finish start productId=\(productId) state=restored")
                 appendNativeEvent([
                     "event": "transaction:finish:start",
@@ -296,6 +316,38 @@ public class StoreKitPurchasePlugin: CAPPlugin, SKProductsRequestDelegate, SKPay
                 break
             }
         }
+    }
+
+    public func paymentQueueRestoreCompletedTransactionsFinished(_ queue: SKPaymentQueue) {
+        guard let call = restoreCall else { return }
+        let uniqueIds = Array(Set(restoredProductIds))
+        appendNativeEvent([
+            "event": "restore:finished",
+            "restoredProductIds": uniqueIds
+        ])
+        restoreCall = nil
+        restoredProductIds = []
+        call.resolve([
+            "success": true,
+            "restoredProductIds": uniqueIds
+        ])
+    }
+
+    public func paymentQueue(_ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: Error) {
+        guard let call = restoreCall else { return }
+        let nsError = error as NSError
+        appendNativeEvent([
+            "event": "restore:failed",
+            "error": buildErrorPayload(nsError)
+        ])
+        restoreCall = nil
+        restoredProductIds = []
+        call.resolve([
+            "success": false,
+            "error": nsError.localizedDescription,
+            "errorDomain": nsError.domain,
+            "errorCode": nsError.code
+        ])
     }
 
     private func handlePurchaseProductsResponse(_ response: SKProductsResponse) {

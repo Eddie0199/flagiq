@@ -1600,7 +1600,9 @@ export default function HomeScreen({
           }}
         >
           <button
-            onClick={() => onAuthRequest && onAuthRequest("login")}
+            onClick={(event) =>
+              onStart && onStart("classic", null, { event, eventType: "guest-cta" })
+            }
             style={{
               width: "85%",
               maxWidth: 520,
@@ -1615,10 +1617,10 @@ export default function HomeScreen({
               cursor: "pointer",
             }}
           >
-            {text("login", "Log in")}
+            {text("playAsGuest", "Play as Guest")}
           </button>
           <button
-            onClick={() => onAuthRequest && onAuthRequest("signup")}
+            onClick={() => onAuthRequest && onAuthRequest("login")}
             style={{
               width: "85%",
               maxWidth: 520,
@@ -1633,7 +1635,7 @@ export default function HomeScreen({
               cursor: "pointer",
             }}
           >
-            {text("auth.signupTab", "Sign up")}
+            {text("signInCreateAccount", "Sign in / Create account")}
           </button>
         </div>
       )}
