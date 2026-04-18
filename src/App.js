@@ -2889,9 +2889,11 @@ export default function App() {
           t={t}
           lang={lang}
           loggedIn={loggedIn}
-          onBack={() => setScreen("home")}
+          onAuthRequest={openAuth}
+          classicStats={classicStats}
+          timetrialStats={timetrialStats}
+          maxLevelsByMode={homeMaxLevels}
           onSelectMode={(modeId) => {
-            if (modeId === "future") return;
             handleHomeStart(modeId, null);
           }}
         />
