@@ -1573,6 +1573,25 @@ export default function GameScreen({
     color: "#0f172a",
   };
 
+  const guestAuthPromptCard = {
+    margin: "10px auto 0",
+    width: "min(260px, 90vw)",
+    background: "#ffffff",
+    border: "1px solid rgba(37,99,235,0.14)",
+    borderRadius: 16,
+    padding: "10px 10px 9px",
+    boxShadow: "0 8px 18px rgba(15,23,42,0.12)",
+  };
+
+  const guestAuthActionButton = {
+    ...actionButtonBase,
+    width: "100%",
+    border: "none",
+    background: "#2563eb",
+    color: "#ffffff",
+    boxShadow: "0 8px 16px rgba(37,99,235,0.32)",
+  };
+
   return (
     <div style={{ padding: "10px 12px 60px" }}>
       {/* HINT INFO POPUP (first time) */}
@@ -1953,28 +1972,10 @@ export default function GameScreen({
               </button>
             </div>
             {isGuestUser && (
-              <div
-                style={{
-                  margin: "14px auto 0",
-                  width: "min(420px, 100%)",
-                  padding: "12px 12px 10px",
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.10)",
-                  border: "1px solid rgba(255,255,255,0.22)",
-                  boxShadow: "0 8px 18px rgba(15,23,42,0.14)",
-                }}
-              >
+              <div style={guestAuthPromptCard}>
                 <button
                   onClick={() => onGuestAuthRequest && onGuestAuthRequest("signup")}
-                  style={{
-                    ...secondaryActionButton,
-                    width: "100%",
-                    marginTop: 0,
-                    background: "#ffffff",
-                    border: "1px solid #dbeafe",
-                    color: "#0f172a",
-                    fontWeight: 700,
-                  }}
+                  style={guestAuthActionButton}
                 >
                   {t && lang
                     ? t(lang, "level_complete_cta_button")
@@ -1982,9 +1983,9 @@ export default function GameScreen({
                 </button>
                 <div
                   style={{
-                    marginTop: 8,
+                    marginTop: 6,
                     fontSize: 12,
-                    color: "#f8fafc",
+                    color: "#334155",
                     lineHeight: 1.35,
                     textAlign: "center",
                     wordBreak: "break-word",
@@ -1993,7 +1994,7 @@ export default function GameScreen({
                 >
                   {t && lang
                     ? t(lang, "level_complete_cta_text")
-                    : "Save your progress and continue where you left off."}
+                    : "Save your progress or continue where you left off."}
                 </div>
               </div>
             )}
