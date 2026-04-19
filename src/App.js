@@ -1758,6 +1758,7 @@ export default function App() {
     if (!storageUserId) {
       setBackendPreferredLanguage(null);
       setPendingPreferredLanguagePush(false);
+      setPendingAuthAction("");
       setCoins(0);
       setHeartsState(DEFAULT_HEARTS_STATE);
       setBackendLoaded(false);
@@ -1789,9 +1790,12 @@ export default function App() {
     setCooldowns({});
     setHeartsState(loadHeartsForUser(storageUserId));
 
+    const authAction = pendingAuthAction;
     (async () => {
       try {
-        await ensurePlayerState(activeUser);
+        if (authAction !== "login") {
+          await ensurePlayerState(activeUser);
+        }
 
         const state = await getPlayerState(activeUser);
         if (state) {
@@ -1880,6 +1884,7 @@ export default function App() {
         }
 
         setBackendLoaded(true);
+        setPendingAuthAction("");
       } catch (e) {
         // fallback to local only
         try {
@@ -1893,9 +1898,10 @@ export default function App() {
 
         // ✅ allow later sync back to backend
         setBackendLoaded(true);
+        setPendingAuthAction("");
       }
     })();
-  }, [activeUser, loggedIn, persistProgress, storageUserId]);
+  }, [activeUser, loggedIn, pendingAuthAction, persistProgress, storageUserId]);
 
 
   // helper to update coins AND persist to localStorage
@@ -2189,62 +2195,6 @@ export default function App() {
   const heartsCurrent = heartsState?.current ?? MAX_HEARTS;
   const heartsMax = heartsState?.max ?? MAX_HEARTS;
   const lastRegenAt = heartsState?.lastRegenAt ?? null;
-
-  useEffect(() => {
-    if (!activeUser || pendingAuthAction !== "login") return;
-    let cancelled = false;
-    (async () => {
-      setBackendLoaded(false);
-      setCoins(0);
-      setProgress(normalizeProgress());
-      setHeartsState(DEFAULT_HEARTS_STATE);
-      setCooldowns({});
-      setInventory(null);
-      try {
-        await ensurePlayerState(activeUser);
-        const state = await getPlayerState(activeUser);
-        if (cancelled || !state) return;
-
-        setCoins(Number(state.coins) || 0);
-        setProgress(normalizeProgress(state.progress));
-
-        const { cleaned: backendInventory, legacyHints } = normalizeInventory(
-          state.inventory || state.inventory_state || state.items || {}
-        );
-        setInventory(backendInventory);
-        const backendHints =
-          (backendInventory && backendInventory.hints) ||
-          (backendInventory && backendInventory.boosters);
-        if (backendHints && typeof backendHints === "object") {
-          setHints((prev) => ({
-            ...DEFAULT_HINTS,
-            ...prev,
-            ...backendHints,
-            ...legacyHints,
-          }));
-        }
-
-        const backendHearts = normalizeHeartsState({
-          hearts_current: state.hearts_current,
-          hearts_max: state.hearts_max,
-          hearts_last_regen_at: state.hearts_last_regen_at,
-        });
-        const regenerated = applyHeartsRegen(backendHearts, Date.now());
-        setHeartsState(regenerated);
-        setCooldowns(state.cooldowns || {});
-      } catch (error) {
-        console.error("Failed to hydrate account state after login", error);
-      } finally {
-        if (!cancelled) {
-          setPendingAuthAction("");
-          setBackendLoaded(true);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [activeUser, pendingAuthAction, setHints]);
 
   const refreshHeartsFromBackend = useCallback(async () => {
     if (!activeUser || !backendLoaded || !isOnline) return;
@@ -3257,6 +3207,7 @@ export default function App() {
               await migrateGuestDataToAccount(nextId);
             }
 
+            setBackendLoaded(false);
             if (u && typeof u === "object") {
               setActiveUser(nextId);
               setActiveUserLabel(nextLabel);

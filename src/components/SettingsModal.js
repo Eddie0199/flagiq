@@ -579,7 +579,9 @@ export default function SettingsModal({
               textDecoration: "underline",
               textUnderlineOffset: 2,
               cursor: "pointer",
-              alignSelf: "center",
+              display: "block",
+              marginLeft: "auto",
+              marginRight: "auto",
             }}
           >
             {tx("deleteAccount")}
