@@ -18,12 +18,16 @@ export default function SettingsModal({
   LANGS = [],
   t,
   onResetProgress, // dev-only callback from App (optional)
+  onAuthRequest,
+  onRestorePurchases,
+  isGuestMode = false,
 }) {
   const loggedIn = !!activeUser;
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState("info");
+  const [restoreBusy, setRestoreBusy] = useState(false);
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
   const [userEmail, setUserEmail] = useState("");
   const [userCreatedAt, setUserCreatedAt] = useState("");
@@ -87,6 +91,26 @@ export default function SettingsModal({
       );
     } finally {
       setDeleteBusy(false);
+    }
+  };
+
+  const handleRestorePurchases = async () => {
+    if (restoreBusy || !onRestorePurchases) return;
+    setRestoreBusy(true);
+    setStatusType("info");
+    setStatusMessage(tx("restorePurchasesWorking"));
+    try {
+      const result = await onRestorePurchases();
+      if (!result?.success) {
+        throw new Error(result?.error || tx("restorePurchasesFailed"));
+      }
+      setStatusType("success");
+      setStatusMessage(tx("restorePurchasesSuccess"));
+    } catch (error) {
+      setStatusType("error");
+      setStatusMessage(error?.message || tx("restorePurchasesFailed"));
+    } finally {
+      setRestoreBusy(false);
     }
   };
 
@@ -460,18 +484,79 @@ export default function SettingsModal({
           </div>
         )}
 
+        {!loggedIn && isGuestMode && (
+          <div
+            style={{
+              marginTop: 10,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 10,
+            }}
+          >
+            <button
+              onClick={() => onAuthRequest && onAuthRequest("login")}
+              style={{
+                width: "100%",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 16,
+                padding: "10px 0",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {tx("login")}
+            </button>
+            <button
+              onClick={() => onAuthRequest && onAuthRequest("signup")}
+              style={{
+                width: "100%",
+                background: "#0b74ff",
+                color: "#fff",
+                border: "1px solid #0b74ff",
+                borderRadius: 16,
+                padding: "10px 0",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {tx("auth.signupTab")}
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={handleRestorePurchases}
+          disabled={restoreBusy}
+          style={{
+            width: "100%",
+            background: "#f8fafc",
+            border: "1px solid #e2e8f0",
+            borderRadius: 16,
+            padding: "10px 0",
+            fontWeight: 600,
+            marginTop: 14,
+            cursor: restoreBusy ? "not-allowed" : "pointer",
+            opacity: restoreBusy ? 0.7 : 1,
+          }}
+        >
+          {restoreBusy ? tx("restorePurchasesWorking") : tx("restorePurchases")}
+        </button>
+
         {loggedIn && (
           <button
             onClick={handleLogout}
             style={{
               width: "100%",
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
+              background: "#0f172a",
+              color: "#fff",
+              border: "1px solid #0f172a",
               borderRadius: 16,
-              padding: "10px 0",
-              fontWeight: 600,
+              padding: "11px 0",
+              fontWeight: 700,
               marginTop: 14,
               cursor: "pointer",
+              boxShadow: "0 8px 16px rgba(15, 23, 42, 0.2)",
             }}
           >
             {tx("logout")}
@@ -485,18 +570,21 @@ export default function SettingsModal({
               setDeleteConfirmOpen(true);
             }}
             style={{
-              width: "100%",
               marginTop: 10,
-              background: "#ef4444",
-              color: "#fff",
-              border: "1px solid #dc2626",
-              borderRadius: 16,
-              padding: "10px 0",
-              fontWeight: 700,
+              background: "transparent",
+              color: "#dc2626",
+              border: "none",
+              padding: "2px 0",
+              fontWeight: 600,
+              textDecoration: "underline",
+              textUnderlineOffset: 2,
               cursor: "pointer",
+              display: "block",
+              marginLeft: "auto",
+              marginRight: "auto",
             }}
           >
-            Delete Account
+            {tx("deleteAccount")}
           </button>
         )}
       </div>
@@ -528,11 +616,10 @@ export default function SettingsModal({
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ fontSize: 18, fontWeight: 700, color: "#7f1d1d" }}>
-              Permanently delete account?
+              {tx("deleteAccountConfirmTitle")}
             </div>
             <div style={{ fontSize: 13, color: "#475569", marginTop: 8 }}>
-              This action cannot be undone. Your account will be permanently
-              deleted, and you will be signed out.
+              {tx("deleteAccountConfirmBody")}
             </div>
             <div
               style={{
@@ -553,7 +640,7 @@ export default function SettingsModal({
                   cursor: deleteBusy ? "not-allowed" : "pointer",
                 }}
               >
-                Cancel
+                {tx("cancel")}
               </button>
               <button
                 onClick={handleDeleteAccount}
@@ -569,7 +656,7 @@ export default function SettingsModal({
                   opacity: deleteBusy ? 0.7 : 1,
                 }}
               >
-                {deleteBusy ? "Deleting..." : "Yes, delete account"}
+                {deleteBusy ? tx("deleting") : tx("deleteAccountConfirmAction")}
               </button>
             </div>
           </div>

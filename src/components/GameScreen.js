@@ -97,6 +97,8 @@ export default function GameScreen({
   onCoinsChange,
   onGameplayDiagnostics,
   onQuestionFlowDiagnostics,
+  isGuestUser = false,
+  onGuestAuthRequest,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -1950,6 +1952,51 @@ export default function GameScreen({
                 {t && lang ? t(lang, "goToMainMenu") : "Go to Main Menu"}
               </button>
             </div>
+            {isGuestUser && (
+              <div
+                style={{
+                  margin: "14px auto 0",
+                  width: "min(420px, 100%)",
+                  padding: "12px 12px 10px",
+                  borderRadius: 16,
+                  background: "rgba(255,255,255,0.10)",
+                  border: "1px solid rgba(255,255,255,0.22)",
+                  boxShadow: "0 8px 18px rgba(15,23,42,0.14)",
+                }}
+              >
+                <button
+                  onClick={() => onGuestAuthRequest && onGuestAuthRequest("signup")}
+                  style={{
+                    ...secondaryActionButton,
+                    width: "100%",
+                    marginTop: 0,
+                    background: "#ffffff",
+                    border: "1px solid #dbeafe",
+                    color: "#0f172a",
+                    fontWeight: 700,
+                  }}
+                >
+                  {t && lang
+                    ? t(lang, "level_complete_cta_button")
+                    : "Create Account / Log In"}
+                </button>
+                <div
+                  style={{
+                    marginTop: 8,
+                    fontSize: 12,
+                    color: "#f8fafc",
+                    lineHeight: 1.35,
+                    textAlign: "center",
+                    wordBreak: "break-word",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {t && lang
+                    ? t(lang, "level_complete_cta_text")
+                    : "Save your progress and continue where you left off."}
+                </div>
+              </div>
+            )}
           </div>
         )
       ) : fail ? (

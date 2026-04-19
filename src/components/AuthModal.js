@@ -119,6 +119,7 @@ export default function AuthModal({
       onLoggedIn({
         id: user?.id || username,
         label: username,
+        authAction: "login",
       });
     onClose && onClose();
   }
@@ -186,6 +187,7 @@ export default function AuthModal({
       onLoggedIn({
         id: user?.id || username,
         label: username,
+        authAction: "signup",
       });
     onClose && onClose();
   }
@@ -703,7 +705,6 @@ export default function AuthModal({
     </div>
   );
 }
-
 
 
 
