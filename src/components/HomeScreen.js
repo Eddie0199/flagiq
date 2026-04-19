@@ -1601,59 +1601,66 @@ export default function HomeScreen({
             gap: 12,
           }}
         >
+          <div
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              display: "grid",
+              gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+              gap: 10,
+            }}
+          >
+            <button
+              onClick={() => onAuthRequest && onAuthRequest("signup")}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 22,
+                border: "none",
+                background: "#0f172a",
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: 16,
+                boxShadow: "0 8px 18px rgba(15,23,42,.2)",
+                cursor: "pointer",
+              }}
+            >
+              {text("createAccount", "Create Account")}
+            </button>
+            <button
+              onClick={() => onAuthRequest && onAuthRequest("login")}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: 22,
+                border: "1px solid rgba(15,23,42,0.2)",
+                background: "rgba(255,255,255,0.96)",
+                color: "#0f172a",
+                fontWeight: 700,
+                fontSize: 16,
+                boxShadow: "0 8px 18px rgba(0,0,0,.12)",
+                cursor: "pointer",
+              }}
+            >
+              {text("login", "Log In")}
+            </button>
+          </div>
           <button
             onClick={() => onPlayAsGuest && onPlayAsGuest()}
             style={{
               width: "85%",
               maxWidth: 520,
-              padding: "12px 16px",
+              padding: "11px 16px",
               borderRadius: 22,
-              border: "none",
-              background: "#0f172a",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: 16,
-              boxShadow: "0 8px 18px rgba(15,23,42,.2)",
+              border: "1px solid rgba(255,255,255,0.65)",
+              background: "rgba(148,163,184,0.18)",
+              color: "#f8fafc",
+              fontWeight: 600,
+              fontSize: 15,
               cursor: "pointer",
             }}
           >
             {text("playAsGuest", "Play as Guest")}
-          </button>
-          <button
-            onClick={() => onAuthRequest && onAuthRequest("login")}
-            style={{
-              width: "85%",
-              maxWidth: 520,
-              padding: "12px 16px",
-              borderRadius: 22,
-              border: "1px solid rgba(15,23,42,0.2)",
-              background: "rgba(255,255,255,0.95)",
-              color: "#0f172a",
-              fontWeight: 700,
-              fontSize: 16,
-              boxShadow: "0 8px 18px rgba(0,0,0,.12)",
-              cursor: "pointer",
-            }}
-          >
-            {text("login", "Log in")}
-          </button>
-          <button
-            onClick={() => onAuthRequest && onAuthRequest("signup")}
-            style={{
-              width: "85%",
-              maxWidth: 520,
-              padding: "12px 16px",
-              borderRadius: 22,
-              border: "1px solid rgba(15,23,42,0.2)",
-              background: "rgba(255,255,255,0.82)",
-              color: "#0f172a",
-              fontWeight: 700,
-              fontSize: 16,
-              boxShadow: "0 8px 18px rgba(0,0,0,.12)",
-              cursor: "pointer",
-            }}
-          >
-            {text("auth.signupTab", "Sign up")}
           </button>
           <div
             style={{

@@ -1575,8 +1575,9 @@ export default function GameScreen({
 
   const guestAuthActionButton = {
     ...secondaryActionButton,
-    border: "1px solid #93c5fd",
-    background: "#f8fbff",
+    border: "1px solid #3b82f6",
+    background: "#e0edff",
+    color: "#0b3a75",
   };
 
   return (
