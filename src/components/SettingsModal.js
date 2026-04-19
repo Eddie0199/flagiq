@@ -548,13 +548,15 @@ export default function SettingsModal({
             onClick={handleLogout}
             style={{
               width: "100%",
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
+              background: "#0f172a",
+              color: "#fff",
+              border: "1px solid #0f172a",
               borderRadius: 16,
-              padding: "10px 0",
-              fontWeight: 600,
+              padding: "11px 0",
+              fontWeight: 700,
               marginTop: 14,
               cursor: "pointer",
+              boxShadow: "0 8px 16px rgba(15, 23, 42, 0.2)",
             }}
           >
             {tx("logout")}
@@ -568,15 +570,16 @@ export default function SettingsModal({
               setDeleteConfirmOpen(true);
             }}
             style={{
-              width: "100%",
               marginTop: 10,
-              background: "#ef4444",
-              color: "#fff",
-              border: "1px solid #dc2626",
-              borderRadius: 16,
-              padding: "10px 0",
-              fontWeight: 700,
+              background: "transparent",
+              color: "#dc2626",
+              border: "none",
+              padding: "2px 0",
+              fontWeight: 600,
+              textDecoration: "underline",
+              textUnderlineOffset: 2,
               cursor: "pointer",
+              alignSelf: "center",
             }}
           >
             {tx("deleteAccount")}

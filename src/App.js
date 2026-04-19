@@ -2153,6 +2153,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [lockInfo, setLockInfo] = useState(null);
   const [noLivesOpen, setNoLivesOpen] = useState(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState("");
 
   const [levels] = useState(() => buildLevels(FLAGS));
   const activeLocalPack = useMemo(() => {
@@ -2188,6 +2189,62 @@ export default function App() {
   const heartsCurrent = heartsState?.current ?? MAX_HEARTS;
   const heartsMax = heartsState?.max ?? MAX_HEARTS;
   const lastRegenAt = heartsState?.lastRegenAt ?? null;
+
+  useEffect(() => {
+    if (!activeUser || pendingAuthAction !== "login") return;
+    let cancelled = false;
+    (async () => {
+      setBackendLoaded(false);
+      setCoins(0);
+      setProgress(normalizeProgress());
+      setHeartsState(DEFAULT_HEARTS_STATE);
+      setCooldowns({});
+      setInventory(null);
+      try {
+        await ensurePlayerState(activeUser);
+        const state = await getPlayerState(activeUser);
+        if (cancelled || !state) return;
+
+        setCoins(Number(state.coins) || 0);
+        setProgress(normalizeProgress(state.progress));
+
+        const { cleaned: backendInventory, legacyHints } = normalizeInventory(
+          state.inventory || state.inventory_state || state.items || {}
+        );
+        setInventory(backendInventory);
+        const backendHints =
+          (backendInventory && backendInventory.hints) ||
+          (backendInventory && backendInventory.boosters);
+        if (backendHints && typeof backendHints === "object") {
+          setHints((prev) => ({
+            ...DEFAULT_HINTS,
+            ...prev,
+            ...backendHints,
+            ...legacyHints,
+          }));
+        }
+
+        const backendHearts = normalizeHeartsState({
+          hearts_current: state.hearts_current,
+          hearts_max: state.hearts_max,
+          hearts_last_regen_at: state.hearts_last_regen_at,
+        });
+        const regenerated = applyHeartsRegen(backendHearts, Date.now());
+        setHeartsState(regenerated);
+        setCooldowns(state.cooldowns || {});
+      } catch (error) {
+        console.error("Failed to hydrate account state after login", error);
+      } finally {
+        if (!cancelled) {
+          setPendingAuthAction("");
+          setBackendLoaded(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeUser, pendingAuthAction, setHints]);
 
   const refreshHeartsFromBackend = useCallback(async () => {
     if (!activeUser || !backendLoaded || !isOnline) return;
@@ -3208,6 +3265,7 @@ export default function App() {
               setActiveUserLabel(nextLabel);
             }
             setGuestSessionActive(false);
+            setPendingAuthAction(authAction || "login");
             setScreen("home");
           }}
         />
