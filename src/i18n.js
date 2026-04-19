@@ -258,7 +258,7 @@ const STRINGS = {
     cancel: "Cancel",
     deleting: "Deleting...",
     level_complete_cta_button: "Create Account / Log In",
-    level_complete_cta_text: "Save your progress and continue where you left off.",
+    level_complete_cta_text: "Save your progress or continue where you left off.",
 
     gameOver: "Game Over",
     tryAgain: "Try Again",
@@ -762,7 +762,7 @@ const STRINGS = {
     cancel: "Cancelar",
     deleting: "Eliminando...",
     level_complete_cta_button: "Crear cuenta / Iniciar sesión",
-    level_complete_cta_text: "Guarda tu progreso y continúa donde lo dejaste.",
+    level_complete_cta_text: "Guarda tu progreso o continúa donde lo dejaste.",
 
     levelWord: "Nivel",
     coins: "Monedas",
@@ -1265,7 +1265,7 @@ const STRINGS = {
     cancel: "Cancelar",
     deleting: "A eliminar...",
     level_complete_cta_button: "Criar conta / Entrar",
-    level_complete_cta_text: "Guarde o seu progresso e continue de onde parou.",
+    level_complete_cta_text: "Guarde o seu progresso ou continue de onde parou.",
 
     levelWord: "Nível",
 
@@ -1747,7 +1747,7 @@ const STRINGS = {
     cancel: "Abbrechen",
     deleting: "Wird gelöscht...",
     level_complete_cta_button: "Konto erstellen / Anmelden",
-    level_complete_cta_text: "Speichere deinen Fortschritt und mache dort weiter, wo du aufgehört hast.",
+    level_complete_cta_text: "Speichere deinen Fortschritt oder mache dort weiter, wo du aufgehört hast.",
 
     storeTitle: "Booster-Shop",
     storeSubtitle: "Gib Münzen für Hinweise aus oder hol dir mehr Münzen.",
@@ -2251,7 +2251,7 @@ const STRINGS = {
     cancel: "Annuler",
     deleting: "Suppression...",
     level_complete_cta_button: "Créer un compte / Se connecter",
-    level_complete_cta_text: "Sauvegardez votre progression et reprenez où vous vous êtes arrêté.",
+    level_complete_cta_text: "Sauvegardez votre progression ou reprenez où vous vous êtes arrêté.",
 
     storeTitle: "Boutique des bonus",
     storeSubtitle:
@@ -2758,7 +2758,7 @@ const STRINGS = {
     cancel: "Annuleren",
     deleting: "Bezig met verwijderen...",
     level_complete_cta_button: "Account maken / Inloggen",
-    level_complete_cta_text: "Sla je voortgang op en ga verder waar je gebleven was.",
+    level_complete_cta_text: "Sla je voortgang op of ga verder waar je gebleven was.",
 
     storeTitle: "Booster-shop",
     storeSubtitle: "Besteed munten aan hints of koop meer munten.",
@@ -3198,7 +3198,6 @@ export function tp(lang, key, count, vars = {}) {
   const pluralKey = count === 1 ? `${key}.one` : `${key}.other`;
   return interpolate(t(lang, pluralKey), { ...vars, count });
 }
-
 
 
 

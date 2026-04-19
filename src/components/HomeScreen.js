@@ -1601,6 +1601,23 @@ export default function HomeScreen({
             gap: 12,
           }}
         >
+          <button
+            onClick={() => onPlayAsGuest && onPlayAsGuest()}
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              padding: "11px 16px",
+              borderRadius: 22,
+              border: "1px solid rgba(255,255,255,0.65)",
+              background: "rgba(148,163,184,0.18)",
+              color: "#f8fafc",
+              fontWeight: 600,
+              fontSize: 15,
+              cursor: "pointer",
+            }}
+          >
+            {text("playAsGuest", "Play as Guest")}
+          </button>
           <div
             style={{
               width: "85%",
@@ -1645,23 +1662,6 @@ export default function HomeScreen({
               {text("login", "Log In")}
             </button>
           </div>
-          <button
-            onClick={() => onPlayAsGuest && onPlayAsGuest()}
-            style={{
-              width: "85%",
-              maxWidth: 520,
-              padding: "11px 16px",
-              borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.65)",
-              background: "rgba(148,163,184,0.18)",
-              color: "#f8fafc",
-              fontWeight: 600,
-              fontSize: 15,
-              cursor: "pointer",
-            }}
-          >
-            {text("playAsGuest", "Play as Guest")}
-          </button>
           <div
             style={{
               width: "85%",
