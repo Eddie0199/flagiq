@@ -1430,6 +1430,7 @@ export default function App() {
     []
   );
   const [guestPromptMilestone, setGuestPromptMilestone] = useState(0);
+  const [pendingAuthAction, setPendingAuthAction] = useState("");
   const [authReady, setAuthReady] = useState(!supabase);
   const [backendLoaded, setBackendLoaded] = useState(false);
 
@@ -2159,7 +2160,6 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [lockInfo, setLockInfo] = useState(null);
   const [noLivesOpen, setNoLivesOpen] = useState(false);
-  const [pendingAuthAction, setPendingAuthAction] = useState("");
 
   const [levels] = useState(() => buildLevels(FLAGS));
   const activeLocalPack = useMemo(() => {
