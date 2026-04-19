@@ -1573,6 +1573,12 @@ export default function GameScreen({
     color: "#0f172a",
   };
 
+  const guestAuthActionButton = {
+    ...secondaryActionButton,
+    border: "1px solid #93c5fd",
+    background: "#f8fbff",
+  };
+
   return (
     <div style={{ padding: "10px 12px 60px" }}>
       {/* HINT INFO POPUP (first time) */}
@@ -1955,25 +1961,15 @@ export default function GameScreen({
             {isGuestUser && (
               <div
                 style={{
-                  margin: "14px auto 0",
-                  width: "min(420px, 100%)",
-                  padding: "12px 12px 10px",
-                  borderRadius: 16,
-                  background: "rgba(255,255,255,0.10)",
-                  border: "1px solid rgba(255,255,255,0.22)",
-                  boxShadow: "0 8px 18px rgba(15,23,42,0.14)",
+                  margin: "10px auto 0",
+                  width: "min(260px, 90vw)",
                 }}
               >
                 <button
                   onClick={() => onGuestAuthRequest && onGuestAuthRequest("signup")}
                   style={{
-                    ...secondaryActionButton,
+                    ...guestAuthActionButton,
                     width: "100%",
-                    marginTop: 0,
-                    background: "#ffffff",
-                    border: "1px solid #dbeafe",
-                    color: "#0f172a",
-                    fontWeight: 700,
                   }}
                 >
                   {t && lang
@@ -1982,7 +1978,7 @@ export default function GameScreen({
                 </button>
                 <div
                   style={{
-                    marginTop: 8,
+                    marginTop: 6,
                     fontSize: 12,
                     color: "#f8fafc",
                     lineHeight: 1.35,
