@@ -97,6 +97,8 @@ export default function GameScreen({
   onCoinsChange,
   onGameplayDiagnostics,
   onQuestionFlowDiagnostics,
+  isGuestUser = false,
+  onGuestAuthRequest,
 }) {
   // create / read per-device user id
   const [playerId] = useState(() => {
@@ -1949,6 +1951,31 @@ export default function GameScreen({
               <button onClick={onMainMenu} style={secondaryActionButton}>
                 {t && lang ? t(lang, "goToMainMenu") : "Go to Main Menu"}
               </button>
+              {isGuestUser && (
+                <>
+                  <button
+                    onClick={() => onGuestAuthRequest && onGuestAuthRequest("signup")}
+                    style={secondaryActionButton}
+                  >
+                    {t && lang
+                      ? t(lang, "level_complete_cta_button")
+                      : "Create Account / Log In"}
+                  </button>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#e2e8f0",
+                      lineHeight: 1.35,
+                      maxWidth: 360,
+                      margin: "0 auto",
+                    }}
+                  >
+                    {t && lang
+                      ? t(lang, "level_complete_cta_text")
+                      : "Save your progress and continue where you left off."}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )

@@ -2536,6 +2536,30 @@ export default function App() {
     return result;
   }, []);
 
+  const migrateGuestDataToAccount = useCallback(
+    async (accountId) => {
+      if (!accountId || !guestSessionActive) return;
+      try {
+        await ensurePlayerState(accountId);
+        await updatePlayerState(accountId, {
+          progress: normalizeProgress(progress),
+          coins: Number(coins) || 0,
+          inventory: { hints: { ...(hints || {}) } },
+          hearts_current: heartsState?.current ?? MAX_HEARTS,
+          hearts_max: heartsState?.max ?? MAX_HEARTS,
+          hearts_last_regen_at: heartsState?.lastRegenAt
+            ? new Date(heartsState.lastRegenAt).toISOString()
+            : null,
+          cooldowns: cooldowns || {},
+          preferred_language: normalizeLanguageCode(lang),
+        });
+      } catch (error) {
+        console.error("Guest data migration failed", error);
+      }
+    },
+    [coins, cooldowns, guestSessionActive, heartsState, hints, lang, progress]
+  );
+
   // NEW: per-mode stats for homepage cards, based on in-memory progress
   const classicStats = deriveModeStatsFromProgress(progress, "classic");
   const timetrialStats = deriveModeStatsFromProgress(progress, "timetrial");
@@ -2992,6 +3016,8 @@ export default function App() {
             }
             onGameplayDiagnostics={handleGameplayDiagnostics}
             onQuestionFlowDiagnostics={handleQuestionFlowDiagnostics}
+            isGuestUser={guestSessionActive && !loggedIn}
+            onGuestAuthRequest={openAuth}
           />
         </>
       )}
@@ -3164,14 +3190,24 @@ export default function App() {
           setTab={setAuthTab}
           users={users}
           setUsers={setUsers}
-          onLoggedIn={(u) => {
-            if (u && typeof u === "object") {
-              setActiveUser(u.id || "");
-              setActiveUserLabel(u.label || u.id || "");
-            } else {
-              setActiveUser(u);
-              setActiveUserLabel(u);
+          onLoggedIn={async (u) => {
+            const authAction = typeof u === "object" ? u.authAction : "";
+            const nextId = typeof u === "object" ? u.id || "" : u;
+            const nextLabel =
+              typeof u === "object" ? u.label || u.id || "" : u;
+
+            if (guestSessionActive && authAction === "signup" && nextId) {
+              await migrateGuestDataToAccount(nextId);
             }
+
+            if (u && typeof u === "object") {
+              setActiveUser(nextId);
+              setActiveUserLabel(nextLabel);
+            } else {
+              setActiveUser(nextId);
+              setActiveUserLabel(nextLabel);
+            }
+            setGuestSessionActive(false);
             setScreen("home");
           }}
         />
