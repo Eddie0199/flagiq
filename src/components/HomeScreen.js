@@ -713,6 +713,8 @@ export default function HomeScreen({
   onDailySpinClaim,
   loggedIn,
   onAuthRequest,
+  showEntryCtas = false,
+  onPlayAsGuest,
   i18nAuditEnabled = false,
 }) {
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -1546,7 +1548,7 @@ export default function HomeScreen({
       ) : null}
 
       {/* game cards */}
-      {loggedIn ? (
+      {!showEntryCtas ? (
         <div
           style={{
             marginTop: 60,
@@ -1600,7 +1602,7 @@ export default function HomeScreen({
           }}
         >
           <button
-            onClick={() => onAuthRequest && onAuthRequest("login")}
+            onClick={() => onPlayAsGuest && onPlayAsGuest()}
             style={{
               width: "85%",
               maxWidth: 520,
@@ -1615,10 +1617,10 @@ export default function HomeScreen({
               cursor: "pointer",
             }}
           >
-            {text("login", "Log in")}
+            {text("playAsGuest", "Play as Guest")}
           </button>
           <button
-            onClick={() => onAuthRequest && onAuthRequest("signup")}
+            onClick={() => onAuthRequest && onAuthRequest("login")}
             style={{
               width: "85%",
               maxWidth: 520,
@@ -1633,8 +1635,41 @@ export default function HomeScreen({
               cursor: "pointer",
             }}
           >
+            {text("login", "Log in")}
+          </button>
+          <button
+            onClick={() => onAuthRequest && onAuthRequest("signup")}
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              padding: "12px 16px",
+              borderRadius: 22,
+              border: "1px solid rgba(15,23,42,0.2)",
+              background: "rgba(255,255,255,0.82)",
+              color: "#0f172a",
+              fontWeight: 700,
+              fontSize: 16,
+              boxShadow: "0 8px 18px rgba(0,0,0,.12)",
+              cursor: "pointer",
+            }}
+          >
             {text("auth.signupTab", "Sign up")}
           </button>
+          <div
+            style={{
+              width: "85%",
+              maxWidth: 520,
+              color: "rgba(255,255,255,0.95)",
+              fontSize: 13,
+              lineHeight: 1.35,
+              textAlign: "center",
+              textWrap: "balance",
+              marginTop: 4,
+              textShadow: "0 2px 6px rgba(0,0,0,.35)",
+            }}
+          >
+            {text("entryAccountBenefits", "Save your progress, keep your coins safe, and play across devices.")}
+          </div>
         </div>
       )}
 
