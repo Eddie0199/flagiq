@@ -26,6 +26,7 @@ export default function SettingsModal({
   onResetProgress, // dev-only callback from App (optional)
 }) {
   const loggedIn = !!activeUser;
+  // Product decision: restore in-app purchases is intentionally not exposed in settings.
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
   const [userEmail, setUserEmail] = useState("");
   const [userCreatedAt, setUserCreatedAt] = useState("");
