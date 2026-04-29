@@ -19,7 +19,6 @@ export default function SettingsModal({
   t,
   onResetProgress, // dev-only callback from App (optional)
   onAuthRequest,
-  onRestorePurchases,
   isGuestMode = false,
 }) {
   const loggedIn = !!activeUser;
@@ -27,7 +26,6 @@ export default function SettingsModal({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [statusType, setStatusType] = useState("info");
-  const [restoreBusy, setRestoreBusy] = useState(false);
   const [displayName, setDisplayName] = useState(() => activeUserLabel || "");
   const [userEmail, setUserEmail] = useState("");
   const [userCreatedAt, setUserCreatedAt] = useState("");
@@ -91,26 +89,6 @@ export default function SettingsModal({
       );
     } finally {
       setDeleteBusy(false);
-    }
-  };
-
-  const handleRestorePurchases = async () => {
-    if (restoreBusy || !onRestorePurchases) return;
-    setRestoreBusy(true);
-    setStatusType("info");
-    setStatusMessage(tx("restorePurchasesWorking"));
-    try {
-      const result = await onRestorePurchases();
-      if (!result?.success) {
-        throw new Error(result?.error || tx("restorePurchasesFailed"));
-      }
-      setStatusType("success");
-      setStatusMessage(tx("restorePurchasesSuccess"));
-    } catch (error) {
-      setStatusType("error");
-      setStatusMessage(error?.message || tx("restorePurchasesFailed"));
-    } finally {
-      setRestoreBusy(false);
     }
   };
 
@@ -524,24 +502,6 @@ export default function SettingsModal({
             </button>
           </div>
         )}
-
-        <button
-          onClick={handleRestorePurchases}
-          disabled={restoreBusy}
-          style={{
-            width: "100%",
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            borderRadius: 16,
-            padding: "10px 0",
-            fontWeight: 600,
-            marginTop: 14,
-            cursor: restoreBusy ? "not-allowed" : "pointer",
-            opacity: restoreBusy ? 0.7 : 1,
-          }}
-        >
-          {restoreBusy ? tx("restorePurchasesWorking") : tx("restorePurchases")}
-        </button>
 
         {loggedIn && (
           <button
