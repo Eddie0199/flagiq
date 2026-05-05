@@ -459,7 +459,7 @@ export async function purchaseProduct(productId) {
   }
 
   if (!DEV_MODE_ENABLED) {
-    return { success: false, error: "Purchases unavailable" };
+    return { success: false, error: "Purchases temporarily unavailable." };
   }
 
   return await applyRewards(product, platform);
