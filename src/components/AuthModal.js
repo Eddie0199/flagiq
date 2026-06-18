@@ -437,14 +437,19 @@ export default function AuthModal({
             </form>
           ) : tab === "login" ? (
             // ---------- LOGIN SCREEN ----------
-            <form onSubmit={handleLogin}>
+            <form onSubmit={handleLogin} autoComplete="on">
               {/* email */}
               <label
+                htmlFor="login-email"
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
                 {tr("auth.email", "Email")}
               </label>
               <input
+                id="login-email"
+                name="email"
+                type="email"
+                autoComplete="email"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 placeholder={tr("auth.emailPlaceholder", "Enter your email")}
@@ -461,12 +466,16 @@ export default function AuthModal({
 
               {/* password */}
               <label
+                htmlFor="login-password"
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
                 {tr("auth.password", "Password")}
               </label>
               <input
+                id="login-password"
+                name="password"
                 type="password"
+                autoComplete="current-password"
                 value={loginPwd}
                 onChange={(e) => setLoginPwd(e.target.value)}
                 placeholder={tr("auth.passwordPlaceholder", "Enter your password")}
@@ -564,14 +573,19 @@ export default function AuthModal({
             </form>
           ) : (
             // ---------- SIGNUP SCREEN ----------
-            <form onSubmit={handleSignup}>
+            <form onSubmit={handleSignup} autoComplete="on">
               {/* username */}
               <label
+                htmlFor="signup-username"
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
                 {tr("auth.username", "Username")}
               </label>
               <input
+                id="signup-username"
+                name="username"
+                type="text"
+                autoComplete="username"
                 value={suUser}
                 onChange={(e) => setSuUser(e.target.value)}
                 placeholder={tr("auth.usernamePlaceholder", "Pick a username")}
@@ -601,11 +615,16 @@ export default function AuthModal({
 
               {/* email */}
               <label
+                htmlFor="signup-email"
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
                 {tr("auth.email", "Email")}
               </label>
               <input
+                id="signup-email"
+                name="email"
+                type="email"
+                autoComplete="email"
                 value={suEmail}
                 onChange={(e) => setSuEmail(e.target.value)}
                 placeholder={tr("auth.emailPlaceholder", "Enter your email")}
@@ -629,13 +648,17 @@ export default function AuthModal({
 
               {/* password */}
               <label
+                htmlFor="signup-password"
                 style={{ display: "block", fontWeight: 600, marginBottom: 4 }}
               >
                 {tr("auth.password", "Password")}
               </label>
               <div style={{ position: "relative", marginBottom: 4 }}>
                 <input
+                  id="signup-password"
+                  name="new-password"
                   type={showPwd ? "text" : "password"}
+                  autoComplete="new-password"
                   value={suPwd}
                   onChange={(e) => setSuPwd(e.target.value)}
                   placeholder={tr("auth.passwordPlaceholder", "Enter your password")}
