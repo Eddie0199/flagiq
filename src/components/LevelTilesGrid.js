@@ -74,19 +74,6 @@ export default function LevelTilesGrid({
                 {"★".repeat(3 - stars)}
               </span>
             </div>
-            {locked ? (
-              <span
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  top: 8,
-                  right: 10,
-                  color: "#94a3b8",
-                }}
-              >
-                🔒
-              </span>
-            ) : null}
             {locked && showBadge > 0 ? (
               <div
                 style={{
