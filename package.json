@@ -6,6 +6,7 @@
   "main": "src/index.tsx",
   "homepage": ".",
   "dependencies": {
+    "@capacitor-community/in-app-review": "^6.0.0",
     "@capacitor/app": "file:vendor/capacitor-app",
     "@capacitor/core": "^6.0.0",
     "@supabase/supabase-js": "^2.48.0",

@@ -643,12 +643,12 @@ function countUniqueCompletedLevels(progress) {
   return completed.size;
 }
 
+const InAppReview = registerPlugin("InAppReview");
+
 async function requestInAppReview() {
-  if (!Capacitor?.Plugins) return false;
-  const plugin = Capacitor.Plugins.InAppReview || Capacitor.Plugins.AppReview;
-  if (!plugin?.requestReview) return false;
+  if (!Capacitor.isNativePlatform()) return false;
   try {
-    await plugin.requestReview();
+    await InAppReview.requestReview();
     return true;
   } catch (e) {
     return false;
@@ -1622,7 +1622,8 @@ export default function App() {
       if ((reviewPromptState.sessionsSinceLastPrompt || 0) < 3) return;
 
       (async () => {
-        await requestInAppReview();
+        const reviewRequested = await requestInAppReview();
+        if (!reviewRequested) return;
         setReviewPromptState((prev) => ({
           ...prev,
           lastReviewMilestonePrompted: milestone,
