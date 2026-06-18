@@ -46,6 +46,10 @@ import {
   updatePlayerState,
 } from "./playerStateApi";
 import { resolveFlagImageSrc } from "./flagAssets";
+import {
+  getOrCreateAnonymousDeviceId,
+  trackAnonymousDevice,
+} from "./anonymousDeviceApi";
 
 
 const LANGUAGE_STORAGE_KEY = "flagLang";
@@ -366,6 +370,47 @@ function normalizeProgress(raw) {
   });
 
   return base;
+}
+
+
+function mergeProgress(primary, secondary) {
+  const first = normalizeProgress(primary);
+  const second = normalizeProgress(secondary);
+  const merged = normalizeProgress(first);
+
+  ["classic", "timetrial"].forEach((modeKey) => {
+    const firstMode = first[modeKey] || {};
+    const secondMode = second[modeKey] || {};
+    const starsByLevel = { ...(firstMode.starsByLevel || {}) };
+    Object.entries(secondMode.starsByLevel || {}).forEach(([level, stars]) => {
+      starsByLevel[level] = Math.max(Number(starsByLevel[level]) || 0, Number(stars) || 0);
+    });
+    merged[modeKey] = {
+      starsByLevel,
+      unlockedUntil: Math.max(
+        Number(firstMode.unlockedUntil) || 5,
+        Number(secondMode.unlockedUntil) || 5
+      ),
+    };
+  });
+
+  const mergedPacks = { ...(first.localFlags?.packs || {}) };
+  Object.entries(second.localFlags?.packs || {}).forEach(([packId, pack]) => {
+    const existing = mergedPacks[packId] || { starsByLevel: {} };
+    const starsByLevel = { ...(existing.starsByLevel || {}) };
+    Object.entries(pack?.starsByLevel || {}).forEach(([level, stars]) => {
+      starsByLevel[level] = Math.max(Number(starsByLevel[level]) || 0, Number(stars) || 0);
+    });
+    mergedPacks[packId] = {
+      ...existing,
+      ...pack,
+      starsByLevel,
+      currentLevel: Math.max(Number(existing.currentLevel) || 1, Number(pack?.currentLevel) || 1),
+    };
+  });
+  merged.localFlags = { packs: mergedPacks };
+
+  return merged;
 }
 
 export function starsNeededForLevelId(levelId, starsMap) {
@@ -1431,8 +1476,34 @@ export default function App() {
   );
   const [guestPromptMilestone, setGuestPromptMilestone] = useState(0);
   const [pendingAuthAction, setPendingAuthAction] = useState("");
+  const [anonymousDeviceId, setAnonymousDeviceId] = useState("");
   const [authReady, setAuthReady] = useState(!supabase);
   const [backendLoaded, setBackendLoaded] = useState(false);
+
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const deviceId = await getOrCreateAnonymousDeviceId();
+        if (cancelled) return;
+        setAnonymousDeviceId(deviceId);
+        await trackAnonymousDevice(deviceId);
+      } catch (e) {
+        console.warn("Anonymous device tracking failed", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!anonymousDeviceId || !activeUser) return;
+    trackAnonymousDevice(anonymousDeviceId, activeUser).catch((e) => {
+      console.warn("Anonymous device link failed", e);
+    });
+  }, [anonymousDeviceId, activeUser]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -2549,9 +2620,13 @@ export default function App() {
       if (!accountId || !guestSessionActive) return;
       try {
         await ensurePlayerState(accountId);
+        await trackAnonymousDevice(anonymousDeviceId, accountId);
+        const existingState = await getPlayerState(accountId).catch(() => null);
+        const existingProgress = normalizeProgress(existingState?.progress);
+        const guestProgress = normalizeProgress(progress);
         await updatePlayerState(accountId, {
-          progress: normalizeProgress(progress),
-          coins: Number(coins) || 0,
+          progress: mergeProgress(existingProgress, guestProgress),
+          coins: Math.max(Number(existingState?.coins) || 0, Number(coins) || 0),
           inventory: { hints: { ...(hints || {}) } },
           hearts_current: heartsState?.current ?? MAX_HEARTS,
           hearts_max: heartsState?.max ?? MAX_HEARTS,
@@ -2565,7 +2640,7 @@ export default function App() {
         console.error("Guest data migration failed", error);
       }
     },
-    [coins, cooldowns, guestSessionActive, heartsState, hints, lang, progress]
+    [anonymousDeviceId, coins, cooldowns, guestSessionActive, heartsState, hints, lang, progress]
   );
 
   // NEW: per-mode stats for homepage cards, based on in-memory progress
@@ -3204,7 +3279,7 @@ export default function App() {
             const nextLabel =
               typeof u === "object" ? u.label || u.id || "" : u;
 
-            if (guestSessionActive && authAction === "signup" && nextId) {
+            if (guestSessionActive && nextId) {
               await migrateGuestDataToAccount(nextId);
             }
 
