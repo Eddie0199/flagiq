@@ -366,6 +366,7 @@ export default function GameScreen({
   const [isInputLocked, setIsInputLocked] = useState(false);
   const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
   const [isFetchingNextQuestion, setIsFetchingNextQuestion] = useState(false);
+  const [isCorrectAnswerFeedbackActive, setIsCorrectAnswerFeedbackActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resolvedTapTarget, setResolvedTapTarget] = useState("none");
   const [resolvedOptionIndex, setResolvedOptionIndex] = useState(-1);
@@ -683,7 +684,7 @@ export default function GameScreen({
   useEffect(() => {
     if (mode !== "timetrial") return;
     if (!questionReadyDetails.questionReady) return;
-    if (ttPaused) return;
+    if (ttPaused || isCorrectAnswerFeedbackActive) return;
 
     const timer = setInterval(() => {
       setTtRemaining((prev) => {
@@ -705,7 +706,7 @@ export default function GameScreen({
 
     return () => clearInterval(timer);
     
-  }, [mode, questionReadyDetails, ttPaused]);
+  }, [mode, questionReadyDetails, ttPaused, isCorrectAnswerFeedbackActive]);
 
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
@@ -1118,7 +1119,7 @@ export default function GameScreen({
       return;
     }
 
-    if (ttPaused) return;
+    if (ttPaused || isCorrectAnswerFeedbackActive) return;
 
     // pause for a short window
     setTtPaused(true);
@@ -1247,6 +1248,7 @@ export default function GameScreen({
         logQuestionFlowEvent("answer accepted", { answer: answerId, mode: "classic" });
         soundCorrect && soundCorrect();
         correctAnswerFeedbackInFlightRef.current = true;
+        setIsCorrectAnswerFeedbackActive(true);
         const lastQ = qIndex + 1 >= questionCount;
         lockInput();
         setIsAnimatingTransition(true);
@@ -1302,6 +1304,7 @@ export default function GameScreen({
               })
               .finally(() => {
                 correctAnswerFeedbackInFlightRef.current = false;
+                setIsCorrectAnswerFeedbackActive(false);
                 actionInFlightRef.current = false;
                 unlockInput();
               });
@@ -1340,6 +1343,7 @@ export default function GameScreen({
         logQuestionFlowEvent("answer accepted", { answer: answerId, mode: "timetrial" });
         soundCorrect && soundCorrect();
         correctAnswerFeedbackInFlightRef.current = true;
+        setIsCorrectAnswerFeedbackActive(true);
         const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
@@ -1401,6 +1405,7 @@ export default function GameScreen({
               })
               .finally(() => {
                 correctAnswerFeedbackInFlightRef.current = false;
+                setIsCorrectAnswerFeedbackActive(false);
                 actionInFlightRef.current = false;
                 unlockInput();
               });
