@@ -3057,7 +3057,7 @@ export default function App() {
             }}
             username={storageUserId}
             onSettings={() => setSettingsOpen(true)}
-            showHearts
+            showHearts={false}
             t={t}
             lang={lang}
             coins={coins}
