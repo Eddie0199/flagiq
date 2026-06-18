@@ -32,7 +32,7 @@ const nextFrame = (fn) => {
 };
 
 const WRONG_ANSWER_RESET_MS = 120;
-const CORRECT_ANSWER_HOLD_MS = 260;
+const CORRECT_ANSWER_HOLD_MS = 2000;
 const PAUSE_HINT_MS = 1500;
 const INPUT_LOCK_WATCHDOG_MS = 1500;
 const FLAG_PRELOAD_CACHE = "flagiq-flag-assets-v1";
@@ -366,6 +366,7 @@ export default function GameScreen({
   const [isInputLocked, setIsInputLocked] = useState(false);
   const [isAnimatingTransition, setIsAnimatingTransition] = useState(false);
   const [isFetchingNextQuestion, setIsFetchingNextQuestion] = useState(false);
+  const [isCorrectAnswerFeedbackActive, setIsCorrectAnswerFeedbackActive] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [resolvedTapTarget, setResolvedTapTarget] = useState("none");
   const [resolvedOptionIndex, setResolvedOptionIndex] = useState(-1);
@@ -377,6 +378,7 @@ export default function GameScreen({
   const pendingPauseTimeoutRef = useRef(null);
   const questionTokenRef = useRef(0);
   const actionInFlightRef = useRef(false);
+  const correctAnswerFeedbackInFlightRef = useRef(false);
   const lastProgressionErrorRef = useRef("");
   const loadingStartedAtRef = useRef(0);
 
@@ -682,13 +684,16 @@ export default function GameScreen({
   useEffect(() => {
     if (mode !== "timetrial") return;
     if (!questionReadyDetails.questionReady) return;
-    if (ttPaused) return;
+    if (ttPaused || isCorrectAnswerFeedbackActive) return;
 
     const timer = setInterval(() => {
       setTtRemaining((prev) => {
         const next = prev - TT_TICK_MS;
         if (next <= 0) {
           clearInterval(timer);
+          if (correctAnswerFeedbackInFlightRef.current) {
+            return 0;
+          }
           setFail(true);
           setSkulls((s) => clamp(s + 1, 0, 3));
           // time-out = failed run → lose exactly one life
@@ -701,7 +706,7 @@ export default function GameScreen({
 
     return () => clearInterval(timer);
     
-  }, [mode, questionReadyDetails, ttPaused]);
+  }, [mode, questionReadyDetails, ttPaused, isCorrectAnswerFeedbackActive]);
 
   const isLocalFlag = (flag) =>
     Boolean(flag?.code && String(flag.code).includes("_"));
@@ -1114,7 +1119,7 @@ export default function GameScreen({
       return;
     }
 
-    if (ttPaused) return;
+    if (ttPaused || isCorrectAnswerFeedbackActive) return;
 
     // pause for a short window
     setTtPaused(true);
@@ -1242,6 +1247,8 @@ export default function GameScreen({
       if (isCorrect) {
         logQuestionFlowEvent("answer accepted", { answer: answerId, mode: "classic" });
         soundCorrect && soundCorrect();
+        correctAnswerFeedbackInFlightRef.current = true;
+        setIsCorrectAnswerFeedbackActive(true);
         const lastQ = qIndex + 1 >= questionCount;
         lockInput();
         setIsAnimatingTransition(true);
@@ -1296,6 +1303,8 @@ export default function GameScreen({
                 console.error("[question-flow] classic progression failure", error);
               })
               .finally(() => {
+                correctAnswerFeedbackInFlightRef.current = false;
+                setIsCorrectAnswerFeedbackActive(false);
                 actionInFlightRef.current = false;
                 unlockInput();
               });
@@ -1333,6 +1342,8 @@ export default function GameScreen({
       if (isCorrect) {
         logQuestionFlowEvent("answer accepted", { answer: answerId, mode: "timetrial" });
         soundCorrect && soundCorrect();
+        correctAnswerFeedbackInFlightRef.current = true;
+        setIsCorrectAnswerFeedbackActive(true);
         const gain = Math.floor((ttRemaining / TT_MS_PER_Q) * TT_MAX_PER_Q);
         const newTotal = ttScore + gain;
         const lastQ = qIndex + 1 >= questionCount;
@@ -1393,6 +1404,8 @@ export default function GameScreen({
                 console.error("[question-flow] timetrial progression failure", error);
               })
               .finally(() => {
+                correctAnswerFeedbackInFlightRef.current = false;
+                setIsCorrectAnswerFeedbackActive(false);
                 actionInFlightRef.current = false;
                 unlockInput();
               });
