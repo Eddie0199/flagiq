@@ -1818,6 +1818,95 @@ export default function App() {
     [progressStorageKey]
   );
 
+
+
+
+
+  // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
+  const [hints, setHints] = usePerUserHints(storageUserId);
+
+  // Backend inventory (includes hints). We keep a copy so we can merge
+  // additional keys the backend might have without losing them when we
+  // update hints.
+  const [inventory, setInventory] = useState(null);
+  const [cooldowns, setCooldowns] = useState({});
+
+  // 🔑 COINS: single source of truth synced with localStorage
+  const [coins, setCoins] = useState(0);
+  const [heartsState, setHeartsState] = useState(DEFAULT_HEARTS_STATE);
+  const backendHeartsRef = useRef(null);
+  const pendingHeartsUpdateRef = useRef(null);
+  const heartsPushTimeoutRef = useRef(null);
+  const [nextHeartsRefreshAt, setNextHeartsRefreshAt] = useState(null);
+
+  const buildAnonymousGuestStatePayload = useCallback(
+    (nextProgress = progress) => ({
+      coins,
+      preferred_language: normalizeLanguageCode(lang),
+      progress: normalizeProgress(nextProgress),
+      inventory: { hints: { ...(hints || {}) } },
+      cooldowns: cooldowns || {},
+      hearts_current: heartsState?.current ?? MAX_HEARTS,
+      hearts_max: heartsState?.max ?? MAX_HEARTS,
+      hearts_last_regen_at: heartsState?.lastRegenAt
+        ? new Date(heartsState.lastRegenAt).toISOString()
+        : null,
+    }),
+    [coins, cooldowns, heartsState, hints, lang, progress]
+  );
+
+  const saveAnonymousGuestState = useCallback(
+    async (reason, nextProgress = progress) => {
+      if (!guestSessionActive || loggedIn || !anonymousDeviceId || !backendLoaded) {
+        logAnonymousTrackingContext("guest state save skipped", {
+          reason,
+          guestSessionActive,
+          loggedIn,
+          anonymous_device_id: anonymousDeviceId || null,
+          backendLoaded,
+        });
+        return null;
+      }
+
+      const payload = buildAnonymousGuestStatePayload(nextProgress);
+      logAnonymousTrackingContext("guest state save payload sent to Supabase", {
+        reason,
+        anonymous_device_id: anonymousDeviceId,
+        payload,
+      });
+
+      try {
+        const response = await saveAnonymousDeviceState(anonymousDeviceId, payload);
+        logAnonymousTrackingContext("guest state save Supabase response", {
+          reason,
+          anonymous_device_id: anonymousDeviceId,
+          payload,
+          response,
+          error: null,
+        });
+        return response;
+      } catch (error) {
+        console.warn("Anonymous guest state save failed", error);
+        logAnonymousTrackingContext("guest state save Supabase error", {
+          reason,
+          anonymous_device_id: anonymousDeviceId,
+          payload,
+          response: null,
+          error,
+        });
+        return null;
+      }
+    },
+    [
+      anonymousDeviceId,
+      backendLoaded,
+      buildAnonymousGuestStatePayload,
+      guestSessionActive,
+      loggedIn,
+      progress,
+    ]
+  );
+
   const updateProgressAfterLevel = useCallback(
     (modeKey, level, stars) => {
       setProgress((prev) => {
@@ -1875,6 +1964,8 @@ export default function App() {
         persistProgress(next);
         if (activeUser) {
           updatePlayerState(activeUser, { progress: next });
+        } else {
+          saveAnonymousGuestState("level_completion_after_persistProgress", next);
         }
         maybePromptForReview(next);
         maybePromptGuestAccount(next);
@@ -1887,27 +1978,9 @@ export default function App() {
       maybePromptForReview,
       maybePromptGuestAccount,
       persistProgress,
+      saveAnonymousGuestState,
     ]
   );
-
-
-
-  // 🔁 HINTS: now use dedicated per-user hook (with legacy migration)
-  const [hints, setHints] = usePerUserHints(storageUserId);
-
-  // Backend inventory (includes hints). We keep a copy so we can merge
-  // additional keys the backend might have without losing them when we
-  // update hints.
-  const [inventory, setInventory] = useState(null);
-  const [cooldowns, setCooldowns] = useState({});
-
-  // 🔑 COINS: single source of truth synced with localStorage
-  const [coins, setCoins] = useState(0);
-  const [heartsState, setHeartsState] = useState(DEFAULT_HEARTS_STATE);
-  const backendHeartsRef = useRef(null);
-  const pendingHeartsUpdateRef = useRef(null);
-  const heartsPushTimeoutRef = useRef(null);
-  const [nextHeartsRefreshAt, setNextHeartsRefreshAt] = useState(null);
 
   useEffect(() => {
     backendHeartsRef.current = null;
@@ -2300,61 +2373,11 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (!guestSessionActive || loggedIn || !anonymousDeviceId || !backendLoaded) {
-      logAnonymousTrackingContext("guest state save skipped", {
-        guestSessionActive,
-        loggedIn,
-        device_id: anonymousDeviceId || null,
-        backendLoaded,
-      });
-      return;
-    }
     const timeoutId = setTimeout(() => {
-      const payload = {
-        coins,
-        preferred_language: normalizeLanguageCode(lang),
-        progress: normalizeProgress(progress),
-        inventory: { hints: { ...(hints || {}) } },
-        cooldowns: cooldowns || {},
-        hearts_current: heartsState?.current ?? MAX_HEARTS,
-        hearts_max: heartsState?.max ?? MAX_HEARTS,
-        hearts_last_regen_at: heartsState?.lastRegenAt
-          ? new Date(heartsState.lastRegenAt).toISOString()
-          : null,
-      };
-      logAnonymousTrackingContext("guest state save scheduled payload", {
-        device_id: anonymousDeviceId,
-        payload,
-      });
-      saveAnonymousDeviceState(anonymousDeviceId, payload)
-        .then((tracked) => {
-          logAnonymousTrackingContext("guest state save completed", {
-            device_id: anonymousDeviceId,
-            last_seen_at: tracked?.last_seen_at || null,
-            row: tracked,
-          });
-        })
-        .catch((e) => {
-          console.warn("Anonymous guest state save failed", e);
-          logAnonymousTrackingContext("guest state save failed", {
-            device_id: anonymousDeviceId,
-            error: e,
-          });
-        });
+      saveAnonymousGuestState("debounced_guest_state_change", progress);
     }, 400);
     return () => clearTimeout(timeoutId);
-  }, [
-    anonymousDeviceId,
-    backendLoaded,
-    coins,
-    cooldowns,
-    guestSessionActive,
-    heartsState,
-    hints,
-    lang,
-    loggedIn,
-    progress,
-  ]);
+  }, [progress, saveAnonymousGuestState]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
@@ -3057,8 +3080,9 @@ export default function App() {
             <div>Build: {supabaseBuildInfo.buildNumber} / {supabaseBuildInfo.commitSha}</div>
             <div>Stored anonymous_device_id: {anonymousDeviceId || "pending"}</div>
             <div>Auth user: {activeUser || "guest/anon"}</div>
-            <div>Write path: RPC track_anonymous_device → fallback direct insert</div>
+            <div>Write path: RPC save_anonymous_device_state for guest state; track_anonymous_device for row tracking</div>
             <div>Column: anonymous_device_id (not id/device_id)</div>
+            <div>Guest save logs include anonymous_device_id, Supabase payload, response, and error.</div>
             <hr style={{ borderColor: "rgba(148, 163, 184, 0.35)" }} />
             {anonymousDebugEvents.length === 0 ? (
               <div>No anonymous tracking events yet.</div>
