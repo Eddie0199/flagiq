@@ -47,7 +47,9 @@ import {
 } from "./playerStateApi";
 import { resolveFlagImageSrc } from "./flagAssets";
 import {
+  getAnonymousDeviceState,
   getOrCreateAnonymousDeviceId,
+  saveAnonymousDeviceState,
   trackAnonymousDevice,
 } from "./anonymousDeviceApi";
 
@@ -372,6 +374,53 @@ function normalizeProgress(raw) {
   return base;
 }
 
+
+function hasMeaningfulProgress(progress) {
+  const base = normalizeProgress(progress);
+  const classicStars = Object.values(base.classic?.starsByLevel || {}).some(
+    (stars) => Number(stars) > 0
+  );
+  const timetrialStars = Object.values(base.timetrial?.starsByLevel || {}).some(
+    (stars) => Number(stars) > 0
+  );
+  const localStars = Object.values(base.localFlags?.packs || {}).some((pack) =>
+    Object.values(pack?.starsByLevel || {}).some((stars) => Number(stars) > 0)
+  );
+  return classicStars || timetrialStars || localStars;
+}
+
+function hasMeaningfulPlayerState(state) {
+  if (!state) return false;
+  if (hasMeaningfulProgress(state.progress)) return true;
+  if (Number(state.coins) > 0) return true;
+  const { cleaned, legacyHints } = normalizeInventory(
+    state.inventory || state.inventory_state || state.items || {}
+  );
+  const hints = cleaned?.hints || cleaned?.boosters || legacyHints || {};
+  if (
+    Object.entries(hints || {}).some(([key, qty]) => {
+      const baseline = Number(DEFAULT_HINTS[key]) || 0;
+      return Number(qty) > baseline;
+    })
+  ) {
+    return true;
+  }
+  if (Number(state.hearts_max) > MAX_HEARTS) return true;
+  return false;
+}
+
+function mergeInventory(primary, secondary) {
+  const { cleaned: first } = normalizeInventory(primary);
+  const { cleaned: second } = normalizeInventory(secondary);
+  return {
+    ...second,
+    ...first,
+    hints: {
+      ...(second?.hints || {}),
+      ...(first?.hints || {}),
+    },
+  };
+}
 
 function mergeProgress(primary, secondary) {
   const first = normalizeProgress(primary);
@@ -2212,20 +2261,36 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (!storageUserId) return;
-    try {
-      const key = getHeartsStorageKey(storageUserId);
-      if (!key) return;
-      localStorage.setItem(
-        key,
-        JSON.stringify({
-          hearts_current: heartsState.current,
-          hearts_max: heartsState.max,
-          hearts_last_regen_at: heartsState.lastRegenAt,
-        })
-      );
-    } catch (e) {}
-  }, [heartsState, storageUserId]);
+    if (!guestSessionActive || loggedIn || !anonymousDeviceId || !backendLoaded) return;
+    const timeoutId = setTimeout(() => {
+      saveAnonymousDeviceState(anonymousDeviceId, {
+        coins,
+        preferred_language: normalizeLanguageCode(lang),
+        progress: normalizeProgress(progress),
+        inventory: { hints: { ...(hints || {}) } },
+        cooldowns: cooldowns || {},
+        hearts_current: heartsState?.current ?? MAX_HEARTS,
+        hearts_max: heartsState?.max ?? MAX_HEARTS,
+        hearts_last_regen_at: heartsState?.lastRegenAt
+          ? new Date(heartsState.lastRegenAt).toISOString()
+          : null,
+      }).catch((e) => {
+        console.warn("Anonymous guest state save failed", e);
+      });
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [
+    anonymousDeviceId,
+    backendLoaded,
+    coins,
+    cooldowns,
+    guestSessionActive,
+    heartsState,
+    hints,
+    lang,
+    loggedIn,
+    progress,
+  ]);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState("login");
@@ -2616,25 +2681,64 @@ export default function App() {
   }, []);
 
   const migrateGuestDataToAccount = useCallback(
-    async (accountId) => {
+    async (accountId, authAction = "login") => {
       if (!accountId || !guestSessionActive) return;
       try {
-        await ensurePlayerState(accountId);
-        await trackAnonymousDevice(anonymousDeviceId, accountId);
-        const existingState = await getPlayerState(accountId).catch(() => null);
-        const existingProgress = normalizeProgress(existingState?.progress);
-        const guestProgress = normalizeProgress(progress);
-        await updatePlayerState(accountId, {
-          progress: mergeProgress(existingProgress, guestProgress),
-          coins: Math.max(Number(existingState?.coins) || 0, Number(coins) || 0),
+        await saveAnonymousDeviceState(anonymousDeviceId, {
+          coins,
+          preferred_language: normalizeLanguageCode(lang),
+          progress: normalizeProgress(progress),
           inventory: { hints: { ...(hints || {}) } },
+          cooldowns: cooldowns || {},
           hearts_current: heartsState?.current ?? MAX_HEARTS,
           hearts_max: heartsState?.max ?? MAX_HEARTS,
           hearts_last_regen_at: heartsState?.lastRegenAt
             ? new Date(heartsState.lastRegenAt).toISOString()
             : null,
-          cooldowns: cooldowns || {},
-          preferred_language: normalizeLanguageCode(lang),
+        });
+        await trackAnonymousDevice(anonymousDeviceId, accountId);
+        const anonymousState = await getAnonymousDeviceState(anonymousDeviceId).catch(() => null);
+        const guestProgress = normalizeProgress(anonymousState?.progress || progress);
+        const guestInventory = anonymousState?.inventory || { hints: { ...(hints || {}) } };
+        const guestHearts = normalizeHeartsState({
+          hearts_current: anonymousState?.hearts_current ?? heartsState?.current,
+          hearts_max: anonymousState?.hearts_max ?? heartsState?.max,
+          hearts_last_regen_at:
+            anonymousState?.hearts_last_regen_at ?? heartsState?.lastRegenAt,
+        });
+        const existingState = await getPlayerState(accountId).catch(() => null);
+        const accountHasProgress = hasMeaningfulPlayerState(existingState);
+
+        if (authAction === "login" && accountHasProgress) {
+          return;
+        }
+
+        if (!existingState) {
+          await ensurePlayerState(accountId);
+        }
+
+        await updatePlayerState(accountId, {
+          progress:
+            authAction === "signup"
+              ? guestProgress
+              : mergeProgress(normalizeProgress(existingState?.progress), guestProgress),
+          coins:
+            authAction === "signup"
+              ? Math.max(Number(anonymousState?.coins ?? coins) || 0, 0)
+              : Math.max(Number(existingState?.coins) || 0, Number(anonymousState?.coins ?? coins) || 0),
+          inventory:
+            authAction === "signup"
+              ? guestInventory
+              : mergeInventory(existingState?.inventory, guestInventory),
+          hearts_current: guestHearts.current,
+          hearts_max: guestHearts.max,
+          hearts_last_regen_at: guestHearts.lastRegenAt
+            ? new Date(guestHearts.lastRegenAt).toISOString()
+            : null,
+          cooldowns: anonymousState?.cooldowns || cooldowns || {},
+          preferred_language: normalizeLanguageCode(
+            anonymousState?.preferred_language || lang
+          ),
         });
       } catch (error) {
         console.error("Guest data migration failed", error);
@@ -3280,7 +3384,7 @@ export default function App() {
               typeof u === "object" ? u.label || u.id || "" : u;
 
             if (guestSessionActive && nextId) {
-              await migrateGuestDataToAccount(nextId);
+              await migrateGuestDataToAccount(nextId, authAction || "login");
             }
 
             setBackendLoaded(false);
