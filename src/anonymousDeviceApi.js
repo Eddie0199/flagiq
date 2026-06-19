@@ -66,3 +66,33 @@ export async function trackAnonymousDevice(anonymousDeviceId, userId = null) {
   if (error) throw error;
   return data;
 }
+
+export async function saveAnonymousDeviceState(anonymousDeviceId, state) {
+  if (!supabase || !anonymousDeviceId) return null;
+  const { data, error } = await supabase.rpc("save_anonymous_device_state", {
+    p_anonymous_device_id: anonymousDeviceId,
+    p_coins: Number.isFinite(Number(state?.coins)) ? Number(state.coins) : 0,
+    p_preferred_language: state?.preferred_language || null,
+    p_progress: state?.progress || {},
+    p_inventory: state?.inventory || {},
+    p_cooldowns: state?.cooldowns || {},
+    p_hearts_current: Number.isFinite(Number(state?.hearts_current))
+      ? Number(state.hearts_current)
+      : null,
+    p_hearts_max: Number.isFinite(Number(state?.hearts_max))
+      ? Number(state.hearts_max)
+      : null,
+    p_hearts_last_regen_at: state?.hearts_last_regen_at || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function getAnonymousDeviceState(anonymousDeviceId) {
+  if (!supabase || !anonymousDeviceId) return null;
+  const { data, error } = await supabase.rpc("get_anonymous_device_state", {
+    p_anonymous_device_id: anonymousDeviceId,
+  });
+  if (error) throw error;
+  return data;
+}
