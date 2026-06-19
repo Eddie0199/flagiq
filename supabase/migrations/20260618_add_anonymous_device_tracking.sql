@@ -72,7 +72,7 @@ begin
   )
   on conflict (anonymous_device_id)
   do update set
-    user_id = coalesce(public.anonymous_devices.user_id, excluded.user_id),
+    user_id = coalesce(excluded.user_id, public.anonymous_devices.user_id),
     last_seen_at = now(),
     converted_at = case
       when public.anonymous_devices.converted_at is not null then public.anonymous_devices.converted_at

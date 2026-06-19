@@ -39,8 +39,6 @@ import {
   supabase,
   restoreSupabaseSession,
   subscribeToSupabaseAuth,
-  supabaseBuildInfo,
-  supabaseProjectUrl,
 } from "./supabaseClient";
 import {
   ensurePlayerState,
@@ -53,8 +51,8 @@ import {
   getOrCreateAnonymousDeviceId,
   saveAnonymousDeviceState,
   trackAnonymousDevice,
+  linkAnonymousDeviceToUser,
   logAnonymousTrackingContext,
-  subscribeToAnonymousDeviceDebug,
 } from "./anonymousDeviceApi";
 
 
@@ -1530,15 +1528,9 @@ export default function App() {
   const [guestPromptMilestone, setGuestPromptMilestone] = useState(0);
   const [pendingAuthAction, setPendingAuthAction] = useState("");
   const [anonymousDeviceId, setAnonymousDeviceId] = useState("");
-  const [anonymousDebugOpen, setAnonymousDebugOpen] = useState(true);
-  const [anonymousDebugEvents, setAnonymousDebugEvents] = useState([]);
   const [authReady, setAuthReady] = useState(!supabase);
   const [backendLoaded, setBackendLoaded] = useState(false);
 
-
-  useEffect(() => subscribeToAnonymousDeviceDebug((entry) => {
-    setAnonymousDebugEvents((prev) => [entry, ...prev].slice(0, 12));
-  }), []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1574,7 +1566,7 @@ export default function App() {
       device_id: anonymousDeviceId,
       activeUser,
     });
-    trackAnonymousDevice(anonymousDeviceId, activeUser)
+    linkAnonymousDeviceToUser(anonymousDeviceId, activeUser)
       .then((tracked) => {
         logAnonymousTrackingContext("authenticated user link tracking effect completed", {
           device_id: anonymousDeviceId,
@@ -2783,7 +2775,7 @@ export default function App() {
             ? new Date(heartsState.lastRegenAt).toISOString()
             : null,
         });
-        await trackAnonymousDevice(anonymousDeviceId, accountId);
+        await linkAnonymousDeviceToUser(anonymousDeviceId, accountId);
         const anonymousState = await getAnonymousDeviceState(anonymousDeviceId).catch(() => null);
         const guestProgress = normalizeProgress(anonymousState?.progress || progress);
         const guestInventory = anonymousState?.inventory || { hints: { ...(hints || {}) } };
@@ -3041,59 +3033,6 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0b74ff" }}>
-
-      <div
-        style={{
-          position: "fixed",
-          right: 8,
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
-          zIndex: 9997,
-          width: anonymousDebugOpen ? "min(92vw, 420px)" : "auto",
-          maxHeight: anonymousDebugOpen ? "42vh" : "auto",
-          overflow: "hidden",
-          borderRadius: 12,
-          border: "1px solid rgba(34, 197, 94, 0.75)",
-          background: "rgba(2, 6, 23, 0.92)",
-          color: "white",
-          boxShadow: "0 12px 28px rgba(0,0,0,0.35)",
-          fontSize: 11,
-          fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-        }}
-      >
-        <button
-          onClick={() => setAnonymousDebugOpen((open) => !open)}
-          style={{
-            width: "100%",
-            padding: "8px 10px",
-            border: 0,
-            background: "rgba(22, 163, 74, 0.9)",
-            color: "white",
-            fontWeight: 800,
-            textAlign: "left",
-          }}
-        >
-          Anon DB Debug {anonymousDebugOpen ? "▼" : "▲"}
-        </button>
-        {anonymousDebugOpen && (
-          <div style={{ padding: 10, overflowY: "auto", maxHeight: "calc(42vh - 32px)" }}>
-            <div>Supabase URL: {supabaseProjectUrl || "missing"}</div>
-            <div>Build: {supabaseBuildInfo.buildNumber} / {supabaseBuildInfo.commitSha}</div>
-            <div>Stored anonymous_device_id: {anonymousDeviceId || "pending"}</div>
-            <div>Auth user: {activeUser || "guest/anon"}</div>
-            <div>Write path: RPC save_anonymous_device_state for guest state; track_anonymous_device for row tracking</div>
-            <div>Column: anonymous_device_id (not id/device_id)</div>
-            <div>Guest save logs include anonymous_device_id, Supabase payload, response, and error.</div>
-            <hr style={{ borderColor: "rgba(148, 163, 184, 0.35)" }} />
-            {anonymousDebugEvents.length === 0 ? (
-              <div>No anonymous tracking events yet.</div>
-            ) : anonymousDebugEvents.map((event) => (
-              <pre key={`${event.timestamp}-${event.message}`} style={{ whiteSpace: "pre-wrap", margin: "0 0 8px" }}>
-                {JSON.stringify(event, null, 2)}
-              </pre>
-            ))}
-          </div>
-        )}
-      </div>
 
       {debugOverlayEnabled && (
         <div
