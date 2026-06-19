@@ -4,23 +4,51 @@ import { supabase, supabaseBuildInfo, supabaseProjectUrl } from "./supabaseClien
 export const ANONYMOUS_DEVICE_ID_STORAGE_KEY = "flagiq:anonymousDeviceId";
 
 const LOG_PREFIX = "[anonymous-device]";
+const debugListeners = new Set();
 
-function logAnonymousDevice(message, details = {}) {
-  console.log(`${LOG_PREFIX} ${message}`, {
+function emitAnonymousDebug(event) {
+  const entry = {
+    timestamp: new Date().toISOString(),
     supabaseProjectUrl: supabaseProjectUrl || null,
     buildNumber: supabaseBuildInfo.buildNumber,
     commitSha: supabaseBuildInfo.commitSha,
-    ...details,
+    ...event,
+  };
+  debugListeners.forEach((listener) => {
+    try {
+      listener(entry);
+    } catch (e) {
+      // keep logging side effects isolated from app startup
+    }
   });
 }
 
-function warnAnonymousDevice(message, details = {}) {
-  console.warn(`${LOG_PREFIX} ${message}`, {
+export function subscribeToAnonymousDeviceDebug(listener) {
+  if (typeof listener !== "function") return () => {};
+  debugListeners.add(listener);
+  return () => debugListeners.delete(listener);
+}
+
+function logAnonymousDevice(message, details = {}) {
+  const payload = {
     supabaseProjectUrl: supabaseProjectUrl || null,
     buildNumber: supabaseBuildInfo.buildNumber,
     commitSha: supabaseBuildInfo.commitSha,
     ...details,
-  });
+  };
+  console.log(`${LOG_PREFIX} ${message}`, payload);
+  emitAnonymousDebug({ level: "info", message, details: payload });
+}
+
+function warnAnonymousDevice(message, details = {}) {
+  const payload = {
+    supabaseProjectUrl: supabaseProjectUrl || null,
+    buildNumber: supabaseBuildInfo.buildNumber,
+    commitSha: supabaseBuildInfo.commitSha,
+    ...details,
+  };
+  console.warn(`${LOG_PREFIX} ${message}`, payload);
+  emitAnonymousDebug({ level: "warn", message, details: payload });
 }
 
 export function logAnonymousTrackingContext(message, details = {}) {
@@ -105,6 +133,38 @@ export async function getOrCreateAnonymousDeviceId() {
   return nextId;
 }
 
+async function insertAnonymousDeviceFallback(anonymousDeviceId) {
+  const fallbackPayload = {
+    anonymous_device_id: anonymousDeviceId,
+    last_seen_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  logAnonymousDevice("direct anonymous_devices insert fallback requested", {
+    device_id: anonymousDeviceId,
+    table: "anonymous_devices",
+    payload: fallbackPayload,
+    note: "Fallback uses anonymous_device_id (not id/device_id) when track_anonymous_device RPC is missing or failing.",
+  });
+  const response = await supabase.from("anonymous_devices").insert(fallbackPayload).select().maybeSingle();
+  logAnonymousDevice("direct anonymous_devices insert fallback response", {
+    device_id: anonymousDeviceId,
+    status: response.status,
+    statusText: response.statusText,
+    data: response.data,
+    error: response.error,
+  });
+  if (response.error?.code === "23505") {
+    warnAnonymousDevice("direct anonymous_devices insert fallback found existing row", {
+      device_id: anonymousDeviceId,
+      error: response.error,
+      note: "Existing row means this install was already recorded; anon RLS may prevent direct updates, so RPC should be installed for true upsert/last_seen updates.",
+    });
+    return { anonymous_device_id: anonymousDeviceId, already_exists: true };
+  }
+  if (response.error) throw response.error;
+  return response.data;
+}
+
 export async function trackAnonymousDevice(anonymousDeviceId, userId = null) {
   const payload = {
     p_anonymous_device_id: anonymousDeviceId,
@@ -132,7 +192,13 @@ export async function trackAnonymousDevice(anonymousDeviceId, userId = null) {
     error,
     last_seen_at: data?.last_seen_at || null,
   });
-  if (error) throw error;
+  if (error) {
+    warnAnonymousDevice("track_anonymous_device RPC failed; trying direct insert fallback", {
+      device_id: anonymousDeviceId,
+      error,
+    });
+    return insertAnonymousDeviceFallback(anonymousDeviceId);
+  }
   return data;
 }
 
