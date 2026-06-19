@@ -24,6 +24,10 @@ workflows:
             echo "Missing required env vars for build: REACT_APP_SUPABASE_URL and/or REACT_APP_SUPABASE_ANON_KEY"
             exit 1
           fi
+          export REACT_APP_BUILD_NUMBER="${CM_BUILD_NUMBER:-$IOS_BUILD_NUMBER}"
+          export REACT_APP_COMMIT_SHA="${CM_COMMIT:-$(git rev-parse --short HEAD)}"
+          echo "Building web app for Supabase project: ${REACT_APP_SUPABASE_URL}"
+          echo "Embedding web build metadata: build=${REACT_APP_BUILD_NUMBER} commit=${REACT_APP_COMMIT_SHA}"
           npx cross-env ESLINT_NO_DEV_ERRORS=true npm run build
       - name: Copy Capacitor web assets to iOS (without native project regeneration)
         script: npx cap copy ios

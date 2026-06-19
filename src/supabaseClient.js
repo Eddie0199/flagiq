@@ -2,7 +2,12 @@
 import { Capacitor } from "@capacitor/core";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+export const supabaseProjectUrl = process.env.REACT_APP_SUPABASE_URL;
+export const supabaseBuildInfo = {
+  buildNumber: process.env.REACT_APP_BUILD_NUMBER || "unknown",
+  commitSha: process.env.REACT_APP_COMMIT_SHA || "unknown",
+};
+const supabaseUrl = supabaseProjectUrl;
 const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 export const missingSupabaseEnv = [];
