@@ -270,24 +270,52 @@ export async function trackAnonymousDevice(anonymousDeviceId, userId = null) {
 }
 
 export async function linkAnonymousDeviceToUser(anonymousDeviceId, userId) {
-  if (!supabase || !anonymousDeviceId || !userId) {
+  const resolvedUserId = typeof userId === "object" ? userId?.id : userId;
+
+  if (!supabase || !anonymousDeviceId || !resolvedUserId) {
     warnAnonymousDevice("anonymous device user link skipped", {
       hasSupabaseClient: Boolean(supabase),
       device_id: anonymousDeviceId || null,
-      user_id: userId || null,
+      user_id: resolvedUserId || null,
     });
     return null;
   }
 
-  logAnonymousDevice("anonymous device user link requested", {
+  const timestamp = new Date().toISOString();
+  const payload = {
+    user_id: resolvedUserId,
+    updated_at: timestamp,
+    last_seen_at: timestamp,
+  };
+
+  logAnonymousDevice("anonymous device user direct update requested", {
     device_id: anonymousDeviceId,
-    user_id: userId,
+    user_id: resolvedUserId,
     table: "anonymous_devices",
-    column: "user_id",
-    note: "Links the stored anonymous device row to the authenticated account without touching player_state.",
+    matchColumn: "anonymous_device_id",
+    payload,
+    note: "Links the stored anonymous device row to the authenticated account without touching profiles or player_state.",
   });
 
-  return trackAnonymousDevice(anonymousDeviceId, userId);
+  const { data, error, status, statusText } = await supabase
+    .from("anonymous_devices")
+    .update(payload)
+    .eq("anonymous_device_id", anonymousDeviceId)
+    .select()
+    .maybeSingle();
+
+  logAnonymousDevice("anonymous device user direct update response", {
+    device_id: anonymousDeviceId,
+    user_id: resolvedUserId,
+    status,
+    statusText,
+    data,
+    error,
+    last_seen_at: data?.last_seen_at || null,
+  });
+
+  if (error) throw error;
+  return data;
 }
 
 export async function saveAnonymousDeviceState(anonymousDeviceId, state) {
