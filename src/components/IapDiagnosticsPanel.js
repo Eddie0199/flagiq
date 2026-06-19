@@ -9,7 +9,7 @@ import { PRODUCT_IDS, SHOP_PRODUCTS } from "../shopProducts";
 import { getProductCurrencyDiagnostics } from "../storePriceDisplay";
 import { IS_DEBUG_BUILD } from "../debugTools";
 
-const JS_BUILD_MARKER = "2026-02-19-B53";
+const JS_BUILD_MARKER = "2026-06-19-B75";
 
 function toPretty(value) {
   try {
