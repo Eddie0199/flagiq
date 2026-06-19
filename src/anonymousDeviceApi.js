@@ -269,6 +269,27 @@ export async function trackAnonymousDevice(anonymousDeviceId, userId = null) {
   return data;
 }
 
+export async function linkAnonymousDeviceToUser(anonymousDeviceId, userId) {
+  if (!supabase || !anonymousDeviceId || !userId) {
+    warnAnonymousDevice("anonymous device user link skipped", {
+      hasSupabaseClient: Boolean(supabase),
+      device_id: anonymousDeviceId || null,
+      user_id: userId || null,
+    });
+    return null;
+  }
+
+  logAnonymousDevice("anonymous device user link requested", {
+    device_id: anonymousDeviceId,
+    user_id: userId,
+    table: "anonymous_devices",
+    column: "user_id",
+    note: "Links the stored anonymous device row to the authenticated account without touching player_state.",
+  });
+
+  return trackAnonymousDevice(anonymousDeviceId, userId);
+}
+
 export async function saveAnonymousDeviceState(anonymousDeviceId, state) {
   if (!supabase || !anonymousDeviceId) {
     warnAnonymousDevice("save_anonymous_device_state skipped", {

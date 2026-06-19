@@ -1,12 +1,52 @@
-alter table public.anonymous_devices
-  add column if not exists coins integer not null default 0,
-  add column if not exists preferred_language text,
-  add column if not exists progress jsonb not null default '{}'::jsonb,
-  add column if not exists inventory jsonb not null default '{}'::jsonb,
-  add column if not exists cooldowns jsonb not null default '{}'::jsonb,
-  add column if not exists hearts_current integer,
-  add column if not exists hearts_max integer,
-  add column if not exists hearts_last_regen_at timestamptz;
+create or replace function public.track_anonymous_device(
+  p_anonymous_device_id uuid,
+  p_user_id uuid default null
+)
+returns public.anonymous_devices
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  resolved_user_id uuid;
+  tracked public.anonymous_devices;
+begin
+  if p_user_id is not null and auth.uid() is not null and p_user_id <> auth.uid() then
+    raise exception 'Cannot link anonymous device to a different user.';
+  end if;
+
+  resolved_user_id := auth.uid();
+
+  insert into public.anonymous_devices (
+    anonymous_device_id,
+    user_id,
+    first_seen_at,
+    last_seen_at,
+    converted_at,
+    updated_at
+  ) values (
+    p_anonymous_device_id,
+    resolved_user_id,
+    now(),
+    now(),
+    case when resolved_user_id is null then null else now() end,
+    now()
+  )
+  on conflict (anonymous_device_id)
+  do update set
+    user_id = coalesce(excluded.user_id, public.anonymous_devices.user_id),
+    last_seen_at = now(),
+    converted_at = case
+      when public.anonymous_devices.converted_at is not null then public.anonymous_devices.converted_at
+      when coalesce(excluded.user_id, public.anonymous_devices.user_id) is not null then now()
+      else null
+    end,
+    updated_at = now()
+  returning * into tracked;
+
+  return tracked;
+end;
+$$;
 
 create or replace function public.save_anonymous_device_state(
   p_anonymous_device_id uuid,
@@ -74,26 +114,3 @@ begin
   return tracked;
 end;
 $$;
-
-grant execute on function public.save_anonymous_device_state(uuid, integer, text, jsonb, jsonb, jsonb, integer, integer, timestamptz) to anon, authenticated;
-
-create or replace function public.get_anonymous_device_state(
-  p_anonymous_device_id uuid
-)
-returns public.anonymous_devices
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  tracked public.anonymous_devices;
-begin
-  select * into tracked
-  from public.anonymous_devices
-  where anonymous_device_id = p_anonymous_device_id;
-
-  return tracked;
-end;
-$$;
-
-grant execute on function public.get_anonymous_device_state(uuid) to anon, authenticated;
