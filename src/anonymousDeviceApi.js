@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { Preferences } from "@capacitor/preferences";
 import { supabase, supabaseBuildInfo, supabaseProjectUrl } from "./supabaseClient";
 
 export const ANONYMOUS_DEVICE_ID_STORAGE_KEY = "flagiq:anonymousDeviceId";
@@ -56,10 +57,23 @@ export function logAnonymousTrackingContext(message, details = {}) {
 }
 
 function getCapacitorStorage() {
-  if (!Capacitor?.Plugins) return null;
-  // Prefer the native Preferences plugin when it is available. Storage is kept only
-  // as a legacy fallback for older builds that may still have written there.
-  return Capacitor.Plugins.Preferences || Capacitor.Plugins.Storage || null;
+  // Use the installed Preferences plugin directly so native builds do not silently
+  // fall back to WebView localStorage when Capacitor.Plugins is not populated yet.
+  if (Preferences?.get && Preferences?.set) {
+    return { plugin: Preferences, backend: "@capacitor/preferences import" };
+  }
+  if (!Capacitor?.Plugins) return { plugin: null, backend: "unavailable" };
+  // Storage is kept only as a legacy fallback for older builds that may still have
+  // written there before Preferences was installed and synced into native projects.
+  const plugin = Capacitor.Plugins.Preferences || Capacitor.Plugins.Storage || null;
+  return {
+    plugin,
+    backend: Capacitor.Plugins.Preferences
+      ? "Capacitor.Plugins.Preferences"
+      : Capacitor.Plugins.Storage
+        ? "Capacitor.Plugins.Storage legacy fallback"
+        : "unavailable",
+  };
 }
 
 function isNativePlatform() {
@@ -112,14 +126,15 @@ function writeLocalStorageDeviceId(deviceId) {
   }
 }
 
-async function persistCanonicalAnonymousDeviceId(plugin, deviceId, source) {
+async function persistCanonicalAnonymousDeviceId(plugin, deviceId, source, backend) {
   const wroteCapacitor = await writeCapacitorDeviceId(plugin, deviceId);
   const wroteLocalStorage = writeLocalStorageDeviceId(deviceId);
   logAnonymousDevice("persisted canonical device_id to available stores", {
     storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
     device_id: deviceId,
     source,
-    capacitorAvailable: Boolean(plugin?.set),
+    capacitorBackend: backend,
+    capacitorAvailable: Boolean(plugin?.get && plugin?.set),
     localStorageAvailable: wroteLocalStorage,
     wroteCapacitor,
     wroteLocalStorage,
@@ -143,7 +158,7 @@ function createAnonymousDeviceId() {
 }
 
 export async function getOrCreateAnonymousDeviceId() {
-  const plugin = getCapacitorStorage();
+  const { plugin, backend } = getCapacitorStorage();
   const native = isNativePlatform();
   const capacitorDeviceId = await readCapacitorDeviceId(plugin);
   const localStorageDeviceId = readLocalStorageDeviceId();
@@ -162,10 +177,12 @@ export async function getOrCreateAnonymousDeviceId() {
       hasCapacitorDeviceId: Boolean(capacitorDeviceId),
       hasLocalStorageDeviceId: Boolean(localStorageDeviceId),
       storesDisagreed: Boolean(capacitorDeviceId && localStorageDeviceId && capacitorDeviceId !== localStorageDeviceId),
+      capacitorBackend: backend,
+      capacitorAvailable: Boolean(plugin?.get && plugin?.set),
     });
 
     if (capacitorDeviceId !== canonicalDeviceId || localStorageDeviceId !== canonicalDeviceId) {
-      await persistCanonicalAnonymousDeviceId(plugin, canonicalDeviceId, source);
+      await persistCanonicalAnonymousDeviceId(plugin, canonicalDeviceId, source, backend);
     }
 
     return canonicalDeviceId;
@@ -176,9 +193,10 @@ export async function getOrCreateAnonymousDeviceId() {
     storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
     device_id: nextId,
     native,
-    capacitorAvailable: Boolean(plugin?.set),
+    capacitorBackend: backend,
+    capacitorAvailable: Boolean(plugin?.get && plugin?.set),
   });
-  await persistCanonicalAnonymousDeviceId(plugin, nextId, "generated");
+  await persistCanonicalAnonymousDeviceId(plugin, nextId, "generated", backend);
   return nextId;
 }
 
