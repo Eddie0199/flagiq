@@ -1,7 +1,31 @@
 import { Capacitor } from "@capacitor/core";
-import { supabase } from "./supabaseClient";
+import { supabase, supabaseBuildInfo, supabaseProjectUrl } from "./supabaseClient";
 
 export const ANONYMOUS_DEVICE_ID_STORAGE_KEY = "flagiq:anonymousDeviceId";
+
+const LOG_PREFIX = "[anonymous-device]";
+
+function logAnonymousDevice(message, details = {}) {
+  console.log(`${LOG_PREFIX} ${message}`, {
+    supabaseProjectUrl: supabaseProjectUrl || null,
+    buildNumber: supabaseBuildInfo.buildNumber,
+    commitSha: supabaseBuildInfo.commitSha,
+    ...details,
+  });
+}
+
+function warnAnonymousDevice(message, details = {}) {
+  console.warn(`${LOG_PREFIX} ${message}`, {
+    supabaseProjectUrl: supabaseProjectUrl || null,
+    buildNumber: supabaseBuildInfo.buildNumber,
+    commitSha: supabaseBuildInfo.commitSha,
+    ...details,
+  });
+}
+
+export function logAnonymousTrackingContext(message, details = {}) {
+  logAnonymousDevice(message, details);
+}
 
 function getCapacitorStorage() {
   if (!Capacitor?.Plugins) return null;
@@ -29,47 +53,98 @@ export async function getOrCreateAnonymousDeviceId() {
   if (plugin?.get) {
     try {
       const result = await plugin.get({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY });
-      if (result?.value) return result.value;
-    } catch (e) {}
+      if (result?.value) {
+        logAnonymousDevice("loaded device_id from Capacitor storage", {
+          storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
+          device_id: result.value,
+        });
+        return result.value;
+      }
+    } catch (e) {
+      warnAnonymousDevice("failed reading device_id from Capacitor storage", { error: e });
+    }
   }
 
   try {
     const stored = localStorage.getItem(ANONYMOUS_DEVICE_ID_STORAGE_KEY);
     if (stored) {
+      logAnonymousDevice("loaded device_id from localStorage", {
+        storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
+        device_id: stored,
+      });
       if (plugin?.set) {
         try {
           await plugin.set({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY, value: stored });
-        } catch (e) {}
+        } catch (e) {
+          warnAnonymousDevice("failed backfilling device_id to Capacitor storage", { error: e });
+        }
       }
       return stored;
     }
-  } catch (e) {}
+  } catch (e) {
+    warnAnonymousDevice("failed reading device_id from localStorage", { error: e });
+  }
 
   const nextId = createAnonymousDeviceId();
+  logAnonymousDevice("generated new device_id", {
+    storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
+    device_id: nextId,
+  });
   if (plugin?.set) {
     try {
       await plugin.set({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY, value: nextId });
-    } catch (e) {}
+    } catch (e) {
+      warnAnonymousDevice("failed storing device_id in Capacitor storage", { error: e });
+    }
   }
   try {
     localStorage.setItem(ANONYMOUS_DEVICE_ID_STORAGE_KEY, nextId);
-  } catch (e) {}
+  } catch (e) {
+    warnAnonymousDevice("failed storing device_id in localStorage", { error: e });
+  }
   return nextId;
 }
 
 export async function trackAnonymousDevice(anonymousDeviceId, userId = null) {
-  if (!supabase || !anonymousDeviceId) return null;
-  const { data, error } = await supabase.rpc("track_anonymous_device", {
+  const payload = {
     p_anonymous_device_id: anonymousDeviceId,
     p_user_id: userId || null,
+  };
+  logAnonymousDevice("track_anonymous_device requested", {
+    device_id: anonymousDeviceId,
+    rpc: "track_anonymous_device",
+    payload,
+    note: "RPC writes anonymous_devices.anonymous_device_id (not id/device_id) and updates last_seen_at.",
+  });
+  if (!supabase || !anonymousDeviceId) {
+    warnAnonymousDevice("track_anonymous_device skipped", {
+      hasSupabaseClient: Boolean(supabase),
+      device_id: anonymousDeviceId || null,
+    });
+    return null;
+  }
+  const { data, error, status, statusText } = await supabase.rpc("track_anonymous_device", payload);
+  logAnonymousDevice("track_anonymous_device response", {
+    device_id: anonymousDeviceId,
+    status,
+    statusText,
+    data,
+    error,
+    last_seen_at: data?.last_seen_at || null,
   });
   if (error) throw error;
   return data;
 }
 
 export async function saveAnonymousDeviceState(anonymousDeviceId, state) {
-  if (!supabase || !anonymousDeviceId) return null;
-  const { data, error } = await supabase.rpc("save_anonymous_device_state", {
+  if (!supabase || !anonymousDeviceId) {
+    warnAnonymousDevice("save_anonymous_device_state skipped", {
+      hasSupabaseClient: Boolean(supabase),
+      device_id: anonymousDeviceId || null,
+    });
+    return null;
+  }
+  const payload = {
     p_anonymous_device_id: anonymousDeviceId,
     p_coins: Number.isFinite(Number(state?.coins)) ? Number(state.coins) : 0,
     p_preferred_language: state?.preferred_language || null,
@@ -83,6 +158,20 @@ export async function saveAnonymousDeviceState(anonymousDeviceId, state) {
       ? Number(state.hearts_max)
       : null,
     p_hearts_last_regen_at: state?.hearts_last_regen_at || null,
+  };
+  logAnonymousDevice("save_anonymous_device_state requested", {
+    device_id: anonymousDeviceId,
+    rpc: "save_anonymous_device_state",
+    payload,
+  });
+  const { data, error, status, statusText } = await supabase.rpc("save_anonymous_device_state", payload);
+  logAnonymousDevice("save_anonymous_device_state response", {
+    device_id: anonymousDeviceId,
+    status,
+    statusText,
+    data,
+    error,
+    last_seen_at: data?.last_seen_at || null,
   });
   if (error) throw error;
   return data;
@@ -90,9 +179,15 @@ export async function saveAnonymousDeviceState(anonymousDeviceId, state) {
 
 export async function getAnonymousDeviceState(anonymousDeviceId) {
   if (!supabase || !anonymousDeviceId) return null;
-  const { data, error } = await supabase.rpc("get_anonymous_device_state", {
+  const payload = {
     p_anonymous_device_id: anonymousDeviceId,
+  };
+  logAnonymousDevice("get_anonymous_device_state requested", {
+    device_id: anonymousDeviceId,
+    rpc: "get_anonymous_device_state",
+    payload,
   });
+  const { data, error } = await supabase.rpc("get_anonymous_device_state", payload);
   if (error) throw error;
   return data;
 }

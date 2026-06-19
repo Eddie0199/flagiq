@@ -51,6 +51,7 @@ import {
   getOrCreateAnonymousDeviceId,
   saveAnonymousDeviceState,
   trackAnonymousDevice,
+  logAnonymousTrackingContext,
 } from "./anonymousDeviceApi";
 
 
@@ -1534,12 +1535,23 @@ export default function App() {
     let cancelled = false;
     (async () => {
       try {
+        logAnonymousTrackingContext("app start tracking effect started", {
+          guestSessionActive,
+          loggedIn,
+          activeUser: activeUser || null,
+        });
         const deviceId = await getOrCreateAnonymousDeviceId();
         if (cancelled) return;
         setAnonymousDeviceId(deviceId);
-        await trackAnonymousDevice(deviceId);
+        const tracked = await trackAnonymousDevice(deviceId);
+        logAnonymousTrackingContext("app start tracking effect completed", {
+          device_id: deviceId,
+          last_seen_at: tracked?.last_seen_at || null,
+          row: tracked,
+        });
       } catch (e) {
         console.warn("Anonymous device tracking failed", e);
+        logAnonymousTrackingContext("app start tracking effect failed", { error: e });
       }
     })();
     return () => {
@@ -1549,9 +1561,27 @@ export default function App() {
 
   useEffect(() => {
     if (!anonymousDeviceId || !activeUser) return;
-    trackAnonymousDevice(anonymousDeviceId, activeUser).catch((e) => {
-      console.warn("Anonymous device link failed", e);
+    logAnonymousTrackingContext("authenticated user link tracking effect started", {
+      device_id: anonymousDeviceId,
+      activeUser,
     });
+    trackAnonymousDevice(anonymousDeviceId, activeUser)
+      .then((tracked) => {
+        logAnonymousTrackingContext("authenticated user link tracking effect completed", {
+          device_id: anonymousDeviceId,
+          activeUser,
+          last_seen_at: tracked?.last_seen_at || null,
+          row: tracked,
+        });
+      })
+      .catch((e) => {
+        console.warn("Anonymous device link failed", e);
+        logAnonymousTrackingContext("authenticated user link tracking effect failed", {
+          device_id: anonymousDeviceId,
+          activeUser,
+          error: e,
+        });
+      });
   }, [anonymousDeviceId, activeUser]);
 
   useEffect(() => {
@@ -2261,9 +2291,17 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (!guestSessionActive || loggedIn || !anonymousDeviceId || !backendLoaded) return;
+    if (!guestSessionActive || loggedIn || !anonymousDeviceId || !backendLoaded) {
+      logAnonymousTrackingContext("guest state save skipped", {
+        guestSessionActive,
+        loggedIn,
+        device_id: anonymousDeviceId || null,
+        backendLoaded,
+      });
+      return;
+    }
     const timeoutId = setTimeout(() => {
-      saveAnonymousDeviceState(anonymousDeviceId, {
+      const payload = {
         coins,
         preferred_language: normalizeLanguageCode(lang),
         progress: normalizeProgress(progress),
@@ -2274,9 +2312,26 @@ export default function App() {
         hearts_last_regen_at: heartsState?.lastRegenAt
           ? new Date(heartsState.lastRegenAt).toISOString()
           : null,
-      }).catch((e) => {
-        console.warn("Anonymous guest state save failed", e);
+      };
+      logAnonymousTrackingContext("guest state save scheduled payload", {
+        device_id: anonymousDeviceId,
+        payload,
       });
+      saveAnonymousDeviceState(anonymousDeviceId, payload)
+        .then((tracked) => {
+          logAnonymousTrackingContext("guest state save completed", {
+            device_id: anonymousDeviceId,
+            last_seen_at: tracked?.last_seen_at || null,
+            row: tracked,
+          });
+        })
+        .catch((e) => {
+          console.warn("Anonymous guest state save failed", e);
+          logAnonymousTrackingContext("guest state save failed", {
+            device_id: anonymousDeviceId,
+            error: e,
+          });
+        });
     }, 400);
     return () => clearTimeout(timeoutId);
   }, [
