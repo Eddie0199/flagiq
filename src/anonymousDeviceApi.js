@@ -57,7 +57,73 @@ export function logAnonymousTrackingContext(message, details = {}) {
 
 function getCapacitorStorage() {
   if (!Capacitor?.Plugins) return null;
+  // Prefer the native Preferences plugin when it is available. Storage is kept only
+  // as a legacy fallback for older builds that may still have written there.
   return Capacitor.Plugins.Preferences || Capacitor.Plugins.Storage || null;
+}
+
+function isNativePlatform() {
+  try {
+    return typeof Capacitor?.isNativePlatform === "function" && Capacitor.isNativePlatform();
+  } catch (e) {
+    return false;
+  }
+}
+
+async function readCapacitorDeviceId(plugin) {
+  if (!plugin?.get) return "";
+  try {
+    const result = await plugin.get({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY });
+    return result?.value || "";
+  } catch (e) {
+    warnAnonymousDevice("failed reading device_id from Capacitor storage", { error: e });
+    return "";
+  }
+}
+
+function readLocalStorageDeviceId() {
+  try {
+    return localStorage.getItem(ANONYMOUS_DEVICE_ID_STORAGE_KEY) || "";
+  } catch (e) {
+    warnAnonymousDevice("failed reading device_id from localStorage", { error: e });
+    return "";
+  }
+}
+
+async function writeCapacitorDeviceId(plugin, deviceId) {
+  if (!plugin?.set || !deviceId) return false;
+  try {
+    await plugin.set({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY, value: deviceId });
+    return true;
+  } catch (e) {
+    warnAnonymousDevice("failed storing device_id in Capacitor storage", { error: e });
+    return false;
+  }
+}
+
+function writeLocalStorageDeviceId(deviceId) {
+  if (!deviceId) return false;
+  try {
+    localStorage.setItem(ANONYMOUS_DEVICE_ID_STORAGE_KEY, deviceId);
+    return true;
+  } catch (e) {
+    warnAnonymousDevice("failed storing device_id in localStorage", { error: e });
+    return false;
+  }
+}
+
+async function persistCanonicalAnonymousDeviceId(plugin, deviceId, source) {
+  const wroteCapacitor = await writeCapacitorDeviceId(plugin, deviceId);
+  const wroteLocalStorage = writeLocalStorageDeviceId(deviceId);
+  logAnonymousDevice("persisted canonical device_id to available stores", {
+    storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
+    device_id: deviceId,
+    source,
+    capacitorAvailable: Boolean(plugin?.set),
+    localStorageAvailable: wroteLocalStorage,
+    wroteCapacitor,
+    wroteLocalStorage,
+  });
 }
 
 function createAnonymousDeviceId() {
@@ -78,58 +144,41 @@ function createAnonymousDeviceId() {
 
 export async function getOrCreateAnonymousDeviceId() {
   const plugin = getCapacitorStorage();
-  if (plugin?.get) {
-    try {
-      const result = await plugin.get({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY });
-      if (result?.value) {
-        logAnonymousDevice("loaded device_id from Capacitor storage", {
-          storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
-          device_id: result.value,
-        });
-        return result.value;
-      }
-    } catch (e) {
-      warnAnonymousDevice("failed reading device_id from Capacitor storage", { error: e });
-    }
-  }
+  const native = isNativePlatform();
+  const capacitorDeviceId = await readCapacitorDeviceId(plugin);
+  const localStorageDeviceId = readLocalStorageDeviceId();
 
-  try {
-    const stored = localStorage.getItem(ANONYMOUS_DEVICE_ID_STORAGE_KEY);
-    if (stored) {
-      logAnonymousDevice("loaded device_id from localStorage", {
-        storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
-        device_id: stored,
-      });
-      if (plugin?.set) {
-        try {
-          await plugin.set({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY, value: stored });
-        } catch (e) {
-          warnAnonymousDevice("failed backfilling device_id to Capacitor storage", { error: e });
-        }
-      }
-      return stored;
+  if (capacitorDeviceId || localStorageDeviceId) {
+    const canonicalDeviceId = native
+      ? capacitorDeviceId || localStorageDeviceId
+      : localStorageDeviceId || capacitorDeviceId;
+    const source = capacitorDeviceId === canonicalDeviceId ? "Capacitor storage" : "localStorage";
+
+    logAnonymousDevice("loaded existing device_id", {
+      storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
+      device_id: canonicalDeviceId,
+      source,
+      native,
+      hasCapacitorDeviceId: Boolean(capacitorDeviceId),
+      hasLocalStorageDeviceId: Boolean(localStorageDeviceId),
+      storesDisagreed: Boolean(capacitorDeviceId && localStorageDeviceId && capacitorDeviceId !== localStorageDeviceId),
+    });
+
+    if (capacitorDeviceId !== canonicalDeviceId || localStorageDeviceId !== canonicalDeviceId) {
+      await persistCanonicalAnonymousDeviceId(plugin, canonicalDeviceId, source);
     }
-  } catch (e) {
-    warnAnonymousDevice("failed reading device_id from localStorage", { error: e });
+
+    return canonicalDeviceId;
   }
 
   const nextId = createAnonymousDeviceId();
-  logAnonymousDevice("generated new device_id", {
+  logAnonymousDevice("generated new device_id after no existing storage match", {
     storageKey: ANONYMOUS_DEVICE_ID_STORAGE_KEY,
     device_id: nextId,
+    native,
+    capacitorAvailable: Boolean(plugin?.set),
   });
-  if (plugin?.set) {
-    try {
-      await plugin.set({ key: ANONYMOUS_DEVICE_ID_STORAGE_KEY, value: nextId });
-    } catch (e) {
-      warnAnonymousDevice("failed storing device_id in Capacitor storage", { error: e });
-    }
-  }
-  try {
-    localStorage.setItem(ANONYMOUS_DEVICE_ID_STORAGE_KEY, nextId);
-  } catch (e) {
-    warnAnonymousDevice("failed storing device_id in localStorage", { error: e });
-  }
+  await persistCanonicalAnonymousDeviceId(plugin, nextId, "generated");
   return nextId;
 }
 
