@@ -16,6 +16,7 @@ import AuthModal from "./components/AuthModal";
 import SettingsModal from "./components/SettingsModal";
 import { LockedModal, NoLivesModal } from "./components/Modals";
 import StoreScreen from "./components/StoreScreen";
+import SocialScreen from "./components/SocialScreen";
 import ResetPasswordPage from "./components/ResetPasswordPage";
 import LegalPage from "./components/LegalPage";
 import {
@@ -2525,7 +2526,7 @@ export default function App() {
   // home guard
   useEffect(() => {
     if (!authReady) return;
-    if (!hasAppSession && screen !== "home") setScreen("home");
+    if (!hasAppSession && !["home", "social"].includes(screen)) setScreen("home");
   }, [authReady, hasAppSession, screen, setScreen]);
 
   const goHome = () => setScreen("home");
@@ -3067,6 +3068,7 @@ export default function App() {
           }}
           coins={coins}
           onShop={openStoreFromScreen}
+          onSocial={() => setScreen("social")}
           onStart={handleHomeStart}
           classicStats={classicStats}
           timetrialStats={timetrialStats}
@@ -3291,6 +3293,29 @@ export default function App() {
             onGuestAuthRequest={openAuth}
           />
         </>
+      )}
+
+
+      {/* SOCIAL */}
+      {screen === "social" && (
+        <SocialScreen
+          activeUser={activeUser}
+          activeUserLabel={activeUserLabel}
+          hearts={{
+            current: heartsCurrent,
+            max: heartsMax,
+            lastRegenAt,
+            nextRefreshAt: nextHeartsRefreshAt,
+          }}
+          coins={coins}
+          username={storageUserId}
+          onBack={goHome}
+          onSettings={() => setSettingsOpen(true)}
+          onAuthRequest={openAuth}
+          t={t}
+          lang={lang}
+          onShop={openStoreFromScreen}
+        />
       )}
 
       {/* SHOP / STORE */}
