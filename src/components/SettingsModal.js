@@ -155,6 +155,10 @@ export default function SettingsModal({
   }, [lang, userCreatedAt]);
 
   const displayLabel = displayName || activeUserLabel || activeUser || "";
+  const profileUsername = (() => {
+    const cleaned = String(displayLabel || "").trim().replace(/^@+/, "");
+    return cleaned ? `@${cleaned}` : "@player";
+  })();
   const avatarLetter =
     displayLabel.replace(/^@/, "").trim().charAt(0).toUpperCase() || "?";
 
@@ -244,8 +248,8 @@ export default function SettingsModal({
                 {avatarLetter}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: "#0f172a" }}>
-                  {displayLabel || (t ? t(lang, "username") : "Username")}
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
+                  {profileUsername}
                 </div>
                 {userEmail && (
                   <div style={{ fontSize: 13, color: "#64748b" }}>
@@ -258,6 +262,38 @@ export default function SettingsModal({
                   </div>
                 )}
               </div>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: 8,
+                marginBottom: 14,
+              }}
+            >
+              {[
+                "Flags Mastered",
+                "Current Streak",
+                "Weekly XP",
+                "Challenges",
+              ].map((label) => (
+                <div
+                  key={label}
+                  style={{
+                    border: "1px solid #e2e8f0",
+                    borderRadius: 14,
+                    padding: "10px 12px",
+                    background: "#ffffff",
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 800, color: "#0f172a" }}>
+                    {label}
+                  </div>
+                  <div style={{ marginTop: 3, fontSize: 12, color: "#64748b" }}>
+                    Coming soon
+                  </div>
+                </div>
+              ))}
             </div>
             <hr
               style={{

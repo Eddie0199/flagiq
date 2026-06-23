@@ -701,6 +701,7 @@ export default function HomeScreen({
   hearts,
   coins,
   onShop,
+  onSocial,
   onStart,
   classicStats, // still accepted but unused; we rely on fresh calc
   timetrialStats, // (kept for backward compatibility with App)
@@ -1085,6 +1086,24 @@ export default function HomeScreen({
           aria-label={text("homeInfoTitle", "About FlagIQ")}
         >
           ❓
+        </button>
+        <button
+          onClick={() => onSocial && onSocial()}
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 999,
+            background: "rgba(255,255,255,.95)",
+            border: "1px solid rgba(0,0,0,0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            fontSize: 20,
+          }}
+          aria-label="Social"
+        >
+          👥
         </button>
         <button
           onClick={() => setShowLeaderboardModal(true)}
