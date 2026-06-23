@@ -54,6 +54,7 @@ import {
   linkAnonymousDeviceToUser,
   logAnonymousTrackingContext,
 } from "./anonymousDeviceApi";
+import { trackUserCountry } from "./countryTrackingApi";
 
 
 const LANGUAGE_STORAGE_KEY = "flagLang";
@@ -1545,6 +1546,7 @@ export default function App() {
         if (cancelled) return;
         setAnonymousDeviceId(deviceId);
         const tracked = await trackAnonymousDevice(deviceId);
+        await trackUserCountry({ anonymousDeviceId: deviceId });
         logAnonymousTrackingContext("app start tracking effect completed", {
           device_id: deviceId,
           last_seen_at: tracked?.last_seen_at || null,
@@ -1567,7 +1569,8 @@ export default function App() {
       activeUser,
     });
     linkAnonymousDeviceToUser(anonymousDeviceId, activeUser)
-      .then((tracked) => {
+      .then(async (tracked) => {
+        await trackUserCountry({ anonymousDeviceId, userId: activeUser });
         logAnonymousTrackingContext("authenticated user link tracking effect completed", {
           device_id: anonymousDeviceId,
           activeUser,
@@ -2776,6 +2779,7 @@ export default function App() {
             : null,
         });
         await linkAnonymousDeviceToUser(anonymousDeviceId, accountId);
+        await trackUserCountry({ anonymousDeviceId, userId: accountId });
         const anonymousState = await getAnonymousDeviceState(anonymousDeviceId).catch(() => null);
         const guestProgress = normalizeProgress(anonymousState?.progress || progress);
         const guestInventory = anonymousState?.inventory || { hints: { ...(hints || {}) } };
